@@ -1,0 +1,2 @@
+# This script uses Python's standard library only.
+# Configure the DeepSeek API key with LabelQt; it is injected as DEEPSEEK_API_KEY at runtime.

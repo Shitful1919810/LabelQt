@@ -1,0 +1,98 @@
+{
+  "apiVersion": 1,
+  "name": "OCR",
+  "description": "Configure OCR and run OCR for the current page or selected image region.",
+  "scripts": [
+    {
+      "id": "configure",
+      "name": "Configure OCR",
+      "entry": "configure_ocr.py",
+      "description": "Save local OCR preferences to the user config directory.",
+      "parameters": [
+        {
+          "key": "engine",
+          "label": "Default OCR engine",
+          "type": "choice",
+          "default": "manga-with-paddle",
+          "options": ["paddle", "manga-with-paddle"]
+        },
+        {
+          "key": "language",
+          "label": "PaddleOCR language",
+          "type": "choice",
+          "default": "japan",
+          "options": ["japan", "ch", "en", "korean"]
+        },
+        {
+          "key": "device",
+          "label": "PaddleOCR device",
+          "type": "choice",
+          "default": "cpu",
+          "options": ["cpu", "gpu"]
+        },
+        {
+          "key": "mangaModelPath",
+          "label": "manga-ocr model directory",
+          "type": "directory",
+          "default": ""
+        },
+        {
+          "key": "defaultGroup",
+          "label": "Default label group",
+          "type": "group",
+          "default": "框内"
+        },
+        {
+          "key": "rightToLeft",
+          "label": "Sort PaddleOCR regions right-to-left",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "key": "showResult",
+          "label": "Show result dialog after non-preview runs",
+          "type": "boolean",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "preview",
+      "name": "OCR Preview",
+      "entry": "ocr_preview.py",
+      "description": "Preview OCR results using the configured OCR engine."
+    },
+    {
+      "id": "add_labels",
+      "name": "OCR Add Labels",
+      "entry": "ocr_preview.py",
+      "description": "Run OCR using the configured engine and add recognized text blocks as labels.",
+      "environment": {
+        "LABELQT_OCR_ACTION": "add-labels"
+      }
+    },
+    {
+      "id": "add_page_range_labels",
+      "name": "OCR Add Page Range Labels",
+      "entry": "ocr_preview.py",
+      "description": "Run OCR for every page in the selected 1-based page range and add recognized text blocks as labels.",
+      "parameters": [
+        {
+          "key": "startPage",
+          "label": "Start page (1-based)",
+          "type": "text",
+          "default": "1"
+        },
+        {
+          "key": "endPage",
+          "label": "End page (1-based)",
+          "type": "text",
+          "default": "1"
+        }
+      ],
+      "environment": {
+        "LABELQT_OCR_ACTION": "add-page-range-labels"
+      }
+    }
+  ]
+}

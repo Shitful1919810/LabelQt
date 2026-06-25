@@ -1,0 +1,8 @@
+pillow
+paddleocr
+
+# Optional: set LABELQT_OCR_ENGINE=manga-with-paddle to recognize Paddle-detected boxes with manga-ocr.
+manga-ocr
+# manga-ocr 0.1.x was written for the Transformers 4.x API. Transformers 5.x can fail to load
+# kha-white/manga-ocr-base image processor.
+transformers<5

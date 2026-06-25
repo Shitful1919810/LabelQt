@@ -1,0 +1,149 @@
+{
+  "apiVersion": 1,
+  "name": "AI Translation",
+  "description": "Configure DeepSeek translation and translate selected labels or the current page.",
+  "scripts": [
+    {
+      "id": "configure",
+      "name": "Configure AI Translation",
+      "entry": "configure_ai_translation.py",
+      "description": "Save local DeepSeek translation preferences to the user config directory.",
+      "parameters": [
+        {
+          "key": "deepseekApiKey",
+          "label": "DeepSeek API key",
+          "type": "secret",
+          "secretKey": "deepseekApiKey",
+          "service": "LabelQt",
+          "account": "deepseek_api_key",
+          "environment": "DEEPSEEK_API_KEY"
+        },
+        {
+          "key": "baseUrl",
+          "label": "API base URL",
+          "type": "text",
+          "default": "https://api.deepseek.com"
+        },
+        {
+          "key": "model",
+          "label": "Model",
+          "type": "choice",
+          "default": "deepseek-v4-flash",
+          "options": ["deepseek-v4-flash", "deepseek-v4-pro"]
+        },
+        {
+          "key": "targetLanguage",
+          "label": "Target language",
+          "type": "choice",
+          "default": "Simplified Chinese",
+          "options": ["Simplified Chinese", "Traditional Chinese", "English", "Japanese"]
+        },
+        {
+          "key": "style",
+          "label": "Translation style",
+          "type": "choice",
+          "default": "Natural manga dialogue",
+          "options": ["Natural manga dialogue", "Faithful literal translation", "Polished localization"]
+        },
+        {
+          "key": "temperature",
+          "label": "Temperature",
+          "type": "text",
+          "default": "0.4"
+        },
+        {
+          "key": "customPrompt",
+          "label": "Custom translation prompt",
+          "type": "textarea",
+          "default": ""
+        },
+        {
+          "key": "showResult",
+          "label": "Show result dialog after apply",
+          "type": "boolean",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "preview",
+      "name": "Translation Preview",
+      "entry": "translate.py",
+      "description": "Preview DeepSeek translations without changing labels.",
+      "parameters": [
+        {
+          "key": "outputMode",
+          "label": "Preview output",
+          "type": "choice",
+          "default": "translationOnly",
+          "options": ["translationOnly", "translationWithAnalysis"]
+        }
+      ],
+      "environment": {
+        "LABELQT_TRANSLATION_ACTION": "preview"
+      },
+      "secrets": [
+        {
+          "key": "deepseekApiKey",
+          "label": "DeepSeek API key",
+          "service": "LabelQt",
+          "account": "deepseek_api_key",
+          "environment": "DEEPSEEK_API_KEY",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "apply",
+      "name": "Apply Translation",
+      "entry": "translate.py",
+      "description": "Translate labels with DeepSeek and apply the translations to labels.",
+      "environment": {
+        "LABELQT_TRANSLATION_ACTION": "apply"
+      },
+      "secrets": [
+        {
+          "key": "deepseekApiKey",
+          "label": "DeepSeek API key",
+          "service": "LabelQt",
+          "account": "deepseek_api_key",
+          "environment": "DEEPSEEK_API_KEY",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "apply_page_range",
+      "name": "Apply Page Range Translation",
+      "entry": "translate.py",
+      "description": "Translate every label in the selected page range and apply the translations.",
+      "parameters": [
+        {
+          "key": "startPage",
+          "label": "Start page (1-based)",
+          "type": "text",
+          "default": "1"
+        },
+        {
+          "key": "endPage",
+          "label": "End page (1-based)",
+          "type": "text",
+          "default": "1"
+        }
+      ],
+      "environment": {
+        "LABELQT_TRANSLATION_ACTION": "apply-page-range"
+      },
+      "secrets": [
+        {
+          "key": "deepseekApiKey",
+          "label": "DeepSeek API key",
+          "service": "LabelQt",
+          "account": "deepseek_api_key",
+          "environment": "DEEPSEEK_API_KEY",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

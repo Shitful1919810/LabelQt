@@ -1,0 +1,83 @@
+{
+  "apiVersion": 1,
+  "name": "Test",
+  "description": "Small automation scripts for testing the automation framework.",
+  "scripts": [
+    {
+      "id": "label_word_count",
+      "name": "Label Word Count",
+      "entry": "word_count.py",
+      "description": "Count characters in all non-deleted labels in the current project."
+    },
+    {
+      "id": "group_swap",
+      "name": "Swap Label Groups",
+      "entry": "group_swap.py",
+      "description": "Swap all labels between two selected groups.",
+      "parameters": [
+        {
+          "key": "groupA",
+          "label": "First group",
+          "type": "group"
+        },
+        {
+          "key": "groupB",
+          "label": "Second group",
+          "type": "group"
+        }
+      ]
+    },
+    {
+      "id": "selected_text_stamp",
+      "name": "Set Selected Label Text Test",
+      "entry": "selected_text_stamp.py",
+      "description": "Append a stamp to all currently selected labels to test setLabelText operations.",
+      "parameters": [
+        {
+          "key": "stamp",
+          "label": "Text stamp",
+          "type": "text",
+          "default": " [automation]"
+        }
+      ]
+    },
+    {
+      "id": "nudge_selected_labels",
+      "name": "Move Selected Markers Test",
+      "entry": "nudge_selected_labels.py",
+      "description": "Move selected label markers slightly to test setLabelPosition operations.",
+      "parameters": [
+        {
+          "key": "dx",
+          "label": "Normalized X offset",
+          "type": "text",
+          "default": "0.02"
+        },
+        {
+          "key": "dy",
+          "label": "Normalized Y offset",
+          "type": "text",
+          "default": "0.02"
+        }
+      ]
+    },
+    {
+      "id": "delete_selected_labels",
+      "name": "Delete Selected Labels Test",
+      "entry": "delete_selected_labels.py",
+      "description": "Delete currently selected labels to test deleteLabel operations."
+    },
+    {
+      "id": "wait_5s",
+      "name": "Wait 5s",
+      "entry": "wait_5s.py",
+      "description": "Wait for 5s and quit."
+    },
+    {
+      "id": "realtime_log",
+      "name": "Realtime Log Test",
+      "entry": "realtime_log.py",
+      "description": "Emit stdout and stderr lines to test realtime automation logs."
+    }
+  ]
+}

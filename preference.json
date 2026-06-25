@@ -1,0 +1,76 @@
+{
+    "appearance": {
+        "language": "zh_CN",
+        "style": "",
+        "theme": ""
+    },
+    "automation": {
+        "python": {
+            "arguments": [
+            ],
+            "autoInstallRequirements": true,
+            "command": "",
+            "pipIndexUrl": ""
+        },
+        "shortcuts": {
+        },
+        "showRunLog": true
+    },
+    "backupIntervalSeconds": 200,
+    "backupPath": "bak",
+    "canvasLabelTextEditor": {
+        "opacity": 0.75
+    },
+    "groupStyles": [
+        {
+            "fontPointSize": 10,
+            "groupColor": "#ef4444",
+            "markerDiameter": 20,
+            "markerStyle": "circle"
+        },
+        {
+            "fontPointSize": 10,
+            "groupColor": "#2563eb",
+            "markerDiameter": 20,
+            "markerStyle": "square"
+        },
+        {
+            "fontPointSize": 10,
+            "groupColor": "#10b981",
+            "markerDiameter": 20,
+            "markerStyle": "circle"
+        }
+    ],
+    "input": {
+        "alternateNextLabelShortcut": "Ctrl+Down",
+        "alternatePreviousLabelShortcut": "Ctrl+Up",
+        "commitLabelTextShortcut": "Ctrl+Return",
+        "editLabelTextShortcut": "Return",
+        "moveLabelModifier": "ctrl",
+        "nextLabelShortcut": "Tab",
+        "nextPageShortcut": "Ctrl+Right",
+        "previousLabelModifier": "ctrl",
+        "previousPageShortcut": "Ctrl+Left",
+        "redoShortcut": "Ctrl+Shift+Z",
+        "undoShortcut": "Ctrl+Z"
+    },
+    "labelMarker": {
+        "diameter": 20,
+        "fontPointSize": 10
+    },
+    "labelTable": {
+        "fontFamily": "",
+        "fontPointSize": 0,
+        "maxTextRows": 4
+    },
+    "labelTextEditor": {
+        "fontFamily": "",
+        "fontPointSize": 0
+    },
+    "markerTextBubble": {
+        "fontFamily": "",
+        "fontPointSize": 0,
+        "opacity": 1
+    }
+}
+
