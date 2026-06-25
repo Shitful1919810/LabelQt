@@ -5,6 +5,9 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QTextEdit>
 #include <QWidget>
 
 #include <utility>
@@ -26,6 +29,12 @@ QKeyCombination withModifiers(QKeyCombination combination, Qt::KeyboardModifiers
 bool hasSameKeyIgnoringModifiers(QKeyCombination lhs, QKeyCombination rhs)
 {
     return lhs.key() != Qt::Key_unknown && lhs.key() == rhs.key();
+}
+
+bool isTextInputWidget(const QWidget* widget)
+{
+    return qobject_cast<const QLineEdit*>(widget) != nullptr || qobject_cast<const QTextEdit*>(widget) != nullptr ||
+           qobject_cast<const QPlainTextEdit*>(widget) != nullptr;
 }
 } // namespace
 
@@ -62,6 +71,34 @@ bool MainWindowShortcutController::handleGlobalShortcut(QObject* watched, QEvent
     }
 
     const QKeyCombination pressedKey = labelqt::ui::normalizedShortcutKeyCombination(*keyEvent);
+    const QKeySequence keySequence(pressedKey);
+
+    if (!isTextInputWidget(watchedWidget)) {
+        if (keySequence.matches(QKeySequence::Cut) == QKeySequence::ExactMatch) {
+            if (!isShortcutOverride && !keyEvent->isAutoRepeat() && m_callbacks.cutSelectedLabels) {
+                m_callbacks.cutSelectedLabels();
+            }
+            event->accept();
+            return true;
+        }
+
+        if (keySequence.matches(QKeySequence::Copy) == QKeySequence::ExactMatch) {
+            if (!isShortcutOverride && !keyEvent->isAutoRepeat() && m_callbacks.copySelectedLabels) {
+                m_callbacks.copySelectedLabels();
+            }
+            event->accept();
+            return true;
+        }
+
+        if (keySequence.matches(QKeySequence::Paste) == QKeySequence::ExactMatch) {
+            if (!isShortcutOverride && !keyEvent->isAutoRepeat() && m_callbacks.pasteLabels) {
+                m_callbacks.pasteLabels();
+            }
+            event->accept();
+            return true;
+        }
+    }
+
     const QKeyCombination nextLabelKey = firstKeyCombination(m_preferences.nextLabelShortcut());
     const QKeyCombination previousLabelKey = withModifiers(nextLabelKey, m_preferences.previousLabelModifiers());
     const QKeyCombination alternatePreviousLabelKey =
@@ -105,7 +142,6 @@ bool MainWindowShortcutController::handleGlobalShortcut(QObject* watched, QEvent
         return true;
     }
 
-    const QKeySequence keySequence(pressedKey);
     if (keySequence.matches(m_preferences.previousPageShortcut()) == QKeySequence::ExactMatch) {
         if (!isShortcutOverride && m_callbacks.selectPreviousPage) {
             m_callbacks.selectPreviousPage();

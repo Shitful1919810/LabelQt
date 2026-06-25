@@ -1,7 +1,9 @@
 #include "ui/MainWindow.h"
 
 #include "services/AutomationOperationApplier.h"
+#include "services/LabelClipboardService.h"
 #include "services/LabelNavigator.h"
+#include "services/LabelPastePlanner.h"
 #include "services/ProjectImageValidator.h"
 #include "services/SessionStateStore.h"
 #include "ui/AutomationController.h"
@@ -26,6 +28,7 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QCloseEvent>
+#include <QClipboard>
 #include <QComboBox>
 #include <QDialog>
 #include <QDir>
@@ -45,6 +48,7 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSet>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
@@ -96,6 +100,9 @@ MainWindow::MainWindow(QWidget* parent)
             selectNextPage();
         },
         [this]() { editCurrentLabelText(); },
+        [this]() { copySelectedLabelsToClipboard(); },
+        [this]() { cutSelectedLabelsToClipboard(); },
+        [this]() { pasteLabelsFromClipboard(); },
     });
     m_automationController = new AutomationController(this, this);
     m_automationController->setPreferences(m_preferences);
@@ -222,6 +229,7 @@ MainWindow::MainWindow(QWidget* parent)
                                                                      tr("Move label"),
                                                                      tr("Delete labels"),
                                                                      tr("Reorder labels"),
+                                                                     tr("Paste labels"),
                                                                      tr("Add group"),
                                                                      tr("Remove group"),
                                                                      tr("Add %1 %2 label %3"),
@@ -230,6 +238,7 @@ MainWindow::MainWindow(QWidget* parent)
                                                                      tr("Change %1 %2 label %3"),
                                                                      tr("Move %1 %2 label %3"),
                                                                      tr("Reorder labels on %1"),
+                                                                     tr("Paste %2 label(s) on %1"),
                                                                      tr("Add group %1"),
                                                                      tr("Remove group %1"),
                                                                  });
@@ -1172,11 +1181,15 @@ void MainWindow::updateGroupFilter(const QStringList& groups)
     }
 
     commitCanvasLabelTextEditor();
+    const QVector<int> previousSelectedIndexes = selectedLabelIndexes();
     m_labelModel->setGroupFilter(groups);
     m_canvas->setVisibleGroups(groups);
     resizeLabelRowsToContents();
 
-    if (m_currentLabelIndex >= 0 && m_labelModel->rowForSourceIndex(m_currentLabelIndex) < 0) {
+    if (!previousSelectedIndexes.isEmpty()) {
+        selectLabelIndexes(previousSelectedIndexes, m_currentLabelIndex);
+    }
+    else if (m_currentLabelIndex >= 0 && m_labelModel->rowForSourceIndex(m_currentLabelIndex) < 0) {
         clearCurrentLabelSelection();
     }
 }
@@ -1262,7 +1275,7 @@ void MainWindow::addLabel(QPointF normalizedPosition)
 
     const QString group =
         m_insertGroupComboBox->currentText().isEmpty() ? QStringLiteral("框内") : m_insertGroupComboBox->currentText();
-    if (!m_groupFilterComboBox->selectedGroups().contains(group)) {
+    if (!isGroupVisibleByFilter(group)) {
         statusBar()->showMessage(tr("The insert group is hidden by the current filter."), 4000);
         return;
     }
@@ -1274,6 +1287,120 @@ void MainWindow::addLabel(QPointF normalizedPosition)
     }
     refreshLabelViews();
     selectLabel(result.selectedLabelIndex);
+}
+
+labelqt::services::ClipboardLabels MainWindow::selectedVisibleClipboardLabels() const
+{
+    const labelqt::core::ImageEntry* image = currentImage();
+    QVector<int> labelIndexes = selectedVisibleLabelIndexes();
+    labelqt::services::ClipboardLabels copiedLabels;
+    if (image == nullptr || labelIndexes.isEmpty()) {
+        return copiedLabels;
+    }
+
+    copiedLabels.sourceImageName = image->name.isEmpty() ? image->path : image->name;
+    copiedLabels.labels.reserve(labelIndexes.size());
+    for (int labelIndex : std::as_const(labelIndexes)) {
+        copiedLabels.labels.append(image->labels.at(labelIndex));
+    }
+    return copiedLabels;
+}
+
+void MainWindow::copySelectedLabelsToClipboard()
+{
+    labelqt::services::ClipboardLabels copiedLabels = selectedVisibleClipboardLabels();
+    if (copiedLabels.labels.isEmpty()) {
+        return;
+    }
+    copiedLabels.pasteBehavior = labelqt::services::ClipboardLabels::PasteBehavior::OffsetOnPaste;
+
+    QApplication::clipboard()->setMimeData(labelqt::services::LabelClipboardService::createMimeData(copiedLabels));
+    statusBar()->showMessage(tr("Copied %n label(s).", nullptr, static_cast<int>(copiedLabels.labels.size())), 3000);
+}
+
+void MainWindow::cutSelectedLabelsToClipboard()
+{
+    if (isProjectEditingBlocked()) {
+        return;
+    }
+
+    labelqt::services::ClipboardLabels cutLabels = selectedVisibleClipboardLabels();
+    const QVector<int> labelIndexes = selectedVisibleLabelIndexes();
+    if (cutLabels.labels.isEmpty() || labelIndexes.isEmpty() || currentImage() == nullptr ||
+        m_labelEditController == nullptr) {
+        return;
+    }
+
+    const labelqt::services::LabelEditResult result =
+        m_labelEditController->deleteLabels(m_currentImageIndex, labelIndexes);
+    if (!result.changed) {
+        return;
+    }
+
+    cutLabels.pasteBehavior = labelqt::services::ClipboardLabels::PasteBehavior::PreservePositionOnPaste;
+    QApplication::clipboard()->setMimeData(labelqt::services::LabelClipboardService::createMimeData(cutLabels));
+    refreshLabelViews();
+    clearCurrentLabelSelection();
+    statusBar()->showMessage(tr("Cut %n label(s).", nullptr, static_cast<int>(cutLabels.labels.size())), 3000);
+}
+
+void MainWindow::pasteLabelsFromClipboard()
+{
+    if (isProjectEditingBlocked()) {
+        return;
+    }
+
+    labelqt::core::ImageEntry* image = currentImage();
+    if (image == nullptr || m_labelEditController == nullptr) {
+        return;
+    }
+
+    labelqt::services::ClipboardLabels clipboardLabels =
+        labelqt::services::LabelClipboardService::readMimeData(QApplication::clipboard()->mimeData());
+    if (clipboardLabels.labels.isEmpty()) {
+        return;
+    }
+
+    const QSet<QString> visibleGroups = visibleGroupSet();
+    clipboardLabels.labels.erase(
+        std::remove_if(clipboardLabels.labels.begin(), clipboardLabels.labels.end(),
+                       [&visibleGroups](const labelqt::core::Label& label) {
+                           return label.isDeleted() || !visibleGroups.contains(label.group());
+                       }),
+        clipboardLabels.labels.end());
+    if (clipboardLabels.labels.isEmpty()) {
+        return;
+    }
+
+    const QString currentImageName = image->name.isEmpty() ? image->path : image->name;
+    const bool sameSourceImage = clipboardLabels.sourceImageName == currentImageName;
+    const labelqt::services::LabelPastePlanner::PasteBehavior pasteBehavior =
+        clipboardLabels.pasteBehavior == labelqt::services::ClipboardLabels::PasteBehavior::PreservePositionOnPaste ||
+                !sameSourceImage
+            ? labelqt::services::LabelPastePlanner::PasteBehavior::PreservePositionOnPaste
+            : labelqt::services::LabelPastePlanner::PasteBehavior::OffsetOnPaste;
+    labelqt::services::LabelPastePlanner::PasteOptions pasteOptions;
+    pasteOptions.behavior = pasteBehavior;
+    if (m_canvas != nullptr) {
+        pasteOptions.anchorPosition = m_canvas->normalizedCursorImagePosition();
+    }
+    QVector<labelqt::core::Label> pastedLabels =
+        labelqt::services::LabelPastePlanner::labelsAdjustedForPaste(clipboardLabels.labels, *image, visibleGroups,
+                                                                     pasteOptions);
+
+    const QVector<int> selectedIndexes = selectedVisibleLabelIndexes();
+    const int insertAfterLabelIndex =
+        selectedIndexes.isEmpty() ? -1 : *std::max_element(selectedIndexes.cbegin(), selectedIndexes.cend());
+    const labelqt::services::LabelEditResult result =
+        m_labelEditController->pasteLabels(m_currentImageIndex, std::move(pastedLabels), insertAfterLabelIndex);
+    if (!result.changed) {
+        return;
+    }
+
+    refreshLabelViews();
+    selectLabelIndexes(result.selectedLabelIndexes, result.selectedLabelIndex);
+    statusBar()->showMessage(tr("Pasted %n label(s).", nullptr, static_cast<int>(result.selectedLabelIndexes.size())),
+                             3000);
 }
 
 void MainWindow::deleteSelectedLabels()
@@ -1958,10 +2085,43 @@ void MainWindow::selectLabelAndCenter(int imageIndex, int labelIndex)
     }
 }
 
+QSet<QString> MainWindow::visibleGroupSet() const
+{
+    if (m_groupFilterComboBox == nullptr) {
+        return {};
+    }
+
+    const QStringList groups = m_groupFilterComboBox->selectedGroups();
+    return QSet<QString>(groups.cbegin(), groups.cend());
+}
+
+bool MainWindow::isGroupVisibleByFilter(const QString& group) const
+{
+    return visibleGroupSet().contains(group);
+}
+
 bool MainWindow::isLabelVisibleByGroupFilter(const labelqt::core::Label& label) const
 {
-    return !label.isDeleted() && m_groupFilterComboBox != nullptr &&
-           m_groupFilterComboBox->selectedGroups().contains(label.group());
+    return !label.isDeleted() && isGroupVisibleByFilter(label.group());
+}
+
+QVector<int> MainWindow::selectedVisibleLabelIndexes() const
+{
+    const labelqt::core::ImageEntry* image = currentImage();
+    const QVector<int> selectedIndexes = selectedLabelIndexes();
+    if (image == nullptr || selectedIndexes.isEmpty()) {
+        return {};
+    }
+
+    QVector<int> visibleIndexes;
+    visibleIndexes.reserve(selectedIndexes.size());
+    for (int labelIndex : selectedIndexes) {
+        if (labelIndex >= 0 && labelIndex < image->labels.size() &&
+            isLabelVisibleByGroupFilter(image->labels.at(labelIndex))) {
+            visibleIndexes.append(labelIndex);
+        }
+    }
+    return visibleIndexes;
 }
 
 QVector<int> MainWindow::selectedLabelIndexes() const

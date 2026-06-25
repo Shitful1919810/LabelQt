@@ -733,6 +733,10 @@ Last error: %2</translation>
         <translation>Reorder labels</translation>
     </message>
     <message>
+        <source>Paste labels</source>
+        <translation>Paste labels</translation>
+    </message>
+    <message>
         <location filename="../src/ui/MainWindow.cpp" line="215"/>
         <source>Add %1 %2 label %3</source>
         <translation>Add %1 %2 label %3</translation>
@@ -761,6 +765,31 @@ Last error: %2</translation>
         <location filename="../src/ui/MainWindow.cpp" line="220"/>
         <source>Reorder labels on %1</source>
         <translation>Reorder labels on %1</translation>
+    </message>
+    <message>
+        <source>Paste %2 label(s) on %1</source>
+        <translation>Paste %2 label(s) on %1</translation>
+    </message>
+    <message numerus="yes">
+        <source>Copied %n label(s).</source>
+        <translation>
+            <numerusform>Copied %n label.</numerusform>
+            <numerusform>Copied %n labels.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Cut %n label(s).</source>
+        <translation>
+            <numerusform>Cut %n label.</numerusform>
+            <numerusform>Cut %n labels.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Pasted %n label(s).</source>
+        <translation>
+            <numerusform>Pasted %n label.</numerusform>
+            <numerusform>Pasted %n labels.</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="221"/>

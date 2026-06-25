@@ -26,6 +26,7 @@ struct LabelEditCommandTexts {
     QString moveLabel;
     QString deleteLabels;
     QString reorderLabels;
+    QString pasteLabels;
     QString addGroup;
     QString removeGroup;
     QString addLabelMessage;
@@ -34,6 +35,7 @@ struct LabelEditCommandTexts {
     QString changeLabelGroupMessage;
     QString moveLabelMessage;
     QString reorderLabelsMessage;
+    QString pasteLabelsMessage;
     QString addGroupMessage;
     QString removeGroupMessage;
 };
@@ -56,6 +58,7 @@ public:
     LabelEditResult addGroup(const QString& group);
     LabelEditResult removeGroup(const QString& group, const QString& fallbackGroup);
     LabelEditResult addLabel(int imageIndex, const labelqt::core::Label& label);
+    LabelEditResult pasteLabels(int imageIndex, QVector<labelqt::core::Label> labels, int insertAfterLabelIndex);
     LabelEditResult deleteLabels(int imageIndex, const QVector<int>& labelIndexes);
     LabelEditResult changeLabelsGroup(int imageIndex, const QVector<int>& labelIndexes, const QString& group);
     LabelEditResult reorderLabels(int imageIndex, QVector<int> sourceIndexes, int insertBeforeSourceIndex);

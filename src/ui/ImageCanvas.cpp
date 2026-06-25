@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QCursor>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
@@ -237,7 +238,7 @@ void ImageCanvas::setSelectedLabels(QVector<int> indexes)
 {
     QSet<int> selectedLabels;
     for (int index : indexes) {
-        if (index >= 0 && index < m_labels.size()) {
+        if (index >= 0 && index < m_labels.size() && isLabelVisible(m_labels.at(index))) {
             selectedLabels.insert(index);
         }
     }
@@ -318,6 +319,25 @@ bool ImageCanvas::hasSelection() const noexcept
 QRectF ImageCanvas::normalizedSelectionRect() const noexcept
 {
     return m_normalizedSelectionRect;
+}
+
+std::optional<QPointF> ImageCanvas::normalizedCursorImagePosition() const
+{
+    if (m_pixmapItem == nullptr) {
+        return std::nullopt;
+    }
+
+    const QPoint viewportPosition = viewport()->mapFromGlobal(QCursor::pos());
+    if (!viewport()->rect().contains(viewportPosition)) {
+        return std::nullopt;
+    }
+
+    const QPointF scenePosition = mapToScene(viewportPosition);
+    if (!m_pixmapItem->contains(scenePosition)) {
+        return std::nullopt;
+    }
+
+    return normalizedPositionFromScene(scenePosition);
 }
 
 void ImageCanvas::setZoomPercent(int percent)

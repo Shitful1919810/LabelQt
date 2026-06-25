@@ -728,6 +728,10 @@ Last error: %2</source>
         <translation>调整标签顺序</translation>
     </message>
     <message>
+        <source>Paste labels</source>
+        <translation>粘贴标签</translation>
+    </message>
+    <message>
         <location filename="../src/ui/MainWindow.cpp" line="215"/>
         <source>Add %1 %2 label %3</source>
         <translation>新增 %1 的 %2 标签 %3</translation>
@@ -756,6 +760,28 @@ Last error: %2</source>
         <location filename="../src/ui/MainWindow.cpp" line="220"/>
         <source>Reorder labels on %1</source>
         <translation>调整 %1 的标签顺序</translation>
+    </message>
+    <message>
+        <source>Paste %2 label(s) on %1</source>
+        <translation>在 %1 粘贴 %2 个标签</translation>
+    </message>
+    <message numerus="yes">
+        <source>Copied %n label(s).</source>
+        <translation>
+            <numerusform>已复制 %n 个标签。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Cut %n label(s).</source>
+        <translation>
+            <numerusform>已剪切 %n 个标签。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Pasted %n label(s).</source>
+        <translation>
+            <numerusform>已粘贴 %n 个标签。</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="221"/>

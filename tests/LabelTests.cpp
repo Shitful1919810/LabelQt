@@ -3,7 +3,10 @@
 #include "core/LabelPlusDocument.h"
 #include "core/Project.h"
 #include "services/AutomationOperationApplier.h"
+#include "services/LabelClipboardService.h"
+#include "services/LabelEditController.h"
 #include "services/LabelNavigator.h"
+#include "services/LabelPastePlanner.h"
 #include "services/PageSourceInfoService.h"
 #include "services/ProjectImageValidator.h"
 #include "services/ProjectMergeService.h"
@@ -19,12 +22,14 @@
 #include <QKeySequence>
 #include <QMimeData>
 #include <QSettings>
+#include <QSet>
 #include <QSignalSpy>
 #include <QTextStream>
 #include <QUuid>
 #include <QtTest/QtTest>
 
 #include <memory>
+#include <optional>
 
 using labelqt::core::Label;
 using labelqt::core::LabelPlusDocument;
@@ -122,6 +127,127 @@ private slots:
         QVERIFY(previous.isValid());
         QCOMPARE(previous.imageIndex, 0);
         QCOMPARE(previous.labelIndex, 1);
+    }
+
+    void labelClipboardRoundTripsLabels()
+    {
+        labelqt::services::ClipboardLabels labels;
+        labels.sourceImageName = QStringLiteral("001.png");
+        labels.pasteBehavior = labelqt::services::ClipboardLabels::PasteBehavior::PreservePositionOnPaste;
+        labels.labels.append(Label(QStringLiteral("hello"), QStringLiteral("框内"), QPointF(0.2, 0.3)));
+        labels.labels.append(Label(QStringLiteral("world"), QStringLiteral("框外"), QPointF(0.7, 0.8)));
+
+        std::unique_ptr<QMimeData> mimeData(labelqt::services::LabelClipboardService::createMimeData(labels));
+        QVERIFY(mimeData->hasFormat(QString::fromLatin1(labelqt::services::LabelClipboardService::mimeType)));
+        QCOMPARE(mimeData->text(), QStringLiteral("hello\n\nworld"));
+
+        const labelqt::services::ClipboardLabels restored =
+            labelqt::services::LabelClipboardService::readMimeData(mimeData.get());
+        QCOMPARE(restored.sourceImageName, QStringLiteral("001.png"));
+        QCOMPARE(restored.pasteBehavior,
+                 labelqt::services::ClipboardLabels::PasteBehavior::PreservePositionOnPaste);
+        QCOMPARE(restored.labels.size(), 2);
+        QCOMPARE(restored.labels.at(0).text(), QStringLiteral("hello"));
+        QCOMPARE(restored.labels.at(0).group(), QStringLiteral("框内"));
+        QCOMPARE(restored.labels.at(0).position(), QPointF(0.2, 0.3));
+        QCOMPARE(restored.labels.at(1).text(), QStringLiteral("world"));
+    }
+
+    void pastedLabelsAreInsertedAfterSelectedLabelAndUndoable()
+    {
+        labelqt::core::Project project;
+        project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
+        project.images().last().labels.append(Label(QStringLiteral("a"), QStringLiteral("框内"), QPointF(0.1, 0.1)));
+        project.images().last().labels.append(Label(QStringLiteral("b"), QStringLiteral("框外"), QPointF(0.2, 0.2)));
+
+        labelqt::core::UndoStack undoStack;
+        QVector<int> selectedIndexes;
+        labelqt::services::LabelEditController controller(
+            project, undoStack,
+            labelqt::services::LabelEditCommandTexts{
+                QStringLiteral("Add"),      QStringLiteral("Edit"),       QStringLiteral("Group"),
+                QStringLiteral("Move"),     QStringLiteral("Delete"),     QStringLiteral("Reorder"),
+                QStringLiteral("Paste"),    QStringLiteral("Add group"),  QStringLiteral("Remove group"),
+                {},                         {},                           {},
+                {},                         {},                           {},
+                {},                         {},                           {}});
+        controller.setCallbacks({}, [&selectedIndexes](int, QVector<int> indexes) { selectedIndexes = indexes; }, {},
+                                {}, {});
+
+        QVector<Label> pastedLabels{
+            Label(QStringLiteral("p1"), QStringLiteral("框内"), QPointF(0.3, 0.3)),
+            Label(QStringLiteral("p2"), QStringLiteral("框外"), QPointF(0.4, 0.4)),
+        };
+        const labelqt::services::LabelEditResult result = controller.pasteLabels(0, pastedLabels, 0);
+
+        QVERIFY(result.changed);
+        QCOMPARE(result.selectedLabelIndexes, QVector<int>({1, 2}));
+        QCOMPARE(project.images().first().labels.size(), 4);
+        QCOMPARE(project.images().first().labels.at(0).text(), QStringLiteral("a"));
+        QCOMPARE(project.images().first().labels.at(1).text(), QStringLiteral("p1"));
+        QCOMPARE(project.images().first().labels.at(2).text(), QStringLiteral("p2"));
+        QCOMPARE(project.images().first().labels.at(3).text(), QStringLiteral("b"));
+
+        undoStack.undo();
+        QCOMPARE(project.images().first().labels.size(), 2);
+        QVERIFY(selectedIndexes.isEmpty());
+
+        undoStack.redo();
+        QCOMPARE(project.images().first().labels.size(), 4);
+        QCOMPARE(selectedIndexes, QVector<int>({1, 2}));
+    }
+
+    void pastedLabelPositionsStayInsideImageBounds()
+    {
+        labelqt::core::ImageEntry image{QStringLiteral("001.png"), {}, {}};
+        image.labels.append(Label(QStringLiteral("existing"), QStringLiteral("框内"), QPointF(0.98, 0.98)));
+        const QVector<Label> labels{
+            Label(QStringLiteral("pasted"), QStringLiteral("框内"), QPointF(0.99, 0.99)),
+        };
+
+        const QVector<Label> adjusted = labelqt::services::LabelPastePlanner::labelsAdjustedForPaste(
+            labels, image, QSet<QString>{QStringLiteral("框内")},
+            {labelqt::services::LabelPastePlanner::PasteBehavior::OffsetOnPaste, std::nullopt});
+
+        QCOMPARE(adjusted.size(), 1);
+        QVERIFY(adjusted.first().position().x() >= 0.0);
+        QVERIFY(adjusted.first().position().x() <= 1.0);
+        QVERIFY(adjusted.first().position().y() >= 0.0);
+        QVERIFY(adjusted.first().position().y() <= 1.0);
+    }
+
+    void cutPastePreservesOriginalPosition()
+    {
+        labelqt::core::ImageEntry image{QStringLiteral("001.png"), {}, {}};
+        image.labels.append(Label(QStringLiteral("existing"), QStringLiteral("框内"), QPointF(0.2, 0.2)));
+        const QVector<Label> labels{
+            Label(QStringLiteral("cut"), QStringLiteral("框内"), QPointF(0.2, 0.2)),
+        };
+
+        const QVector<Label> adjusted = labelqt::services::LabelPastePlanner::labelsAdjustedForPaste(
+            labels, image, QSet<QString>{QStringLiteral("框内")},
+            {labelqt::services::LabelPastePlanner::PasteBehavior::PreservePositionOnPaste, std::nullopt});
+
+        QCOMPARE(adjusted.size(), 1);
+        QCOMPARE(adjusted.first().position(), QPointF(0.2, 0.2));
+    }
+
+    void anchoredPasteMovesLabelsToAnchor()
+    {
+        labelqt::core::ImageEntry image{QStringLiteral("001.png"), {}, {}};
+        const QVector<Label> labels{
+            Label(QStringLiteral("a"), QStringLiteral("框内"), QPointF(0.2, 0.2)),
+            Label(QStringLiteral("b"), QStringLiteral("框内"), QPointF(0.4, 0.4)),
+        };
+
+        const QVector<Label> adjusted = labelqt::services::LabelPastePlanner::labelsAdjustedForPaste(
+            labels, image, QSet<QString>{QStringLiteral("框内")},
+            {labelqt::services::LabelPastePlanner::PasteBehavior::OffsetOnPaste, QPointF(0.6, 0.6)});
+
+        QCOMPARE(adjusted.size(), 2);
+        QCOMPARE(adjusted.at(0).position(), QPointF(0.5, 0.5));
+        QCOMPARE(adjusted.at(1).position(), QPointF(0.7, 0.7));
     }
 
     void appPreferencesLoadsAutomationShortcuts()

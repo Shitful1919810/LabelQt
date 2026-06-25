@@ -728,6 +728,10 @@ Last error: %2</source>
         <translation>ラベルを並べ替え</translation>
     </message>
     <message>
+        <source>Paste labels</source>
+        <translation>ラベルを貼り付け</translation>
+    </message>
+    <message>
         <location filename="../src/ui/MainWindow.cpp" line="215"/>
         <source>Add %1 %2 label %3</source>
         <translation>%1 の %2 ラベル %3 を追加</translation>
@@ -756,6 +760,28 @@ Last error: %2</source>
         <location filename="../src/ui/MainWindow.cpp" line="220"/>
         <source>Reorder labels on %1</source>
         <translation>%1 のラベルを並べ替え</translation>
+    </message>
+    <message>
+        <source>Paste %2 label(s) on %1</source>
+        <translation>%1 に %2 件のラベルを貼り付け</translation>
+    </message>
+    <message numerus="yes">
+        <source>Copied %n label(s).</source>
+        <translation>
+            <numerusform>%n 件のラベルをコピーしました。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Cut %n label(s).</source>
+        <translation>
+            <numerusform>%n 件のラベルを切り取りました。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Pasted %n label(s).</source>
+        <translation>
+            <numerusform>%n 件のラベルを貼り付けました。</numerusform>
+        </translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="221"/>

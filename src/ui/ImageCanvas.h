@@ -13,6 +13,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include <optional>
+
 class QGraphicsItem;
 class QGraphicsRectItem;
 class QGraphicsTextItem;
@@ -61,6 +63,7 @@ public:
     QPoint globalPositionForLabel(int index) const;
     bool hasSelection() const noexcept;
     QRectF normalizedSelectionRect() const noexcept;
+    std::optional<QPointF> normalizedCursorImagePosition() const;
     void setZoomPercent(int percent);
     int zoomPercent() const noexcept;
     QPointF normalizedViewCenter() const;

@@ -18,6 +18,7 @@
 #include <QPersistentModelIndex>
 #include <QPointF>
 #include <QPointer>
+#include <QSet>
 #include <QSize>
 #include <QVariant>
 #include <QVector>
@@ -49,6 +50,10 @@ class MainWindowShortcutController;
 class PageSelectorComboBox;
 class ProjectViewController;
 class ViewportFittedTableColumns;
+
+namespace labelqt::services {
+struct ClipboardLabels;
+}
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -86,6 +91,10 @@ private:
     void selectLabel(int index);
     void selectLabelFromCanvas(int index, Qt::KeyboardModifiers modifiers);
     void addLabel(QPointF normalizedPosition);
+    labelqt::services::ClipboardLabels selectedVisibleClipboardLabels() const;
+    void copySelectedLabelsToClipboard();
+    void cutSelectedLabelsToClipboard();
+    void pasteLabelsFromClipboard();
     void deleteSelectedLabels();
     void changeSelectedLabelsGroup(const QString& group);
     void showLabelContextMenu(const QPoint& position);
@@ -123,7 +132,10 @@ private:
     void editCurrentLabelText();
     void openCanvasLabelTextEditorForCurrentLabel();
     void selectLabelAndCenter(int imageIndex, int labelIndex);
+    QSet<QString> visibleGroupSet() const;
+    bool isGroupVisibleByFilter(const QString& group) const;
     bool isLabelVisibleByGroupFilter(const labelqt::core::Label& label) const;
+    QVector<int> selectedVisibleLabelIndexes() const;
     QVector<int> selectedLabelIndexes() const;
     void selectLabelIndexes(const QVector<int>& sourceIndexes, int primarySourceIndex = -1);
     void refreshProjectUi();

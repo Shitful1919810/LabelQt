@@ -18,7 +18,11 @@ set(LABELQT_SERVICE_SOURCES
     services/AutomationService.cpp
     services/ImagePageCache.cpp
     services/ImagePageCache.h
+    services/LabelClipboardService.cpp
+    services/LabelClipboardService.h
     services/LabelEditController.cpp
+    services/LabelPastePlanner.cpp
+    services/LabelPastePlanner.h
     services/LabelNavigator.cpp
     services/PageSourceInfoService.cpp
     services/ProjectImageValidator.cpp

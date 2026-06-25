@@ -189,6 +189,55 @@ LabelEditResult LabelEditController::addLabel(int imageIndex, const labelqt::cor
     return {true, labelIndex, {}, {labelIndex}};
 }
 
+LabelEditResult LabelEditController::pasteLabels(int imageIndex, QVector<labelqt::core::Label> labels,
+                                                 int insertAfterLabelIndex)
+{
+    labelqt::core::ImageEntry* image = imageAt(imageIndex);
+    if (image == nullptr || labels.isEmpty()) {
+        return {};
+    }
+
+    labels.erase(std::remove_if(labels.begin(), labels.end(),
+                                [this](const labelqt::core::Label& label) {
+                                    return label.isDeleted() || !hasGroup(label.group());
+                                }),
+                 labels.end());
+    if (labels.isEmpty()) {
+        return {};
+    }
+
+    const QVector<labelqt::core::Label> oldLabels = image->labels;
+    int insertIndex = static_cast<int>(image->labels.size());
+    if (insertAfterLabelIndex >= 0 && insertAfterLabelIndex < image->labels.size()) {
+        insertIndex = insertAfterLabelIndex + 1;
+    }
+    insertIndex = std::clamp(insertIndex, 0, static_cast<int>(image->labels.size()));
+
+    QVector<int> selectedIndexes;
+    selectedIndexes.reserve(labels.size());
+    for (int i = 0; i < labels.size(); ++i) {
+        image->labels.insert(insertIndex + i, labels.at(i));
+        selectedIndexes.append(insertIndex + i);
+    }
+    const QVector<labelqt::core::Label> newLabels = image->labels;
+
+    const QString message =
+        m_commandTexts.pasteLabelsMessage.isEmpty()
+            ? m_commandTexts.pasteLabels
+            : QString(m_commandTexts.pasteLabelsMessage)
+                  .arg(imageName(m_project, imageIndex), QString::number(labels.size()));
+    m_undoStack.push(
+        m_commandTexts.pasteLabels,
+        message,
+        message,
+        [this, imageIndex, oldLabels]() { applyLabelOrder(imageIndex, oldLabels, {}); },
+        [this, imageIndex, newLabels, selectedIndexes]() {
+            applyLabelOrder(imageIndex, newLabels, selectedIndexes);
+        });
+    markDirty();
+    return {true, selectedIndexes.last(), selectedIndexes, selectedIndexes};
+}
+
 LabelEditResult LabelEditController::deleteLabels(int imageIndex, const QVector<int>& labelIndexes)
 {
     labelqt::core::ImageEntry* image = imageAt(imageIndex);

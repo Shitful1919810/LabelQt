@@ -19,6 +19,9 @@ public:
         std::function<void()> selectPreviousPage;
         std::function<void()> selectNextPage;
         std::function<void()> editCurrentLabelText;
+        std::function<void()> copySelectedLabels;
+        std::function<void()> cutSelectedLabels;
+        std::function<void()> pasteLabels;
     };
 
     explicit MainWindowShortcutController(QWidget* window, QObject* parent = nullptr);
