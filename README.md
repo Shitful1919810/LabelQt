@@ -92,6 +92,24 @@ cmake --preset linux-release
 cmake --build --preset linux-release
 ```
 
+生成 Linux 原生安装包：
+
+```bash
+cmake --build --preset linux-release --target package
+```
+
+该命令会调用 CPack，根据当前 Linux 环境生成 `.deb` 和 `.rpm`。如果只想生成其中一种格式，可以直接调用
+构建目录里的 CPack 配置：
+
+```bash
+cpack --config build/linux/release/CPackConfig.cmake -G DEB
+cpack --config build/linux/release/CPackConfig.cmake -G RPM
+```
+
+生成 `.deb` 通常需要 `dpkg-dev` / `fakeroot`，生成 `.rpm` 通常需要 `rpm-build`。安装包会包含
+`labelqt` 可执行文件、默认 `preference.json`、官方自动化脚本、空的 `scripts/custom` 目录、桌面入口、
+图标、许可证和第三方声明。Python、OCR 模型与自动化脚本依赖不会被打包进安装包。
+
 ### Windows
 
 默认 Windows preset 使用 Ninja：
@@ -127,6 +145,10 @@ cmake --preset windows-vs-release
 cmake --build --preset windows-vs-release
 cmake --build --preset windows-vs-release --target deploy_windows
 ```
+
+制作 Windows 预编译发布包时，以 `deploy_windows` 生成后的 Release 目录为准，保留 `labelqt.exe`、运行所需
+DLL、Qt 插件目录、`preference.json` 和 `scripts` 目录，去掉测试程序 `LabelQtTests.exe` 与
+`Qt6Test.dll`。仓库根目录的 `LICENSE.txt` 和 `THIRD_PARTY_NOTICES.md` 应随包发布。
 
 实验性 Windows 静态单 exe 构建：
 

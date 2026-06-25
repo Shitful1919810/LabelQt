@@ -11,7 +11,7 @@ CMakeUserPresets.json
 .clangd/
 
 # Generated binaries and packages
-*.AppImage
+dist/
 *.deb
 *.rpm
 

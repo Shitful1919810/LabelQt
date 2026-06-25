@@ -39,3 +39,5 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS AND CMAKE_GENERATOR MATCHES "Ninja|Makefiles")
         VERBATIM
     )
 endif()
+
+include(Packaging)

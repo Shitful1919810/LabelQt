@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=LabelQt
+Comment=LabelPlus manga translation project editor
+Exec=labelqt
+Icon=org.labelqt.LabelQt
+Terminal=false
+Categories=Graphics;Utility;

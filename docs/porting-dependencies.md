@@ -90,11 +90,54 @@ cmake --build --preset windows-vs-release --target deploy_windows
 
 如果使用 vcpkg 或自建 Qt，需确认 CMake 找到的是期望的 Qt 包。动态 Qt 会生成依赖 Qt DLL 的 exe，这是正常情况。
 
+制作 Windows 预编译发布包时，应以 `deploy_windows` 生成后的 Release 目录为基础：
+
+- 保留 `labelqt.exe`、运行所需 DLL、Qt 插件目录、`preference.json`、`scripts/official` 和空的 `scripts/custom`。
+- 删除 `LabelQtTests.exe` 与 `Qt6Test.dll`，它们只属于测试目标。
+- 附带仓库根目录的 `LICENSE.txt` 和 `THIRD_PARTY_NOTICES.md`。
+- 不要把 Qt SDK、Qt 源码、构建缓存、`compile_commands.json`、用户脚本配置或 API key 打进发布包。
+
 仓库还提供 `LabelQtStatic` / `windows-vs-static-release` 等实验目标，但它们只适合本地验证：
 
 - 必须使用真正静态构建的 Qt。
 - QtKeychain、LibArchive 等依赖也需要有静态库，否则仍可能出现额外 DLL。
 - 未做 Qt 许可证审查前，不要把静态单 exe 当作官方发行物。
+
+## Linux DEB/RPM 打包
+
+普通 Linux release 构建生成的是动态链接可执行文件。项目现在使用 CPack 生成 Linux 原生安装包：
+
+```bash
+cmake --build --preset linux-release --target package
+```
+
+该目标会根据 `cmake/Packaging.cmake` 生成 `.deb` 和 `.rpm`。如果只想生成其中一种格式，可以直接调用
+构建目录中的 CPack 配置：
+
+```bash
+cpack --config build/linux/release/CPackConfig.cmake -G DEB
+cpack --config build/linux/release/CPackConfig.cmake -G RPM
+```
+
+打包工具要求：
+
+- `.deb`：通常需要 `dpkg-dev`、`fakeroot`，并依赖 `dpkg-shlibdeps` 自动分析动态库依赖。
+- `.rpm`：通常需要 `rpm-build`。
+
+安装包内容：
+
+- `/usr/bin/labelqt`
+- `/usr/bin/preference.json`
+- `/usr/bin/scripts/official`
+- `/usr/bin/scripts/custom` 空目录
+- `/usr/share/applications/org.labelqt.LabelQt.desktop`
+- `/usr/share/icons/hicolor/scalable/apps/org.labelqt.LabelQt.svg`
+- `/usr/share/doc/labelqt/LICENSE.txt`
+- `/usr/share/doc/labelqt/THIRD_PARTY_NOTICES.md`
+
+DEB/RPM 不会把 Python 解释器、OCR 模型或自动化脚本依赖打包进去；自动化脚本依赖仍由用户按脚本目录中的
+`requirements.txt` 安装。DEB/RPM 也不会捆绑整套 Qt 运行库，实际依赖由目标发行版的包管理器解析和安装。
+因此，最好分别在 Debian/Ubuntu 系和 Fedora/openSUSE 系环境里构建并测试对应格式。
 
 ## 国际化工作流
 

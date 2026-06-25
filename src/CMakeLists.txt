@@ -228,6 +228,22 @@ install(FILES
     DESTINATION bin
 )
 
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../THIRD_PARTY_NOTICES.md"
+    DESTINATION share/doc/labelqt
+)
+
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../resources/linux/org.labelqt.LabelQt.desktop"
+    DESTINATION share/applications
+)
+
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../resources/linux/org.labelqt.LabelQt.svg"
+    DESTINATION share/icons/hicolor/scalable/apps
+)
+
 install(DIRECTORY
     "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/official"
     DESTINATION bin/scripts
@@ -237,4 +253,4 @@ install(DIRECTORY
     PATTERN "config.json" EXCLUDE
 )
 
-install(CODE "file(MAKE_DIRECTORY \"\${CMAKE_INSTALL_PREFIX}/bin/scripts/custom\")")
+install(CODE "file(MAKE_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin/scripts/custom\")")
