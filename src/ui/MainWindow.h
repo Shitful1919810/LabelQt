@@ -226,7 +226,8 @@ private:
     int m_currentImageIndex{-1};
     int m_currentLabelIndex{-1};
     bool m_isUpdatingUi{false};
-    bool m_suppressNextTableCommitSelection{false};
+    bool m_isTableEditorShortcutNavigation{false};
+    int m_suppressedTableCommitSelectionSourceIndex{-1};
     int m_pendingTextEditImageIndex{-1};
     int m_pendingTextEditLabelIndex{-1};
     QString m_pendingTextEditOldText;

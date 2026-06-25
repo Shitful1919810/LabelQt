@@ -11,6 +11,8 @@
 #include <QTextCursor>
 
 namespace {
+constexpr char textEditorCommittedProperty[] = "labelqt.textEditorCommitted";
+
 template <typename T>
 T* selfOrAncestor(QWidget* widget)
 {
@@ -82,6 +84,7 @@ void EditorStateController::commitActive()
         return;
     }
 
+    itemEditor->setProperty(textEditorCommittedProperty, true);
     QMetaObject::invokeMethod(m_labelView, "commitData", Qt::DirectConnection, Q_ARG(QWidget*, itemEditor));
     QMetaObject::invokeMethod(m_labelView, "closeEditor", Qt::DirectConnection, Q_ARG(QWidget*, itemEditor),
                               Q_ARG(QAbstractItemDelegate::EndEditHint, QAbstractItemDelegate::NoHint));

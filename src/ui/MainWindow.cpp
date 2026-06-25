@@ -610,12 +610,15 @@ void MainWindow::createCentralWidget()
     connect(m_nextButton, &QPushButton::clicked, this, &MainWindow::selectNextPage);
     connect(m_labelView->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
             [this](const QModelIndex& current) {
+                if (m_isTableEditorShortcutNavigation) {
+                    return;
+                }
                 if (current.isValid()) {
                     updateCurrentLabelDetails(m_labelModel->sourceIndexForRow(current.row()));
                 }
             });
     connect(m_labelView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this]() {
-        if (m_isUpdatingUi || m_canvas == nullptr) {
+        if (m_isUpdatingUi || m_isTableEditorShortcutNavigation || m_canvas == nullptr) {
             return;
         }
         const QVector<int> labelIndexes = selectedLabelIndexes();
@@ -1585,10 +1588,8 @@ void MainWindow::updateLabelFromTable(int sourceIndex, int column, QVariant newV
         refreshLabelViews();
     }
 
-    if (m_suppressNextTableCommitSelection) {
-        m_suppressNextTableCommitSelection = false;
-    }
-    else {
+    const bool commitStillTargetsCurrentSelection = m_currentLabelIndex < 0 || sourceIndex == m_currentLabelIndex;
+    if (commitStillTargetsCurrentSelection && sourceIndex != m_suppressedTableCommitSelectionSourceIndex) {
         selectLabel(sourceIndex);
     }
 }
@@ -1849,8 +1850,45 @@ void MainWindow::selectAdjacentVisibleLabelFromShortcut(bool previous)
     const int navigationLabelIndex = m_currentLabelIndex;
     const bool suppressTableCommitSelection = textInputMode == EditorStateController::Mode::TableTextEditor;
 
+    if (suppressTableCommitSelection && !project().isEmpty() && m_groupFilterComboBox != nullptr) {
+        const labelqt::services::LabelNavigationTarget target =
+            previous ? labelqt::services::LabelNavigator::previousVisibleLabel(
+                           project(), {navigationImageIndex, navigationLabelIndex, m_groupFilterComboBox->selectedGroups()})
+                     : labelqt::services::LabelNavigator::nextVisibleLabel(
+                           project(), {navigationImageIndex, navigationLabelIndex, m_groupFilterComboBox->selectedGroups()});
+        if (!target.isValid()) {
+            commitActiveTextInput();
+            return;
+        }
+
+        m_suppressedTableCommitSelectionSourceIndex = navigationLabelIndex;
+        m_isTableEditorShortcutNavigation = true;
+        commitActiveTextInput();
+        QTimer::singleShot(0, this, [this, target]() {
+            if (target.imageIndex < 0 || target.imageIndex >= project().images().size()) {
+                m_suppressedTableCommitSelectionSourceIndex = -1;
+                m_isTableEditorShortcutNavigation = false;
+                return;
+            }
+            const labelqt::core::ImageEntry& image = project().images().at(target.imageIndex);
+            if (target.labelIndex < 0 || target.labelIndex >= image.labels.size() ||
+                !isLabelVisibleByGroupFilter(image.labels.at(target.labelIndex))) {
+                m_suppressedTableCommitSelectionSourceIndex = -1;
+                m_isTableEditorShortcutNavigation = false;
+                return;
+            }
+            selectLabelAndCenter(target.imageIndex, target.labelIndex);
+            editCurrentLabelText();
+            QTimer::singleShot(0, this, [this]() {
+                m_suppressedTableCommitSelectionSourceIndex = -1;
+                m_isTableEditorShortcutNavigation = false;
+            });
+        });
+        return;
+    }
+
     if (suppressTableCommitSelection) {
-        m_suppressNextTableCommitSelection = true;
+        m_suppressedTableCommitSelectionSourceIndex = navigationLabelIndex;
     }
     commitActiveTextInput();
     if (previous) {
@@ -1864,7 +1902,7 @@ void MainWindow::selectAdjacentVisibleLabelFromShortcut(bool previous)
                                                         currentImage() != nullptr && m_currentLabelIndex >= 0);
     }
     if (suppressTableCommitSelection) {
-        QTimer::singleShot(0, this, [this]() { m_suppressNextTableCommitSelection = false; });
+        QTimer::singleShot(0, this, [this]() { m_suppressedTableCommitSelectionSourceIndex = -1; });
     }
 }
 

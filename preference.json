@@ -8,13 +8,13 @@
         "python": {
             "arguments": [
             ],
-            "autoInstallRequirements": true,
+            "autoInstallRequirements": false,
             "command": "",
             "pipIndexUrl": ""
         },
         "shortcuts": {
         },
-        "showRunLog": true
+        "showRunLog": false
     },
     "backupIntervalSeconds": 200,
     "backupPath": "bak",

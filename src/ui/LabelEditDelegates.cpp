@@ -21,6 +21,16 @@ namespace {
 constexpr int groupPopupDelayMs = 120;
 constexpr int maximumPreviewTextLines = 4;
 constexpr int textCellVerticalPadding = 8;
+constexpr char textEditorCommittedProperty[] = "labelqt.textEditorCommitted";
+
+bool markEditorCommitted(QPlainTextEdit* editor)
+{
+    if (editor == nullptr || editor->property(textEditorCommittedProperty).toBool()) {
+        return false;
+    }
+    editor->setProperty(textEditorCommittedProperty, true);
+    return true;
+}
 
 int textEditorHeightHint(QPlainTextEdit* editor)
 {
@@ -141,8 +151,10 @@ bool LabelTextDelegate::eventFilter(QObject* object, QEvent* event)
     }
 
     if (event->type() == QEvent::FocusOut) {
-        emit commitData(editor);
-        emit closeEditor(editor);
+        if (markEditorCommitted(editor)) {
+            emit commitData(editor);
+            emit closeEditor(editor);
+        }
         return false;
     }
 
@@ -150,8 +162,10 @@ bool LabelTextDelegate::eventFilter(QObject* object, QEvent* event)
         const auto* keyEvent = static_cast<QKeyEvent*>(event);
         const QKeySequence pressedKey(keyEvent->keyCombination());
         if (pressedKey.matches(m_commitShortcut) == QKeySequence::ExactMatch) {
-            emit commitData(editor);
-            emit closeEditor(editor);
+            if (markEditorCommitted(editor)) {
+                emit commitData(editor);
+                emit closeEditor(editor);
+            }
             return true;
         }
         if (keyEvent->key() == Qt::Key_Escape) {
