@@ -11,6 +11,7 @@
 #include <QStringList>
 #include <QVector>
 
+#include <expected>
 #include <memory>
 
 class QTemporaryDir;
@@ -102,8 +103,11 @@ struct AutomationRunResult {
 class AutomationService final {
 public:
     static QVector<AutomationScript> discoverScripts(QStringList* warnings = nullptr);
+    static std::expected<void, QString> tryStoreParameterSecrets(const AutomationScript& script,
+                                                                 const QMap<QString, QString>& secrets);
     static bool storeParameterSecrets(const AutomationScript& script, const QMap<QString, QString>& secrets,
                                       QString* error);
+    static std::expected<QMap<QString, QString>, QString> trySecretEnvironment(const AutomationScript& script);
     static bool secretEnvironment(const AutomationScript& script, QMap<QString, QString>* environment, QString* error);
 
 private:

@@ -67,7 +67,7 @@ Qt GRPC、Qt HTTP Server、Qt MQTT、Qt Virtual Keyboard、Qt Wayland Compositor
 
 - CMake 3.24 或更高版本。
 - Ninja，或 Windows 上的 Visual Studio 2022 生成器。
-- 支持 C++20 的编译器。
+- 支持 C++23 的编译器。
 - Qt 6.5 或更高版本，至少需要 Qt Core、Gui、Widgets；建议安装 Qt Svg 以完整显示内置 Breeze 主题图标；开发翻译资源时还需要 Qt Linguist Tools。
 - QtKeychain，用于通过系统密钥环保存自动化脚本所需的 API key 等敏感信息。
 - LibArchive 为可选依赖，用于扩展压缩包读取格式。

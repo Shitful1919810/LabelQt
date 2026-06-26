@@ -2,12 +2,14 @@
 #include "core/Label.h"
 #include "core/LabelPlusDocument.h"
 #include "core/Project.h"
+#include "services/AutomationManifestParser.h"
 #include "services/AutomationOperationApplier.h"
 #include "services/LabelClipboardService.h"
 #include "services/LabelEditController.h"
 #include "services/LabelNavigator.h"
 #include "services/LabelPastePlanner.h"
 #include "services/PageSourceInfoService.h"
+#include "services/ProjectController.h"
 #include "services/ProjectImageValidator.h"
 #include "services/ProjectMergeService.h"
 #include "services/ProjectPageOrderService.h"
@@ -19,6 +21,7 @@
 #include <QAbstractItemModelTester>
 #include <QDir>
 #include <QFile>
+#include <QJsonObject>
 #include <QKeySequence>
 #include <QMimeData>
 #include <QSettings>
@@ -28,6 +31,7 @@
 #include <QUuid>
 #include <QtTest/QtTest>
 
+#include <expected>
 #include <memory>
 #include <optional>
 
@@ -143,6 +147,9 @@ private slots:
 
         const labelqt::services::ClipboardLabels restored =
             labelqt::services::LabelClipboardService::readMimeData(mimeData.get());
+        const std::expected<labelqt::services::ClipboardLabels, QString> expectedRestored =
+            labelqt::services::LabelClipboardService::tryReadMimeData(mimeData.get());
+        QVERIFY(expectedRestored.has_value());
         QCOMPARE(restored.sourceImageName, QStringLiteral("001.png"));
         QCOMPARE(restored.pasteBehavior,
                  labelqt::services::ClipboardLabels::PasteBehavior::PreservePositionOnPaste);
@@ -151,6 +158,22 @@ private slots:
         QCOMPARE(restored.labels.at(0).group(), QStringLiteral("框内"));
         QCOMPARE(restored.labels.at(0).position(), QPointF(0.2, 0.3));
         QCOMPARE(restored.labels.at(1).text(), QStringLiteral("world"));
+    }
+
+    void labelClipboardReportsInvalidData()
+    {
+        QMimeData mimeData;
+        mimeData.setData(QString::fromLatin1(labelqt::services::LabelClipboardService::mimeType),
+                         QByteArrayLiteral("{not-json"));
+
+        const std::expected<labelqt::services::ClipboardLabels, QString> restored =
+            labelqt::services::LabelClipboardService::tryReadMimeData(&mimeData);
+        QVERIFY(!restored.has_value());
+        QVERIFY(restored.error().contains(QStringLiteral("not valid JSON")));
+
+        const labelqt::services::ClipboardLabels fallback =
+            labelqt::services::LabelClipboardService::readMimeData(&mimeData);
+        QVERIFY(fallback.labels.isEmpty());
     }
 
     void pastedLabelsAreInsertedAfterSelectedLabelAndUndoable()
@@ -268,6 +291,18 @@ private slots:
         QCOMPARE(result.preferences.automationShortcuts().value(QStringLiteral("official:test:word_count")),
                  QKeySequence(QStringLiteral("Ctrl+Alt+W")));
         QCOMPARE(result.warnings.size(), 2);
+    }
+
+    void automationManifestRejectsInvalidOperationsOutput()
+    {
+        QJsonObject output;
+        output.insert(QStringLiteral("operations"), QStringLiteral("not-an-array"));
+
+        const std::expected<labelqt::services::AutomationRunResult, QString> result =
+            labelqt::services::AutomationManifestParser::tryResultFromOutput(output);
+
+        QVERIFY(!result.has_value());
+        QVERIFY(result.error().contains(QStringLiteral("operations")));
     }
 
     void automationOperationApplierAddsLabelsWithUndo()
@@ -457,6 +492,28 @@ private slots:
         QCOMPARE(missingImages.first().imageIndex, 1);
         QCOMPARE(missingImages.first().imageName, QStringLiteral("002.png"));
         QCOMPARE(missingImages.first().imagePath, QDir(dirPath).filePath(QStringLiteral("002.png")));
+    }
+
+    void projectControllerExpectedInterfacesReportSkippedAndNoImages()
+    {
+        const QString dirPath = QDir::temp().filePath(QStringLiteral("labelqt_project_controller_expected_test"));
+        QDir directory(dirPath);
+        if (directory.exists()) {
+            directory.removeRecursively();
+        }
+        QVERIFY(QDir().mkpath(dirPath));
+
+        labelqt::services::ProjectController controller;
+        const std::expected<QString, labelqt::services::NewProjectError> newProject =
+            controller.tryCreateProjectFromImageDirectory(dirPath, QStringLiteral("translation"),
+                                                          {QStringLiteral("框内"), QStringLiteral("框外")}, false);
+        QVERIFY(!newProject.has_value());
+        QCOMPARE(newProject.error().code, labelqt::services::NewProjectError::Code::NoImages);
+
+        const std::expected<std::optional<QString>, QString> backup =
+            controller.tryPerformAutoBackup(labelqt::core::AppPreferences{});
+        QVERIFY(backup.has_value());
+        QVERIFY(!backup->has_value());
     }
 
     void imageCanvasCtrlClickMarkerEmitsMultiSelectClickWhenCtrlMovesMarker()

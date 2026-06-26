@@ -2,6 +2,8 @@
 
 #include "core/Label.h"
 
+#include <expected>
+
 #include <QString>
 #include <QVector>
 
@@ -25,6 +27,7 @@ public:
     static constexpr const char* mimeType = "application/x-labelqt-labels";
 
     static QMimeData* createMimeData(const ClipboardLabels& labels);
+    static std::expected<ClipboardLabels, QString> tryReadMimeData(const QMimeData* mimeData);
     static ClipboardLabels readMimeData(const QMimeData* mimeData);
 };
 

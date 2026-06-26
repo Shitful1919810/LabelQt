@@ -7,7 +7,9 @@
 #include <QFileInfo>
 #include <QImageReader>
 
+#include <expected>
 #include <exception>
+#include <optional>
 #include <utility>
 
 namespace labelqt::services {
@@ -78,16 +80,15 @@ void ProjectController::saveAs(const QString& path)
     save();
 }
 
-NewProjectResult ProjectController::createProjectFromImageDirectory(const QString& directoryPath,
-                                                                    const QString& projectBaseName,
-                                                                    const QStringList& defaultGroups,
-                                                                    bool useNextAvailableName)
+std::expected<QString, NewProjectError> ProjectController::tryCreateProjectFromImageDirectory(
+    const QString& directoryPath, const QString& projectBaseName, const QStringList& defaultGroups,
+    bool useNextAvailableName)
 {
     QDir directory(directoryPath);
     const QFileInfoList imageFiles =
         directory.entryInfoList(supportedImageNameFilters(), QDir::Files | QDir::Readable, QDir::Name);
     if (imageFiles.isEmpty()) {
-        return {NewProjectResult::Status::NoImages, {}, {}, {}};
+        return std::unexpected(NewProjectError{NewProjectError::Code::NoImages, {}, {}});
     }
 
     labelqt::core::Project newProject;
@@ -104,7 +105,8 @@ NewProjectResult ProjectController::createProjectFromImageDirectory(const QStrin
     QString projectPath = defaultProjectPath;
     if (QFileInfo::exists(defaultProjectPath)) {
         if (!useNextAvailableName) {
-            return {NewProjectResult::Status::ProjectFileExists, {}, QFileInfo(defaultProjectPath).fileName(), {}};
+            return std::unexpected(
+                NewProjectError{NewProjectError::Code::ProjectFileExists, QFileInfo(defaultProjectPath).fileName(), {}});
         }
         projectPath = availableProjectPath(directory, projectBaseName);
     }
@@ -112,11 +114,33 @@ NewProjectResult ProjectController::createProjectFromImageDirectory(const QStrin
 
     try {
         labelqt::core::LabelPlusDocument::saveToFile(newProject, projectPath);
-        return {NewProjectResult::Status::Created, projectPath, {}, {}};
+        return projectPath;
     }
     catch (const std::exception& error) {
-        return {NewProjectResult::Status::Failed, {}, {}, QString::fromUtf8(error.what())};
+        return std::unexpected(NewProjectError{NewProjectError::Code::Failed, {}, QString::fromUtf8(error.what())});
     }
+}
+
+NewProjectResult ProjectController::createProjectFromImageDirectory(const QString& directoryPath,
+                                                                    const QString& projectBaseName,
+                                                                    const QStringList& defaultGroups,
+                                                                    bool useNextAvailableName)
+{
+    const std::expected<QString, NewProjectError> result =
+        tryCreateProjectFromImageDirectory(directoryPath, projectBaseName, defaultGroups, useNextAvailableName);
+    if (result.has_value()) {
+        return {NewProjectResult::Status::Created, *result, {}, {}};
+    }
+
+    switch (result.error().code) {
+    case NewProjectError::Code::NoImages:
+        return {NewProjectResult::Status::NoImages, {}, {}, {}};
+    case NewProjectError::Code::ProjectFileExists:
+        return {NewProjectResult::Status::ProjectFileExists, {}, result.error().existingFileName, {}};
+    case NewProjectError::Code::Failed:
+        return {NewProjectResult::Status::Failed, {}, {}, result.error().message};
+    }
+    return {NewProjectResult::Status::Failed, {}, {}, {}};
 }
 
 bool ProjectController::isDirty() const noexcept
@@ -138,10 +162,11 @@ void ProjectController::markDirty() noexcept
     setDirty(true);
 }
 
-AutoBackupResult ProjectController::performAutoBackup(const labelqt::core::AppPreferences& preferences)
+std::expected<std::optional<QString>, QString> ProjectController::tryPerformAutoBackup(
+    const labelqt::core::AppPreferences& preferences)
 {
     if (!m_hasPendingBackup || !m_isDirty || m_project.isEmpty() || m_project.filePath().isEmpty()) {
-        return {};
+        return std::optional<QString>{};
     }
 
     const QFileInfo projectInfo(m_project.filePath());
@@ -153,7 +178,7 @@ AutoBackupResult ProjectController::performAutoBackup(const labelqt::core::AppPr
                                             : projectInfo.absoluteDir().filePath(configuredBackupPath);
     QDir backupDirectory(backupDirectoryPath);
     if (!backupDirectory.exists() && !QDir().mkpath(backupDirectory.absolutePath())) {
-        return {AutoBackupResult::Status::Failed, {}, backupDirectory.absolutePath()};
+        return std::unexpected(backupDirectory.absolutePath());
     }
 
     const QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss"));
@@ -169,11 +194,23 @@ AutoBackupResult ProjectController::performAutoBackup(const labelqt::core::AppPr
     try {
         labelqt::core::LabelPlusDocument::saveToFile(m_project, backupPath);
         m_hasPendingBackup = false;
-        return {AutoBackupResult::Status::Saved, backupPath, {}};
+        return backupPath;
     }
     catch (const std::exception& error) {
-        return {AutoBackupResult::Status::Failed, {}, QString::fromUtf8(error.what())};
+        return std::unexpected(QString::fromUtf8(error.what()));
     }
+}
+
+AutoBackupResult ProjectController::performAutoBackup(const labelqt::core::AppPreferences& preferences)
+{
+    const std::expected<std::optional<QString>, QString> result = tryPerformAutoBackup(preferences);
+    if (!result.has_value()) {
+        return {AutoBackupResult::Status::Failed, {}, result.error()};
+    }
+    if (!result->has_value()) {
+        return {};
+    }
+    return {AutoBackupResult::Status::Saved, **result, {}};
 }
 
 } // namespace labelqt::services

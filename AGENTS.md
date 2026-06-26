@@ -36,6 +36,8 @@ cmake -E env CCACHE_DISABLE=1 ctest --preset linux-debug
 ## Required Conventions
 
 - Follow `CONTRIBUTING.md` and `docs/architecture.md`.
+- Commit messages should be written in Chinese using the repository `.gitmessage.txt` structure: title, background,
+  changes, verification, and risk notes. Do not leave empty template sections in the final commit message.
 - Never run `clang-format` on CMake files such as `CMakeLists.txt` or `CMakePresets.json`; format CMake changes manually to match the existing style.
 - New user-visible UI text must use `tr()`.
 - When adding or changing `tr()` strings, update `translations/labelqt_zh_CN.ts`, `translations/labelqt_zh_TW.ts`, `translations/labelqt_ja_JP.ts` and `translations/labelqt_en_US.ts`.

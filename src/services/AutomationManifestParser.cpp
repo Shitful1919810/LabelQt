@@ -3,6 +3,8 @@
 #include <QJsonArray>
 #include <QJsonValue>
 
+#include <expected>
+
 namespace labelqt::services::AutomationManifestParser {
 namespace {
 QString stringFromJsonValue(const QJsonValue& value)
@@ -115,6 +117,23 @@ QMap<QString, QString> environmentFromManifest(const QJsonObject& manifest)
 
 AutomationRunResult resultFromOutput(const QJsonObject& output)
 {
+    AutomationRunResult result;
+    const std::expected<AutomationRunResult, QString> parsed = tryResultFromOutput(output);
+    if (parsed.has_value()) {
+        return *parsed;
+    }
+
+    result.success = false;
+    result.error = parsed.error();
+    return result;
+}
+
+std::expected<AutomationRunResult, QString> tryResultFromOutput(const QJsonObject& output)
+{
+    if (output.contains(QStringLiteral("operations")) && !output.value(QStringLiteral("operations")).isArray()) {
+        return std::unexpected(QStringLiteral("Automation output field \"operations\" must be an array."));
+    }
+
     AutomationRunResult result;
     result.success = true;
     result.summary = output.value(QStringLiteral("summary")).toString();

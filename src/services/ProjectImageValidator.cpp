@@ -2,6 +2,8 @@
 
 #include <QFileInfo>
 
+#include <ranges>
+
 namespace labelqt::services {
 
 QVector<MissingProjectImage> ProjectImageValidator::missingImages(const labelqt::core::Project& project)
@@ -10,7 +12,7 @@ QVector<MissingProjectImage> ProjectImageValidator::missingImages(const labelqt:
     const QVector<labelqt::core::ImageEntry>& images = project.images();
     missingImages.reserve(images.size());
 
-    for (int i = 0; i < images.size(); ++i) {
+    for (int i : std::views::iota(0, static_cast<int>(images.size()))) {
         const labelqt::core::ImageEntry& image = images.at(i);
         const QFileInfo fileInfo(image.path);
         if (fileInfo.exists() && fileInfo.isFile()) {

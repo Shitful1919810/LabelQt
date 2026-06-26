@@ -8,6 +8,7 @@ qt_add_executable(LabelQtTests
     ../src/core/Label.cpp
     ../src/core/Project.cpp
     ../src/core/UndoStack.cpp
+    ../src/services/AutomationManifestParser.cpp
     ../src/services/AutomationOperationApplier.cpp
     ../src/services/LabelClipboardService.cpp
     ../src/services/LabelEditController.cpp
@@ -15,6 +16,7 @@ qt_add_executable(LabelQtTests
     ../src/services/LabelNavigator.cpp
     ../src/services/PageSourceInfoService.cpp
     ../src/services/ProjectImageValidator.cpp
+    ../src/services/ProjectController.cpp
     ../src/services/ProjectMergeService.cpp
     ../src/services/ProjectPageOrderService.cpp
     ../src/services/SessionStateStore.cpp

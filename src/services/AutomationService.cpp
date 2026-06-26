@@ -18,6 +18,8 @@
 #include <QTimer>
 
 #include <algorithm>
+#include <expected>
+#include <optional>
 #include <utility>
 
 namespace labelqt::services {
@@ -367,8 +369,8 @@ QVector<AutomationScript> AutomationService::discoverScripts(QStringList* warnin
     return scripts;
 }
 
-bool AutomationService::storeParameterSecrets(const AutomationScript& script, const QMap<QString, QString>& secrets,
-                                              QString* error)
+std::expected<void, QString> AutomationService::tryStoreParameterSecrets(const AutomationScript& script,
+                                                                         const QMap<QString, QString>& secrets)
 {
     for (const AutomationParameter& parameter : script.parameters) {
         if (parameter.type.compare(QStringLiteral("secret"), Qt::CaseInsensitive) != 0 ||
@@ -376,17 +378,54 @@ bool AutomationService::storeParameterSecrets(const AutomationScript& script, co
             continue;
         }
 
-        const SecretStoreWriteResult result = SecretStore::writeText(parameter.secretService, parameter.secretAccount,
-                                                                     secrets.value(parameter.secretKey));
-        if (!result.success) {
-            if (error != nullptr) {
-                *error = QCoreApplication::translate("AutomationService", "Failed to store automation secret %1: %2")
-                             .arg(parameter.label, result.error);
-            }
-            return false;
+        const std::expected<void, QString> result = SecretStore::tryWriteText(parameter.secretService,
+                                                                             parameter.secretAccount,
+                                                                             secrets.value(parameter.secretKey));
+        if (!result.has_value()) {
+            return std::unexpected(
+                QCoreApplication::translate("AutomationService", "Failed to store automation secret %1: %2")
+                    .arg(parameter.label, result.error()));
         }
     }
-    return true;
+    return {};
+}
+
+bool AutomationService::storeParameterSecrets(const AutomationScript& script, const QMap<QString, QString>& secrets,
+                                              QString* error)
+{
+    const std::expected<void, QString> result = tryStoreParameterSecrets(script, secrets);
+    if (result.has_value()) {
+        return true;
+    }
+    if (error != nullptr) {
+        *error = result.error();
+    }
+    return false;
+}
+
+std::expected<QMap<QString, QString>, QString> AutomationService::trySecretEnvironment(const AutomationScript& script)
+{
+    QMap<QString, QString> environment;
+    for (const AutomationSecret& secret : script.secrets) {
+        const std::expected<std::optional<QString>, QString> result =
+            SecretStore::tryReadText(secret.service, secret.account);
+        if (!result.has_value()) {
+            return std::unexpected(
+                QCoreApplication::translate("AutomationService", "Failed to read automation secret %1: %2")
+                    .arg(secret.label, result.error()));
+        }
+        if (!result->has_value() || result->value().isEmpty()) {
+            if (secret.required) {
+                return std::unexpected(QCoreApplication::translate(
+                                           "AutomationService",
+                                           "Automation secret %1 is not configured. Run the script's configuration first.")
+                                           .arg(secret.label));
+            }
+            continue;
+        }
+        environment.insert(secret.environment, result->value());
+    }
+    return environment;
 }
 
 bool AutomationService::secretEnvironment(const AutomationScript& script, QMap<QString, QString>* environment,
@@ -395,30 +434,16 @@ bool AutomationService::secretEnvironment(const AutomationScript& script, QMap<Q
     if (environment != nullptr) {
         environment->clear();
     }
-    for (const AutomationSecret& secret : script.secrets) {
-        const SecretStoreReadResult result = SecretStore::readText(secret.service, secret.account);
-        if (!result.error.isEmpty()) {
-            if (error != nullptr) {
-                *error = QCoreApplication::translate("AutomationService", "Failed to read automation secret %1: %2")
-                             .arg(secret.label, result.error);
-            }
-            return false;
+
+    const std::expected<QMap<QString, QString>, QString> result = trySecretEnvironment(script);
+    if (!result.has_value()) {
+        if (error != nullptr) {
+            *error = result.error();
         }
-        if (!result.found || result.value.isEmpty()) {
-            if (secret.required) {
-                if (error != nullptr) {
-                    *error = QCoreApplication::translate(
-                                 "AutomationService",
-                                 "Automation secret %1 is not configured. Run the script's configuration first.")
-                                 .arg(secret.label);
-                }
-                return false;
-            }
-            continue;
-        }
-        if (environment != nullptr) {
-            environment->insert(secret.environment, result.value);
-        }
+        return false;
+    }
+    if (environment != nullptr) {
+        *environment = *result;
     }
     return true;
 }
@@ -620,7 +645,14 @@ void AutomationRunner::handleFinished(int exitCode, QProcess::ExitStatus exitSta
         return;
     }
 
-    AutomationRunResult result = AutomationManifestParser::resultFromOutput(output);
+    std::expected<AutomationRunResult, QString> parsedResult = AutomationManifestParser::tryResultFromOutput(output);
+    if (!parsedResult.has_value()) {
+        m_lastFailure.error = parsedResult.error();
+        finishWithResult(m_lastFailure);
+        return;
+    }
+
+    AutomationRunResult result = *parsedResult;
     result.standardOutput = m_lastFailure.standardOutput;
     result.standardError = m_lastFailure.standardError;
     finishWithResult(result);

@@ -4,7 +4,7 @@ LabelQt is an independent C++/Qt 6 LabelPlus text project editor. Keep changes a
 
 ## Code Style
 
-- Use C++20 and Qt 6 Widgets.
+- Use C++23 and Qt 6 Widgets.
 - Class names use `PascalCase`.
 - Functions use `camelCase`.
 - Member variables use the `m_` prefix.
@@ -105,6 +105,18 @@ ctest --preset linux-debug
 scripts/check_translations.sh
 ```
 
+For quick pre-commit checks:
+
+```bash
+scripts/check_fast.sh
+```
+
+For the full local check set:
+
+```bash
+scripts/check_all.sh
+```
+
 For Qt model/view or widget interaction changes:
 
 - Add `QAbstractItemModelTester` coverage for new or changed `QAbstractItemModel` classes when practical.
@@ -119,3 +131,17 @@ cmake -E env CCACHE_DISABLE=1 cmake --preset linux-debug
 cmake -E env CCACHE_DISABLE=1 cmake --build --preset linux-debug
 cmake -E env CCACHE_DISABLE=1 ctest --preset linux-debug
 ```
+
+## Commit Messages
+
+Commit messages should be written in Chinese and follow the repository template in `.gitmessage.txt`. Use a
+Conventional Commits-style title, and keep the body sections `背景`、`改动`、`验证`、`风险` when they are relevant.
+
+To enable it locally:
+
+```bash
+git config commit.template .gitmessage.txt
+```
+
+Use the title to summarize the change, then keep the background, changes, verification and risk notes accurate. Remove
+empty template sections before committing.

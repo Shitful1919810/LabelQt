@@ -3,6 +3,9 @@
 #include "core/AppPreferences.h"
 #include "core/Project.h"
 
+#include <expected>
+#include <optional>
+
 #include <QString>
 #include <QStringList>
 
@@ -34,6 +37,18 @@ struct NewProjectResult {
     QString error;
 };
 
+struct NewProjectError {
+    enum class Code {
+        NoImages,
+        ProjectFileExists,
+        Failed,
+    };
+
+    Code code{Code::Failed};
+    QString existingFileName;
+    QString message;
+};
+
 class ProjectController {
 public:
     labelqt::core::Project& project() noexcept;
@@ -43,6 +58,10 @@ public:
     void loadFromFile(const QString& path);
     void save();
     void saveAs(const QString& path);
+    std::expected<QString, NewProjectError> tryCreateProjectFromImageDirectory(const QString& directoryPath,
+                                                                               const QString& projectBaseName,
+                                                                               const QStringList& defaultGroups,
+                                                                               bool useNextAvailableName);
     NewProjectResult createProjectFromImageDirectory(const QString& directoryPath, const QString& projectBaseName,
                                                      const QStringList& defaultGroups, bool useNextAvailableName);
 
@@ -50,6 +69,8 @@ public:
     void setDirty(bool dirty) noexcept;
     void markDirty() noexcept;
 
+    std::expected<std::optional<QString>, QString> tryPerformAutoBackup(
+        const labelqt::core::AppPreferences& preferences);
     AutoBackupResult performAutoBackup(const labelqt::core::AppPreferences& preferences);
 
 private:

@@ -7,6 +7,8 @@
 
 #include <QFileInfo>
 
+#include <expected>
+
 namespace labelqt::services {
 
 #ifdef LABELQT_HAS_LIBARCHIVE
@@ -30,6 +32,11 @@ bool ArchiveReader::isAvailable() noexcept
 
 QStringList ArchiveReader::listImages(const QString& archivePath) const
 {
+    return tryListImages(archivePath).value_or(QStringList{});
+}
+
+std::expected<QStringList, QString> ArchiveReader::tryListImages(const QString& archivePath) const
+{
     QStringList images;
 
 #ifdef LABELQT_HAS_LIBARCHIVE
@@ -50,10 +57,17 @@ QStringList ArchiveReader::listImages(const QString& archivePath) const
             archive_read_data_skip(reader);
         }
     }
+    else {
+        const char* archiveError = archive_error_string(reader);
+        const QString error = archiveError == nullptr ? QString() : QString::fromUtf8(archiveError);
+        archive_read_free(reader);
+        return std::unexpected(error.isEmpty() ? QStringLiteral("Failed to open archive.") : error);
+    }
 
     archive_read_free(reader);
 #else
     Q_UNUSED(archivePath)
+    return std::unexpected(QStringLiteral("LibArchive support is not available in this build."));
 #endif
 
     images.sort(Qt::CaseInsensitive);

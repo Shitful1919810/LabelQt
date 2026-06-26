@@ -85,8 +85,10 @@ QVector<labelqt::core::Label> LabelPastePlanner::labelsAdjustedForPaste(
     const QVector<labelqt::core::Label>& labels, const labelqt::core::ImageEntry& image,
     const QSet<QString>& visibleGroups, PasteOptions options)
 {
-    if (options.anchorPosition.has_value()) {
-        return shiftedLabels(labels, *options.anchorPosition - labelGroupCenter(labels));
+    const std::optional<QPointF> anchorShift =
+        options.anchorPosition.transform([&labels](const QPointF& anchor) { return anchor - labelGroupCenter(labels); });
+    if (anchorShift.has_value()) {
+        return shiftedLabels(labels, *anchorShift);
     }
 
     if (options.behavior == PasteBehavior::PreservePositionOnPaste) {

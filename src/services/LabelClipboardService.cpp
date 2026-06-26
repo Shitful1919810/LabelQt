@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QMimeData>
 
+#include <expected>
 #include <optional>
 
 namespace labelqt::services {
@@ -94,24 +95,32 @@ QMimeData* LabelClipboardService::createMimeData(const ClipboardLabels& labels)
     return mimeData;
 }
 
-ClipboardLabels LabelClipboardService::readMimeData(const QMimeData* mimeData)
+std::expected<ClipboardLabels, QString> LabelClipboardService::tryReadMimeData(const QMimeData* mimeData)
 {
-    ClipboardLabels result;
     if (mimeData == nullptr || !mimeData->hasFormat(QString::fromLatin1(mimeType))) {
-        return result;
+        return std::unexpected(QStringLiteral("Clipboard does not contain LabelQt label data."));
     }
 
-    const QJsonDocument document = QJsonDocument::fromJson(mimeData->data(QString::fromLatin1(mimeType)));
+    QJsonParseError parseError;
+    const QJsonDocument document =
+        QJsonDocument::fromJson(mimeData->data(QString::fromLatin1(mimeType)), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        return std::unexpected(
+            QStringLiteral("Clipboard label data is not valid JSON: %1").arg(parseError.errorString()));
+    }
     if (!document.isObject()) {
-        return result;
+        return std::unexpected(QStringLiteral("Clipboard label data root must be a JSON object."));
     }
 
     const QJsonObject root = document.object();
-    if (root.value(QString(formatKey)).toString() != QString(labelQtLabelsFormat) ||
-        root.value(QString(versionKey)).toInt() != currentVersion) {
-        return result;
+    if (root.value(QString(formatKey)).toString() != QString(labelQtLabelsFormat)) {
+        return std::unexpected(QStringLiteral("Clipboard label data has an unsupported format."));
+    }
+    if (root.value(QString(versionKey)).toInt() != currentVersion) {
+        return std::unexpected(QStringLiteral("Clipboard label data has an unsupported version."));
     }
 
+    ClipboardLabels result;
     result.sourceImageName = root.value(QString(sourceImageKey)).toString();
     result.pasteBehavior = pasteBehaviorFromString(root.value(QString(pasteBehaviorKey)).toString());
     const QJsonArray labelArray = root.value(QString(labelsKey)).toArray();
@@ -123,6 +132,11 @@ ClipboardLabels LabelClipboardService::readMimeData(const QMimeData* mimeData)
     }
 
     return result;
+}
+
+ClipboardLabels LabelClipboardService::readMimeData(const QMimeData* mimeData)
+{
+    return tryReadMimeData(mimeData).value_or(ClipboardLabels{});
 }
 
 } // namespace labelqt::services

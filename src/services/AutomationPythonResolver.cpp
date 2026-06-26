@@ -29,7 +29,7 @@ void appendPythonCommand(QVector<AutomationPythonCommand>* commands, const QStri
     command.program = program.trimmed();
     command.arguments = arguments;
     command.displayText = commandDisplayText(command.program, command.arguments);
-    const auto duplicate = std::find_if(commands->cbegin(), commands->cend(), [&command](const auto& candidate) {
+    const auto duplicate = std::ranges::find_if(*commands, [&command](const auto& candidate) {
         return candidate.program == command.program && candidate.arguments == command.arguments;
     });
     if (duplicate == commands->cend()) {

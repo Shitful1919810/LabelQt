@@ -1,0 +1,43 @@
+# 标题格式参考 Conventional Commits：
+# <type>(<scope>): <一句话概括>
+#
+# 常用 type：
+#   feat      新功能
+#   fix       Bug 修复
+#   refactor  重构，不改变用户可见行为
+#   perf      性能优化
+#   docs      文档
+#   test      测试
+#   build     构建、打包、依赖
+#   chore     维护性杂项
+#
+# 示例：
+# feat(automation): 增加自动化脚本快捷键配置
+# fix(canvas): 修复 marker 拖动后误触发画面平移
+# refactor(services): 将工程保存结果迁移到 std::expected
+#
+# 标题建议不超过 72 个字符。标题与正文之间保留一个空行。
+
+<type>(<scope>): <一句话概括本次改动>
+
+背景:
+# 说明为什么需要这次改动。删除本行注释，保留实际内容。
+-
+
+改动:
+# 概括关键实现，不要逐个罗列文件名。删除本行注释，保留实际内容。
+-
+
+验证:
+# 勾选或列出实际执行过的命令。删除未执行项。
+- [ ] `scripts/check_fast.sh`
+- [ ] `scripts/check_all.sh`
+- [ ] 其他：
+
+风险:
+# 记录兼容性、平台差异、未验证项或迁移注意事项。没有风险可写“无”。
+-
+
+# Footer 可选。需要时取消注释：
+# BREAKING CHANGE: <不兼容变更说明>
+# Closes: #<issue-id>
