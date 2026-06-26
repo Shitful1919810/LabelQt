@@ -156,6 +156,7 @@ void ImageCanvas::setImage(const QString& path, const QImage& image, const QVect
     }
 
     m_pixmapItem = m_scene.addPixmap(QPixmap::fromImage(image));
+    m_pixmapItem->setTransformationMode(Qt::SmoothTransformation);
     m_scene.setSceneRect(m_pixmapItem->boundingRect());
     rebuildLabelItems();
 
