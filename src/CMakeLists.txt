@@ -30,6 +30,8 @@ set(LABELQT_SERVICE_SOURCES
     services/ProjectMergeService.cpp
     services/ProjectController.cpp
     services/ProjectWorkflowController.cpp
+    services/SaveChangesDecision.cpp
+    services/SaveChangesDecision.h
     services/SessionStateStore.cpp
     services/SecretStore.cpp
 )

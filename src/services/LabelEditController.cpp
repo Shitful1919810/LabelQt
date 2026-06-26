@@ -709,7 +709,8 @@ void LabelEditController::applyBatchLabelDeleted(int imageIndex, QVector<int> la
         return;
     }
 
-    int lastRestoredIndex = -1;
+    QVector<int> restoredIndexes;
+    restoredIndexes.reserve(labelIndexes.size());
     for (int i = 0; i < labelIndexes.size(); ++i) {
         const int labelIndex = labelIndexes.at(i);
         if (labelIndex < 0 || labelIndex >= image->labels.size()) {
@@ -717,12 +718,15 @@ void LabelEditController::applyBatchLabelDeleted(int imageIndex, QVector<int> la
         }
         image->labels[labelIndex].setDeleted(deleted.at(i));
         if (!deleted.at(i)) {
-            lastRestoredIndex = labelIndex;
+            restoredIndexes.append(labelIndex);
         }
     }
 
-    if (lastRestoredIndex >= 0 && m_labelSelected) {
-        m_labelSelected(imageIndex, lastRestoredIndex);
+    if (!restoredIndexes.isEmpty() && m_labelsSelected) {
+        m_labelsSelected(imageIndex, restoredIndexes);
+    }
+    else if (!restoredIndexes.isEmpty() && m_labelSelected) {
+        m_labelSelected(imageIndex, restoredIndexes.last());
     }
     else if (m_imageSelectionCleared) {
         m_imageSelectionCleared(imageIndex);

@@ -5,6 +5,7 @@
 #include "services/LabelNavigator.h"
 #include "services/LabelPastePlanner.h"
 #include "services/ProjectImageValidator.h"
+#include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
 #include "ui/AutomationController.h"
 #include "ui/AutomationShortcutController.h"
@@ -2871,15 +2872,17 @@ bool MainWindow::promptToSaveIfDirty()
                                  tr("The current project has unsaved changes. Do you want to save them?"),
                                  QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
 
-    if (result == QMessageBox::Cancel) {
-        return false;
-    }
-
-    if (result == QMessageBox::Save) {
+    const labelqt::services::SaveChangesChoice choice =
+        result == QMessageBox::Save      ? labelqt::services::SaveChangesChoice::Save
+        : result == QMessageBox::Discard ? labelqt::services::SaveChangesChoice::Discard
+                                         : labelqt::services::SaveChangesChoice::Cancel;
+    const labelqt::services::SaveChangesAction action =
+        labelqt::services::SaveChangesDecision::actionForChoice(choice);
+    if (action == labelqt::services::SaveChangesAction::SaveThenContinue) {
         return saveProject();
     }
 
-    return true;
+    return action == labelqt::services::SaveChangesAction::ContinueWithoutSaving;
 }
 
 void MainWindow::updateWindowTitle()

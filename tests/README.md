@@ -38,11 +38,13 @@ python scripts/check_all.py windows-vs-debug
 - 标签导航与筛选：
   - 跨页切换可见标签。
   - group 筛选对导航结果的影响。
+  - group 筛选变化后，当前选择会自动剔除已被过滤隐藏的 label。
 
 - 标签剪贴板与粘贴规划：
   - LabelQt 自定义剪贴板 MIME 数据往返。
   - 剪贴板 JSON 损坏时的错误路径。
   - 粘贴插入位置和 undo/redo。
+  - 剪切、粘贴后的 undo/redo 选择状态恢复。
   - 批量移动标签的 undo/redo 和选择恢复。
   - 粘贴坐标边界 clamp。
   - 剪切粘贴保留原坐标。
@@ -57,6 +59,7 @@ python scripts/check_all.py windows-vs-debug
 - 自动化脚本服务：
   - 自动化 output 中 `quiet`、`result` 和 `operations` 字段的正常解析。
   - 自动化 output 中非法 `operations` 字段的错误路径。
+  - 自动化 runner 在 Python 命令不可用时返回失败结果，而不是悬挂或崩溃。
   - 自动化操作 `addLabel`、`setLabelText`、`setLabelPosition`、`deleteLabel` 的计划与撤销。
 
 - Qt Model/View：
@@ -68,11 +71,12 @@ python scripts/check_all.py windows-vs-debug
   - 最近页面、缩放、中心点和多选标签状态持久化。
 
 - 工程与页面服务：
+  - 保存确认/关闭流程中的“保存、放弃、取消”决策映射。
   - 缺失图片扫描。
   - `ProjectController` expected 风格接口的空目录和跳过备份路径。
   - 工程合并的无冲突页、冲突页和最终页序应用。
   - 合并来源 comment 的区间解析。
-  - 页面顺序服务的重排。
+  - 页面顺序服务的重排，以及重排后来源信息仍按图片名跟随页面。
 
 - 图像画布交互：
   - `Ctrl+点击 marker` 触发多选点击。

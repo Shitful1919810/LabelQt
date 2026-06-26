@@ -4,6 +4,7 @@
 #include "core/Project.h"
 #include "services/AutomationManifestParser.h"
 #include "services/AutomationOperationApplier.h"
+#include "services/AutomationService.h"
 #include "services/LabelClipboardService.h"
 #include "services/LabelEditController.h"
 #include "services/LabelNavigator.h"
@@ -13,8 +14,10 @@
 #include "services/ProjectImageValidator.h"
 #include "services/ProjectMergeService.h"
 #include "services/ProjectPageOrderService.h"
+#include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
 #include "ui/ImageCanvas.h"
+#include "ui/LabelSelectionController.h"
 #include "ui/LabelTableModel.h"
 #include "ui/PageOrderListModel.h"
 
@@ -29,7 +32,10 @@
 #include <QSettings>
 #include <QSet>
 #include <QSignalSpy>
+#include <QTableView>
 #include <QTextStream>
+#include <QTemporaryDir>
+#include <QTimer>
 #include <QUuid>
 #include <QtTest/QtTest>
 
@@ -157,6 +163,19 @@ private slots:
         QCOMPARE(previous.labelIndex, 1);
     }
 
+    void saveChangesDecisionMapsPromptChoices()
+    {
+        using labelqt::services::SaveChangesAction;
+        using labelqt::services::SaveChangesChoice;
+        using labelqt::services::SaveChangesDecision;
+
+        QCOMPARE(SaveChangesDecision::actionForChoice(SaveChangesChoice::Save),
+                 SaveChangesAction::SaveThenContinue);
+        QCOMPARE(SaveChangesDecision::actionForChoice(SaveChangesChoice::Discard),
+                 SaveChangesAction::ContinueWithoutSaving);
+        QCOMPARE(SaveChangesDecision::actionForChoice(SaveChangesChoice::Cancel), SaveChangesAction::Cancel);
+    }
+
     void labelClipboardRoundTripsLabels()
     {
         labelqt::services::ClipboardLabels labels;
@@ -235,6 +254,60 @@ private slots:
         undoStack.redo();
         QCOMPARE(project.images().first().labels.size(), 4);
         QCOMPARE(selectedIndexes, QVector<int>({1, 2}));
+    }
+
+    void cutPasteUndoRedoRestoresSelectionState()
+    {
+        labelqt::core::Project project;
+        project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
+        project.images().last().labels.append(Label(QStringLiteral("a"), QStringLiteral("框内"), QPointF(0.1, 0.1)));
+        project.images().last().labels.append(Label(QStringLiteral("b"), QStringLiteral("框外"), QPointF(0.2, 0.2)));
+        project.images().last().labels.append(Label(QStringLiteral("c"), QStringLiteral("框内"), QPointF(0.3, 0.3)));
+
+        labelqt::core::UndoStack undoStack;
+        QVector<int> selectedIndexes;
+        int clearedImageIndex = -1;
+        labelqt::services::LabelEditController controller(project, undoStack, testCommandTexts());
+        controller.setCallbacks({}, [&selectedIndexes](int, QVector<int> indexes) { selectedIndexes = indexes; },
+                                [&clearedImageIndex, &selectedIndexes](int imageIndex) {
+                                    clearedImageIndex = imageIndex;
+                                    selectedIndexes.clear();
+                                },
+                                {}, {});
+
+        QVector<Label> cutLabels{
+            project.images().first().labels.at(0),
+            project.images().first().labels.at(1),
+        };
+        labelqt::services::LabelEditResult deleteResult = controller.deleteLabels(0, {0, 1});
+        QVERIFY(deleteResult.changed);
+        QVERIFY(project.images().first().labels.at(0).isDeleted());
+        QVERIFY(project.images().first().labels.at(1).isDeleted());
+
+        undoStack.undo();
+        QCOMPARE(selectedIndexes, QVector<int>({0, 1}));
+        QVERIFY(!project.images().first().labels.at(0).isDeleted());
+        QVERIFY(!project.images().first().labels.at(1).isDeleted());
+
+        undoStack.redo();
+        QCOMPARE(clearedImageIndex, 0);
+        QVERIFY(project.images().first().labels.at(0).isDeleted());
+        QVERIFY(project.images().first().labels.at(1).isDeleted());
+
+        labelqt::services::LabelEditResult pasteResult = controller.pasteLabels(0, cutLabels, 2);
+        QVERIFY(pasteResult.changed);
+        QCOMPARE(pasteResult.selectedLabelIndexes, QVector<int>({3, 4}));
+        QCOMPARE(project.images().first().labels.at(3).text(), QStringLiteral("a"));
+        QCOMPARE(project.images().first().labels.at(4).text(), QStringLiteral("b"));
+
+        undoStack.undo();
+        QVERIFY(selectedIndexes.isEmpty());
+        QCOMPARE(project.images().first().labels.size(), 3);
+
+        undoStack.redo();
+        QCOMPARE(project.images().first().labels.size(), 5);
+        QCOMPARE(selectedIndexes, QVector<int>({3, 4}));
     }
 
     void batchMoveLabelsIsUndoableAndRestoresSelection()
@@ -387,6 +460,50 @@ private slots:
         QCOMPARE(parsed->operations.first().text, QStringLiteral("translated"));
     }
 
+    void automationRunnerReportsMissingPythonAsFailure()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+
+        const QString scriptPath = directory.filePath(QStringLiteral("script.py"));
+        QFile scriptFile(scriptPath);
+        QVERIFY(scriptFile.open(QIODevice::WriteOnly | QIODevice::Text));
+        scriptFile.write("print('should not run')\n");
+        scriptFile.close();
+
+        labelqt::services::AutomationScript script;
+        script.id = QStringLiteral("test:missing-python");
+        script.name = QStringLiteral("Missing Python");
+        script.directoryPath = directory.path();
+        script.entryPath = scriptPath;
+
+        labelqt::core::Project project;
+        labelqt::services::AutomationPythonSettings pythonSettings;
+        pythonSettings.command = directory.filePath(QStringLiteral("definitely_missing_python"));
+
+        labelqt::services::AutomationRunner runner;
+        bool finished = false;
+        labelqt::services::AutomationRunResult result;
+        connect(&runner, &labelqt::services::AutomationRunner::finished, this,
+                [&finished, &result](const labelqt::services::AutomationRunResult& runResult) {
+                    result = runResult;
+                    finished = true;
+                });
+
+        runner.start(script, project, -1, {}, {}, {}, {}, pythonSettings);
+        if (!finished) {
+            QEventLoop loop;
+            connect(&runner, &labelqt::services::AutomationRunner::finished, &loop, &QEventLoop::quit);
+            QTimer::singleShot(5000, &loop, &QEventLoop::quit);
+            loop.exec();
+        }
+
+        QVERIFY(finished);
+        QVERIFY(!result.success);
+        QVERIFY(!result.error.isEmpty());
+        QVERIFY(result.error.contains(QStringLiteral("Python")) || result.error.contains(QStringLiteral("Failed")));
+    }
+
     void automationOperationApplierAddsLabelsWithUndo()
     {
         labelqt::core::Project project;
@@ -491,6 +608,50 @@ private slots:
         QCOMPARE(model.sourceIndexForRow(0), 1);
         QCOMPARE(model.rowForSourceIndex(0), -1);
         QCOMPARE(model.rowForSourceIndex(1), 0);
+    }
+
+    void groupFilterSelectionDropsHiddenLabels()
+    {
+        labelqt::core::ImageEntry image{QStringLiteral("001.png"), {}, {}};
+        image.labels.append(Label(QStringLiteral("inside"), QStringLiteral("框内"), {0.2, 0.3}));
+        image.labels.append(Label(QStringLiteral("outside"), QStringLiteral("框外"), {0.4, 0.5}));
+        image.labels.append(Label(QStringLiteral("inside 2"), QStringLiteral("框内"), {0.6, 0.7}));
+
+        LabelTableModel model;
+        model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
+        model.setLabels(&image.labels);
+        model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
+
+        QTableView tableView;
+        tableView.setModel(&model);
+        ImageCanvas canvas;
+        canvas.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+        canvas.setVisibleGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+        canvas.setImage(QStringLiteral("test.png"), QImage(200, 200, QImage::Format_ARGB32_Premultiplied),
+                        image.labels);
+
+        LabelSelectionController controller;
+        QVector<int> detailsUpdates;
+        controller.setWidgets(&model, &tableView, &canvas);
+        controller.setCallbacks(
+            [&image, &detailsUpdates](int sourceIndex) {
+                const bool valid = sourceIndex >= 0 && sourceIndex < image.labels.size();
+                if (valid) {
+                    detailsUpdates.append(sourceIndex);
+                }
+                return valid;
+            },
+            []() {}, {}, {});
+
+        QVERIFY(controller.selectIndexes(image, {0, 1}, 1));
+        QCOMPARE(controller.selectedLabelIndexes(), QVector<int>({0, 1}));
+
+        const QVector<int> previousSelectedIndexes = controller.selectedLabelIndexes();
+        model.setGroupFilter({QStringLiteral("框内")});
+        canvas.setVisibleGroups({QStringLiteral("框内")});
+        QVERIFY(controller.selectIndexes(image, previousSelectedIndexes, 1));
+        QCOMPARE(controller.selectedLabelIndexes(), QVector<int>({0}));
+        QCOMPARE(detailsUpdates.last(), 0);
     }
 
     void labelTableModelEditRequestsDoNotMutateLabelsDirectly()
@@ -988,6 +1149,54 @@ private slots:
         QVERIFY(project.commentLines().at(1).contains(QStringLiteral("\"firstImage\":\"003.png\"")));
         QVERIFY(project.commentLines().at(2).contains(QStringLiteral("\"firstImage\":\"001.png\"")));
         QVERIFY(project.commentLines().at(2).contains(QStringLiteral("\"lastImage\":\"001.png\"")));
+    }
+
+    void projectPageOrderServiceKeepsSourcesAttachedToImageNames()
+    {
+        labelqt::core::Project project;
+        const QString dirPath = QDir::temp().filePath("labelqt_page_order_sources_test");
+        QDir().mkpath(dirPath);
+        project.setFilePath(QDir(dirPath).filePath("merged.txt"));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("002.png"), {}, {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("003.png"), {}, {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("004.png"), {}, {}});
+        project.setCommentLines({
+            QStringLiteral("# ordinary comment"),
+            QStringLiteral("# LabelQtMergeSources v2"),
+            QStringLiteral(
+                "# {\"firstImage\":\"001.png\",\"lastImage\":\"002.png\",\"sourceIndex\":1,\"sourcePath\":\"a.txt\"}"),
+            QStringLiteral(
+                "# {\"firstImage\":\"003.png\",\"lastImage\":\"004.png\",\"sourceIndex\":2,\"sourcePath\":\"b.txt\"}"),
+            QStringLiteral("# EndLabelQtMergeSources"),
+        });
+
+        labelqt::services::ProjectPageOrderService::reorderImages(project, {2, 0, 3, 1});
+
+        QCOMPARE(project.images().at(0).name, QStringLiteral("003.png"));
+        QCOMPARE(project.images().at(1).name, QStringLiteral("001.png"));
+        QCOMPARE(project.images().at(2).name, QStringLiteral("004.png"));
+        QCOMPARE(project.images().at(3).name, QStringLiteral("002.png"));
+
+        const auto sources = labelqt::services::PageSourceInfoService::sourcesForProject(project);
+        QCOMPARE(sources.value(QStringLiteral("001.png")).sourceIndex, 1);
+        QCOMPARE(sources.value(QStringLiteral("002.png")).sourceIndex, 1);
+        QCOMPARE(sources.value(QStringLiteral("003.png")).sourceIndex, 2);
+        QCOMPARE(sources.value(QStringLiteral("004.png")).sourceIndex, 2);
+        QCOMPARE(sources.value(QStringLiteral("001.png")).sourcePath, QDir(dirPath).filePath(QStringLiteral("a.txt")));
+        QCOMPARE(sources.value(QStringLiteral("003.png")).sourcePath, QDir(dirPath).filePath(QStringLiteral("b.txt")));
+        QCOMPARE(project.commentLines().first(), QStringLiteral("# ordinary comment"));
+        QStringList sourceLines;
+        for (const QString& line : project.commentLines()) {
+            if (line.contains(QStringLiteral("\"firstImage\""))) {
+                sourceLines.append(line);
+            }
+        }
+        QCOMPARE(sourceLines.size(), 4);
+        QVERIFY(sourceLines.at(0).contains(QStringLiteral("\"firstImage\":\"003.png\"")));
+        QVERIFY(sourceLines.at(1).contains(QStringLiteral("\"firstImage\":\"001.png\"")));
+        QVERIFY(sourceLines.at(2).contains(QStringLiteral("\"firstImage\":\"004.png\"")));
+        QVERIFY(sourceLines.at(3).contains(QStringLiteral("\"firstImage\":\"002.png\"")));
     }
 
     void labelPlusDocumentPreservesCommentLines()
