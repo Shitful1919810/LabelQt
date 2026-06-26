@@ -16,6 +16,7 @@
 #include <optional>
 
 class QGraphicsItem;
+class QGraphicsOpacityEffect;
 class QGraphicsRectItem;
 class QGraphicsTextItem;
 class QLabel;
@@ -99,7 +100,7 @@ private:
     void rebuildLabelItems();
     void applyZoom();
     void updateScenePadding();
-    void setZoomPercentAt(int percent, QPoint viewportAnchor);
+    void setZoomPercentAt(int percent, QPointF sceneAnchor, QPointF globalAnchor);
     void notifyViewportStateChanged();
     bool isLabelVisible(const labelqt::core::Label& label) const;
     bool hasMoveLabelModifiers(Qt::KeyboardModifiers modifiers) const;
@@ -126,6 +127,7 @@ private:
     QGraphicsRectItem* m_selectionItem{nullptr};
     QGraphicsTextItem* m_statusTextItem{nullptr};
     QLabel* m_hoverToolTip{nullptr};
+    QGraphicsOpacityEffect* m_hoverOpacityEffect{nullptr};
     QVector<labelqt::core::Label> m_labels;
     QVector<QGraphicsItem*> m_labelItems;
     QString m_imagePath;
@@ -152,6 +154,8 @@ private:
     QVector<int> m_movingLabelIndexes;
     QVector<QPointF> m_movingLabelStartPositions;
     QPointF m_movingLabelAnchorStartPosition;
+    std::optional<QPointF> m_wheelZoomSceneAnchor;
+    QPointF m_wheelZoomGlobalAnchor;
     QPoint m_labelCreatePressPosition;
     QPoint m_labelSelectPressPosition;
     QPoint m_emptyClickPressPosition;

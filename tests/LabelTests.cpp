@@ -37,6 +37,7 @@
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QUuid>
+#include <QWheelEvent>
 #include <QtTest/QtTest>
 
 #include <expected>
@@ -952,6 +953,53 @@ private slots:
         QCOMPARE(singleMoveSpy.first().at(0).toInt(), 1);
         const QPointF movedPosition = singleMoveSpy.first().at(1).toPointF();
         QVERIFY(movedPosition.x() > 0.6);
+    }
+
+    void imageCanvasWheelZoomKeepsScenePointUnderCursor()
+    {
+        ImageCanvas canvas;
+        canvas.resize(640, 480);
+        canvas.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&canvas));
+
+        canvas.setGroups({QStringLiteral("框内")});
+        canvas.setVisibleGroups({QStringLiteral("框内")});
+        canvas.setImage(QStringLiteral("test.png"), QImage(400, 400, QImage::Format_ARGB32_Premultiplied), {});
+        canvas.setZoomPercent(100);
+        connect(&canvas, &ImageCanvas::zoomPercentChanged, &canvas, &ImageCanvas::setZoomPercent);
+
+        const QVector<QPointF> anchors{
+            QPointF(480.0, 300.0),
+            QPointF(80.0, 80.0),
+            QPointF(560.0, 390.0),
+        };
+        for (const QPointF& anchor : anchors) {
+            canvas.setZoomPercent(100);
+            const QPointF sceneBefore = canvas.mapToScene(anchor.toPoint());
+            for (int i = 0; i < 18; ++i) {
+                QWheelEvent event(anchor, canvas.viewport()->mapToGlobal(anchor.toPoint()), QPoint(), QPoint(0, 120),
+                                  Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+                QApplication::sendEvent(canvas.viewport(), &event);
+            }
+            const QPointF sceneAfter = canvas.mapToScene(anchor.toPoint());
+
+            const QPointF drift = sceneAfter - sceneBefore;
+            QVERIFY2(std::abs(drift.x()) < 1.0,
+                     qPrintable(QStringLiteral("anchor: %1,%2 x drift: %3, before: %4, after: %5")
+                                    .arg(anchor.x())
+                                    .arg(anchor.y())
+                                    .arg(drift.x())
+                                    .arg(sceneBefore.x())
+                                    .arg(sceneAfter.x())));
+            QVERIFY2(std::abs(drift.y()) < 1.0,
+                     qPrintable(QStringLiteral("anchor: %1,%2 y drift: %3, before: %4, after: %5")
+                                    .arg(anchor.x())
+                                    .arg(anchor.y())
+                                    .arg(drift.y())
+                                    .arg(sceneBefore.y())
+                                    .arg(sceneAfter.y())));
+            QCOMPARE(canvas.zoomPercent(), 280);
+        }
     }
 
     void projectMergeUsesSingleInvolvedPageAutomatically()

@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCursor>
+#include <QGraphicsOpacityEffect>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
@@ -38,7 +39,7 @@ ImageCanvas::ImageCanvas(QWidget* parent) : QGraphicsView(parent)
     setScene(&m_scene);
     setDragMode(QGraphicsView::ScrollHandDrag);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-    setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+    setTransformationAnchor(QGraphicsView::NoAnchor);
     setResizeAnchor(QGraphicsView::AnchorViewCenter);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -47,8 +48,7 @@ ImageCanvas::ImageCanvas(QWidget* parent) : QGraphicsView(parent)
     connect(horizontalScrollBar(), &QScrollBar::valueChanged, this, &ImageCanvas::notifyViewportStateChanged);
     connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &ImageCanvas::notifyViewportStateChanged);
 
-    m_hoverToolTip = new QLabel(this, Qt::ToolTip);
-    m_hoverToolTip->setAttribute(Qt::WA_ShowWithoutActivating);
+    m_hoverToolTip = new QLabel(this);
     m_hoverToolTip->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_hoverToolTip->setTextFormat(Qt::RichText);
     m_hoverToolTip->setMargin(6);
@@ -58,6 +58,9 @@ ImageCanvas::ImageCanvas(QWidget* parent) : QGraphicsView(parent)
                                                  "border: 1px solid palette(mid);"
                                                  "border-radius: 3px;"
                                                  "}"));
+    m_hoverOpacityEffect = new QGraphicsOpacityEffect(m_hoverToolTip);
+    m_hoverOpacityEffect->setOpacity(1.0);
+    m_hoverToolTip->setGraphicsEffect(m_hoverOpacityEffect);
     m_hoverToolTip->hide();
 }
 
@@ -114,7 +117,9 @@ void ImageCanvas::setPreferences(const labelqt::core::AppPreferences& preference
     m_markerDiameterPixels = preferences.labelMarkerDiameterPixels();
     m_markerFontPointSize = preferences.labelMarkerFontPointSize();
     m_textBubbleOpacity = preferences.markerTextBubbleOpacity();
-    m_hoverToolTip->setWindowOpacity(m_textBubbleOpacity);
+    if (m_hoverOpacityEffect != nullptr) {
+        m_hoverOpacityEffect->setOpacity(std::clamp(m_textBubbleOpacity, 0.0, 1.0));
+    }
     m_textBubbleFont = QApplication::font();
     if (!preferences.markerTextBubbleFontFamily().isEmpty()) {
         m_textBubbleFont.setFamily(preferences.markerTextBubbleFontFamily());
@@ -135,6 +140,7 @@ void ImageCanvas::setImage(const QString& path, const QVector<labelqt::core::Lab
 void ImageCanvas::setImage(const QString& path, const QImage& image, const QVector<labelqt::core::Label>& labels)
 {
     hideHoveredLabelToolTip();
+    m_wheelZoomSceneAnchor.reset();
     m_imagePath = path;
     m_labels = labels;
     for (auto it = m_selectedLabels.begin(); it != m_selectedLabels.end();) {
@@ -172,6 +178,7 @@ void ImageCanvas::setImage(const QString& path, const QImage& image, const QVect
 void ImageCanvas::setImageLoading(const QString& path, const QVector<labelqt::core::Label>& labels)
 {
     hideHoveredLabelToolTip();
+    m_wheelZoomSceneAnchor.reset();
     m_imagePath = path;
     m_labels = labels;
     m_selectedLabels.clear();
@@ -352,8 +359,14 @@ std::optional<QPointF> ImageCanvas::normalizedCursorImagePosition() const
 
 void ImageCanvas::setZoomPercent(int percent)
 {
+    percent = std::clamp(percent, 10, 400);
+    if (m_zoomPercent == percent) {
+        return;
+    }
+
     m_hasUserZoom = true;
-    m_zoomPercent = std::clamp(percent, 10, 400);
+    m_wheelZoomSceneAnchor.reset();
+    m_zoomPercent = percent;
     applyZoom();
     notifyViewportStateChanged();
 }
@@ -379,6 +392,7 @@ void ImageCanvas::restoreView(int zoomPercent, QPointF normalizedCenter)
     }
 
     m_hasUserZoom = true;
+    m_wheelZoomSceneAnchor.reset();
     m_zoomPercent = std::clamp(zoomPercent, 10, 400);
     applyZoom();
 
@@ -683,7 +697,13 @@ void ImageCanvas::mouseReleaseEvent(QMouseEvent* event)
 void ImageCanvas::wheelEvent(QWheelEvent* event)
 {
     const int step = event->angleDelta().y() > 0 ? 10 : -10;
-    setZoomPercentAt(m_zoomPercent + step, event->position().toPoint());
+    const QPointF globalAnchor = event->globalPosition();
+    if (!m_wheelZoomSceneAnchor.has_value() ||
+        (globalAnchor - m_wheelZoomGlobalAnchor).manhattanLength() > 1.0) {
+        m_wheelZoomSceneAnchor = mapToScene(event->position().toPoint());
+        m_wheelZoomGlobalAnchor = globalAnchor;
+    }
+    setZoomPercentAt(m_zoomPercent + step, *m_wheelZoomSceneAnchor, globalAnchor);
     emit zoomPercentChanged(m_zoomPercent);
     event->accept();
 }
@@ -766,7 +786,7 @@ void ImageCanvas::updateScenePadding()
     m_scene.setSceneRect(imageRect.adjusted(-horizontalPadding, -verticalPadding, horizontalPadding, verticalPadding));
 }
 
-void ImageCanvas::setZoomPercentAt(int percent, QPoint viewportAnchor)
+void ImageCanvas::setZoomPercentAt(int percent, QPointF sceneAnchor, QPointF globalAnchor)
 {
     if (m_pixmapItem == nullptr) {
         setZoomPercent(percent);
@@ -774,14 +794,13 @@ void ImageCanvas::setZoomPercentAt(int percent, QPoint viewportAnchor)
     }
 
     m_hasUserZoom = true;
-    const QPointF sceneAnchor = mapToScene(viewportAnchor);
     m_zoomPercent = std::clamp(percent, 10, 400);
     applyZoom();
 
-    const QPoint viewportAnchorAfter = mapFromScene(sceneAnchor);
-    const QPoint delta = viewportAnchorAfter - viewportAnchor;
-    horizontalScrollBar()->setValue(horizontalScrollBar()->value() + delta.x());
-    verticalScrollBar()->setValue(verticalScrollBar()->value() + delta.y());
+    const QPointF currentViewportAnchor = viewport()->mapFromGlobal(globalAnchor.toPoint());
+    const QPointF transformedAnchor = transform().map(sceneAnchor);
+    horizontalScrollBar()->setValue(qRound(transformedAnchor.x() - currentViewportAnchor.x()));
+    verticalScrollBar()->setValue(qRound(transformedAnchor.y() - currentViewportAnchor.y()));
     notifyViewportStateChanged();
 }
 
@@ -875,9 +894,11 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
 
     m_hoverToolTip->setText(lines.join(QStringLiteral("<br/>")));
     m_hoverToolTip->setFont(m_textBubbleFont);
-    m_hoverToolTip->setWindowOpacity(m_textBubbleOpacity);
+    if (m_hoverOpacityEffect != nullptr) {
+        m_hoverOpacityEffect->setOpacity(std::clamp(m_textBubbleOpacity, 0.0, 1.0));
+    }
     m_hoverToolTip->adjustSize();
-    m_hoverToolTip->move(globalPosition + QPoint(12, 18));
+    m_hoverToolTip->move(mapFromGlobal(globalPosition + QPoint(12, 18)));
     m_hoverToolTip->show();
     m_hoverToolTip->raise();
 }
