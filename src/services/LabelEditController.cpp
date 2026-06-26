@@ -495,6 +495,64 @@ LabelEditResult LabelEditController::setLabelPosition(int imageIndex, int labelI
     return {true, labelIndex, {}, {labelIndex}};
 }
 
+LabelEditResult LabelEditController::setLabelPositions(int imageIndex, QVector<int> labelIndexes,
+                                                       QVector<QPointF> normalizedPositions, bool registerUndo)
+{
+    labelqt::core::ImageEntry* image = imageAt(imageIndex);
+    if (image == nullptr || labelIndexes.size() != normalizedPositions.size() || labelIndexes.isEmpty()) {
+        return {};
+    }
+
+    QVector<int> changedIndexes;
+    QVector<QPointF> oldPositions;
+    QVector<QPointF> newPositions;
+    changedIndexes.reserve(labelIndexes.size());
+    oldPositions.reserve(labelIndexes.size());
+    newPositions.reserve(labelIndexes.size());
+
+    for (int i = 0; i < labelIndexes.size(); ++i) {
+        const int labelIndex = labelIndexes.at(i);
+        if (labelIndex < 0 || labelIndex >= image->labels.size()) {
+            continue;
+        }
+
+        const QPointF oldPosition = image->labels.at(labelIndex).position();
+        image->labels[labelIndex].setPosition(normalizedPositions.at(i));
+        const QPointF newPosition = image->labels.at(labelIndex).position();
+        if (oldPosition == newPosition) {
+            continue;
+        }
+
+        changedIndexes.append(labelIndex);
+        oldPositions.append(oldPosition);
+        newPositions.append(newPosition);
+    }
+
+    if (changedIndexes.isEmpty()) {
+        return {};
+    }
+
+    if (registerUndo) {
+        const QString message =
+            changedIndexes.size() == 1
+                ? labelMessage(m_commandTexts.moveLabelMessage, m_commandTexts.moveLabel, m_project, imageIndex,
+                               changedIndexes.first(), image->labels.at(changedIndexes.first()).group())
+                : m_commandTexts.moveLabel;
+        m_undoStack.push(
+            m_commandTexts.moveLabel,
+            message,
+            message,
+            [this, imageIndex, changedIndexes, oldPositions]() {
+                applyBatchLabelPositions(imageIndex, changedIndexes, oldPositions);
+            },
+            [this, imageIndex, changedIndexes, newPositions]() {
+                applyBatchLabelPositions(imageIndex, changedIndexes, newPositions);
+            });
+    }
+    markDirty();
+    return {true, changedIndexes.last(), changedIndexes, changedIndexes};
+}
+
 void LabelEditController::registerLabelTextUndo(int imageIndex, int labelIndex, const QString& oldText,
                                                 const QString& newText)
 {
@@ -571,6 +629,34 @@ void LabelEditController::applyLabelPosition(int imageIndex, int labelIndex, QPo
     image->labels[labelIndex].setPosition(normalizedPosition);
     if (m_labelSelected) {
         m_labelSelected(imageIndex, labelIndex);
+    }
+    markDirty();
+}
+
+void LabelEditController::applyBatchLabelPositions(int imageIndex, QVector<int> labelIndexes,
+                                                   QVector<QPointF> normalizedPositions)
+{
+    labelqt::core::ImageEntry* image = imageAt(imageIndex);
+    if (image == nullptr || labelIndexes.size() != normalizedPositions.size()) {
+        return;
+    }
+
+    QVector<int> validIndexes;
+    validIndexes.reserve(labelIndexes.size());
+    for (int i = 0; i < labelIndexes.size(); ++i) {
+        const int labelIndex = labelIndexes.at(i);
+        if (labelIndex < 0 || labelIndex >= image->labels.size()) {
+            continue;
+        }
+        image->labels[labelIndex].setPosition(normalizedPositions.at(i));
+        validIndexes.append(labelIndex);
+    }
+
+    if (!validIndexes.isEmpty() && m_labelsSelected) {
+        m_labelsSelected(imageIndex, std::move(validIndexes));
+    }
+    else if (m_imageSelectionCleared) {
+        m_imageSelectionCleared(imageIndex);
     }
     markDirty();
 }

@@ -66,6 +66,8 @@ public:
     LabelEditResult setLabelGroup(int imageIndex, int labelIndex, const QString& group, bool registerUndo = true);
     LabelEditResult setLabelPosition(int imageIndex, int labelIndex, QPointF normalizedPosition,
                                      bool registerUndo = true);
+    LabelEditResult setLabelPositions(int imageIndex, QVector<int> labelIndexes, QVector<QPointF> normalizedPositions,
+                                      bool registerUndo = true);
     void registerLabelTextUndo(int imageIndex, int labelIndex, const QString& oldText, const QString& newText);
     void registerLabelGroupUndo(int imageIndex, int labelIndex, const QString& oldGroup, const QString& newGroup);
 
@@ -73,6 +75,7 @@ private:
     void applyLabelText(int imageIndex, int labelIndex, const QString& text);
     void applyLabelGroup(int imageIndex, int labelIndex, const QString& group);
     void applyLabelPosition(int imageIndex, int labelIndex, QPointF normalizedPosition);
+    void applyBatchLabelPositions(int imageIndex, QVector<int> labelIndexes, QVector<QPointF> normalizedPositions);
     void applyLabelOrder(int imageIndex, QVector<labelqt::core::Label> labels, QVector<int> selectedIndexes);
     void applyBatchLabelGroups(int imageIndex, QVector<int> labelIndexes, QVector<QString> groups);
     void applyBatchLabelDeleted(int imageIndex, QVector<int> labelIndexes, QVector<bool> deleted);

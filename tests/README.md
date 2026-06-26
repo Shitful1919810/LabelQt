@@ -43,6 +43,7 @@ python scripts/check_all.py windows-vs-debug
   - LabelQt 自定义剪贴板 MIME 数据往返。
   - 剪贴板 JSON 损坏时的错误路径。
   - 粘贴插入位置和 undo/redo。
+  - 批量移动标签的 undo/redo 和选择恢复。
   - 粘贴坐标边界 clamp。
   - 剪切粘贴保留原坐标。
   - 鼠标锚点粘贴时保持多标签相对布局。
@@ -54,12 +55,14 @@ python scripts/check_all.py windows-vs-debug
   - preference JSON 损坏时的警告路径。
 
 - 自动化脚本服务：
+  - 自动化 output 中 `quiet`、`result` 和 `operations` 字段的正常解析。
   - 自动化 output 中非法 `operations` 字段的错误路径。
   - 自动化操作 `addLabel`、`setLabelText`、`setLabelPosition`、`deleteLabel` 的计划与撤销。
 
 - Qt Model/View：
-  - `LabelTableModel` 通过 `QAbstractItemModelTester`，并验证 group 筛选。
+  - `LabelTableModel` 通过 `QAbstractItemModelTester`，并验证 group 筛选、编辑请求和拖放重排请求。
   - `PageOrderListModel` 通过 `QAbstractItemModelTester`，并验证拖放后页面不丢失。
+  - `PageOrderListModel` 删除页面后保留合理的后继选择，且不直接修改工程图片列表。
 
 - 会话状态：
   - 最近页面、缩放、中心点和多选标签状态持久化。
@@ -74,6 +77,8 @@ python scripts/check_all.py windows-vs-debug
 - 图像画布交互：
   - `Ctrl+点击 marker` 触发多选点击。
   - `Ctrl+拖动 marker` 移动标签且不误触发画面拖动。
+  - 多选状态下 `Ctrl+拖动 marker` 会整体移动当前选择。
+  - `Ctrl+拖动` 未选中的 marker 时，会只移动该 marker，不带着原选择移动。
 
 ## 新增测试建议
 

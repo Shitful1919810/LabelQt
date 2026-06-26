@@ -72,6 +72,7 @@ public:
 signals:
     void labelCreateRequested(QPointF normalizedPosition);
     void labelMoveRequested(int index, QPointF normalizedPosition);
+    void labelsMoveRequested(QVector<int> indexes, QVector<QPointF> normalizedPositions);
     void labelSelected(int index);
     void labelClicked(int index, Qt::KeyboardModifiers modifiers);
     void emptyAreaClicked();
@@ -117,6 +118,8 @@ private:
     bool copyImageToClipboard();
     void updateCursorForInteractionMode();
     void resetPointerInteraction();
+    QVector<QPointF> movingLabelPositionsForViewportPosition(QPoint viewportPosition) const;
+    void previewMovingLabels(QPoint viewportPosition);
 
     QGraphicsScene m_scene;
     QGraphicsPixmapItem* m_pixmapItem{nullptr};
@@ -146,6 +149,9 @@ private:
     int m_movingLabelIndex{-1};
     int m_pendingLabelMoveIndex{-1};
     Qt::KeyboardModifiers m_pendingLabelSelectModifiers{Qt::NoModifier};
+    QVector<int> m_movingLabelIndexes;
+    QVector<QPointF> m_movingLabelStartPositions;
+    QPointF m_movingLabelAnchorStartPosition;
     QPoint m_labelCreatePressPosition;
     QPoint m_labelSelectPressPosition;
     QPoint m_emptyClickPressPosition;

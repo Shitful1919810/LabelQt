@@ -19,8 +19,10 @@
 #include "ui/PageOrderListModel.h"
 
 #include <QAbstractItemModelTester>
+#include <QDataStream>
 #include <QDir>
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QKeySequence>
 #include <QMimeData>
@@ -37,6 +39,28 @@
 
 using labelqt::core::Label;
 using labelqt::core::LabelPlusDocument;
+
+namespace {
+
+labelqt::services::LabelEditCommandTexts testCommandTexts()
+{
+    return {
+        QStringLiteral("Add"),      QStringLiteral("Edit"),       QStringLiteral("Group"),
+        QStringLiteral("Move"),     QStringLiteral("Delete"),     QStringLiteral("Reorder"),
+        QStringLiteral("Paste"),    QStringLiteral("Add group"),  QStringLiteral("Remove group"),
+        QStringLiteral("Add %1 %2 label %3"),
+        QStringLiteral("Delete %1 %2 label %3"),
+        QStringLiteral("Edit %1 %2 label %3"),
+        QStringLiteral("Change %1 %2 label %3"),
+        QStringLiteral("Move %1 %2 label %3"),
+        QStringLiteral("Reorder labels on %1"),
+        QStringLiteral("Paste %2 label(s) on %1"),
+        QStringLiteral("Add group %1"),
+        QStringLiteral("Remove group %1"),
+    };
+}
+
+} // namespace
 
 class LabelTests final : public QObject {
     Q_OBJECT
@@ -186,15 +210,7 @@ private slots:
 
         labelqt::core::UndoStack undoStack;
         QVector<int> selectedIndexes;
-        labelqt::services::LabelEditController controller(
-            project, undoStack,
-            labelqt::services::LabelEditCommandTexts{
-                QStringLiteral("Add"),      QStringLiteral("Edit"),       QStringLiteral("Group"),
-                QStringLiteral("Move"),     QStringLiteral("Delete"),     QStringLiteral("Reorder"),
-                QStringLiteral("Paste"),    QStringLiteral("Add group"),  QStringLiteral("Remove group"),
-                {},                         {},                           {},
-                {},                         {},                           {},
-                {},                         {},                           {}});
+        labelqt::services::LabelEditController controller(project, undoStack, testCommandTexts());
         controller.setCallbacks({}, [&selectedIndexes](int, QVector<int> indexes) { selectedIndexes = indexes; }, {},
                                 {}, {});
 
@@ -219,6 +235,40 @@ private slots:
         undoStack.redo();
         QCOMPARE(project.images().first().labels.size(), 4);
         QCOMPARE(selectedIndexes, QVector<int>({1, 2}));
+    }
+
+    void batchMoveLabelsIsUndoableAndRestoresSelection()
+    {
+        labelqt::core::Project project;
+        project.setGroups({QStringLiteral("框内")});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
+        project.images().last().labels.append(Label(QStringLiteral("a"), QStringLiteral("框内"), QPointF(0.2, 0.2)));
+        project.images().last().labels.append(Label(QStringLiteral("b"), QStringLiteral("框内"), QPointF(0.4, 0.4)));
+        project.images().last().labels.append(Label(QStringLiteral("c"), QStringLiteral("框内"), QPointF(0.8, 0.8)));
+
+        labelqt::core::UndoStack undoStack;
+        QVector<int> selectedIndexes;
+        labelqt::services::LabelEditController controller(project, undoStack, testCommandTexts());
+        controller.setCallbacks({}, [&selectedIndexes](int, QVector<int> indexes) { selectedIndexes = indexes; }, {},
+                                {}, {});
+
+        const labelqt::services::LabelEditResult result =
+            controller.setLabelPositions(0, {0, 1}, {QPointF(0.3, 0.3), QPointF(0.5, 0.5)});
+
+        QVERIFY(result.changed);
+        QCOMPARE(result.selectedLabelIndexes, QVector<int>({0, 1}));
+        QCOMPARE(project.images().first().labels.at(0).position(), QPointF(0.3, 0.3));
+        QCOMPARE(project.images().first().labels.at(1).position(), QPointF(0.5, 0.5));
+
+        undoStack.undo();
+        QCOMPARE(project.images().first().labels.at(0).position(), QPointF(0.2, 0.2));
+        QCOMPARE(project.images().first().labels.at(1).position(), QPointF(0.4, 0.4));
+        QCOMPARE(selectedIndexes, QVector<int>({0, 1}));
+
+        undoStack.redo();
+        QCOMPARE(project.images().first().labels.at(0).position(), QPointF(0.3, 0.3));
+        QCOMPARE(project.images().first().labels.at(1).position(), QPointF(0.5, 0.5));
+        QCOMPARE(selectedIndexes, QVector<int>({0, 1}));
     }
 
     void pastedLabelPositionsStayInsideImageBounds()
@@ -303,6 +353,38 @@ private slots:
 
         QVERIFY(!result.has_value());
         QVERIFY(result.error().contains(QStringLiteral("operations")));
+    }
+
+    void automationManifestParsesQuietResultAndOperations()
+    {
+        QJsonObject operation;
+        operation.insert(QStringLiteral("type"), QStringLiteral("setLabelText"));
+        operation.insert(QStringLiteral("page"), QStringLiteral("001.png"));
+        operation.insert(QStringLiteral("labelIndex"), 2);
+        operation.insert(QStringLiteral("text"), QStringLiteral("translated"));
+
+        QJsonObject resultObject;
+        resultObject.insert(QStringLiteral("title"), QStringLiteral("OCR result"));
+        resultObject.insert(QStringLiteral("text"), QStringLiteral("recognized text"));
+
+        QJsonObject output;
+        output.insert(QStringLiteral("summary"), QStringLiteral("done"));
+        output.insert(QStringLiteral("quiet"), true);
+        output.insert(QStringLiteral("result"), resultObject);
+        output.insert(QStringLiteral("operations"), QJsonArray{operation});
+
+        const std::expected<labelqt::services::AutomationRunResult, QString> parsed =
+            labelqt::services::AutomationManifestParser::tryResultFromOutput(output);
+        QVERIFY(parsed.has_value());
+        QVERIFY(parsed->quiet);
+        QCOMPARE(parsed->summary, QStringLiteral("done"));
+        QCOMPARE(parsed->resultTitle, QStringLiteral("OCR result"));
+        QCOMPARE(parsed->resultText, QStringLiteral("recognized text"));
+        QCOMPARE(parsed->operations.size(), 1);
+        QCOMPARE(parsed->operations.first().type, QStringLiteral("setLabelText"));
+        QCOMPARE(parsed->operations.first().page, QStringLiteral("001.png"));
+        QCOMPARE(parsed->operations.first().labelIndex, 2);
+        QCOMPARE(parsed->operations.first().text, QStringLiteral("translated"));
     }
 
     void automationOperationApplierAddsLabelsWithUndo()
@@ -411,6 +493,57 @@ private slots:
         QCOMPARE(model.rowForSourceIndex(1), 0);
     }
 
+    void labelTableModelEditRequestsDoNotMutateLabelsDirectly()
+    {
+        QVector<Label> labels{
+            Label(QStringLiteral("inside"), QStringLiteral("框内"), {0.2, 0.3}),
+            Label(QStringLiteral("outside"), QStringLiteral("框外"), {0.4, 0.5}),
+        };
+
+        LabelTableModel model;
+        model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
+        model.setLabels(&labels);
+        model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
+
+        QSignalSpy editSpy(&model, &LabelTableModel::labelEditRequested);
+        QVERIFY(model.setData(model.index(0, LabelTableModel::TextColumn), QStringLiteral("changed"), Qt::EditRole));
+        QCOMPARE(editSpy.count(), 1);
+        QCOMPARE(editSpy.first().at(0).toInt(), 0);
+        QCOMPARE(editSpy.first().at(1).toInt(), static_cast<int>(LabelTableModel::TextColumn));
+        QCOMPARE(editSpy.first().at(2).toString(), QStringLiteral("changed"));
+        QCOMPARE(labels.first().text(), QStringLiteral("inside"));
+
+        QVERIFY(!model.setData(model.index(0, LabelTableModel::GroupColumn), QStringLiteral("不存在"), Qt::EditRole));
+        QCOMPARE(editSpy.count(), 1);
+    }
+
+    void labelTableModelDropRequestsSourceIndexesInVisibleOrder()
+    {
+        QVector<Label> labels{
+            Label(QStringLiteral("a"), QStringLiteral("框内"), {0.1, 0.1}),
+            Label(QStringLiteral("b"), QStringLiteral("框外"), {0.2, 0.2}),
+            Label(QStringLiteral("c"), QStringLiteral("框内"), {0.3, 0.3}),
+        };
+
+        LabelTableModel model;
+        model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
+        model.setLabels(&labels);
+        model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
+
+        const QModelIndexList draggedIndexes{
+            model.index(0, LabelTableModel::NumberColumn),
+            model.index(0, LabelTableModel::TextColumn),
+            model.index(2, LabelTableModel::NumberColumn),
+        };
+        std::unique_ptr<QMimeData> mimeData(model.mimeData(draggedIndexes));
+        QSignalSpy reorderSpy(&model, &LabelTableModel::labelsReorderRequested);
+
+        QVERIFY(model.dropMimeData(mimeData.get(), Qt::MoveAction, 1, 0, {}));
+        QCOMPARE(reorderSpy.count(), 1);
+        QCOMPARE(qvariant_cast<QVector<int>>(reorderSpy.first().at(0)), QVector<int>({0, 2}));
+        QCOMPARE(reorderSpy.first().at(1).toInt(), 1);
+    }
+
     void pageOrderListModelPassesModelTesterAndKeepsPagesAfterDragDrop()
     {
         labelqt::core::Project project;
@@ -438,6 +571,23 @@ private slots:
         QVector<int> sortedOrder = model.pageOrder();
         std::sort(sortedOrder.begin(), sortedOrder.end());
         QCOMPARE(sortedOrder, QVector<int>({0, 1, 2, 3, 4, 5}));
+    }
+
+    void pageOrderListModelRemoveKeepsReasonableSelection()
+    {
+        labelqt::core::Project project;
+        for (int i = 0; i < 4; ++i) {
+            project.images().append(
+                labelqt::core::ImageEntry{QStringLiteral("%1.png").arg(i, 3, 10, QLatin1Char('0')), {}, {}});
+        }
+
+        PageOrderListModel model(project);
+        model.removeSourceIndexes({1, 2});
+
+        QCOMPARE(model.pageOrder(), QVector<int>({0, 3}));
+        QCOMPARE(model.lastMovedSourceIndexes(), QVector<int>({3}));
+        QCOMPARE(model.rowForSourceIndex(3), 1);
+        QCOMPARE(project.images().size(), 4);
     }
 
     void sessionStateStorePersistsMultiSelectedLabels()
@@ -569,6 +719,78 @@ private slots:
         QCOMPARE(moveSpy.first().at(0).toInt(), 0);
         const QPointF movedPosition = moveSpy.first().at(1).toPointF();
         QVERIFY(movedPosition.x() > 0.5);
+    }
+
+    void imageCanvasCtrlDragSelectedMarkersMovesSelectionTogether()
+    {
+        ImageCanvas canvas;
+        canvas.resize(640, 480);
+        canvas.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&canvas));
+
+        QVector<Label> labels{
+            Label(QStringLiteral("first"), QStringLiteral("框内"), {0.4, 0.5}),
+            Label(QStringLiteral("second"), QStringLiteral("框内"), {0.6, 0.5}),
+        };
+        canvas.setGroups({QStringLiteral("框内")});
+        canvas.setVisibleGroups({QStringLiteral("框内")});
+        canvas.setImage(QStringLiteral("test.png"), QImage(200, 200, QImage::Format_ARGB32_Premultiplied), labels);
+        canvas.setSelectedLabels({0, 1});
+
+        const QPoint markerPosition = canvas.mapFromGlobal(canvas.globalPositionForLabel(0));
+        const QPoint dragPosition = markerPosition + QPoint(QApplication::startDragDistance() + 30, 0);
+        QSignalSpy singleMoveSpy(&canvas, &ImageCanvas::labelMoveRequested);
+        QSignalSpy batchMoveSpy(&canvas, &ImageCanvas::labelsMoveRequested);
+
+        QTest::mousePress(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, markerPosition);
+        QTest::mouseMove(canvas.viewport(), dragPosition);
+        QTest::mouseRelease(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, dragPosition);
+
+        QCOMPARE(singleMoveSpy.count(), 0);
+        QCOMPARE(batchMoveSpy.count(), 1);
+        const QVector<int> movedIndexes = qvariant_cast<QVector<int>>(batchMoveSpy.first().at(0));
+        const QVector<QPointF> movedPositions = qvariant_cast<QVector<QPointF>>(batchMoveSpy.first().at(1));
+        QCOMPARE(movedIndexes, QVector<int>({0, 1}));
+        QCOMPARE(movedPositions.size(), 2);
+        QVERIFY(movedPositions.at(0).x() > 0.4);
+        QVERIFY(movedPositions.at(1).x() > 0.6);
+    }
+
+    void imageCanvasCtrlDragUnselectedMarkerMovesOnlyThatMarker()
+    {
+        ImageCanvas canvas;
+        canvas.resize(640, 480);
+        canvas.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&canvas));
+
+        QVector<Label> labels{
+            Label(QStringLiteral("first"), QStringLiteral("框内"), {0.4, 0.5}),
+            Label(QStringLiteral("second"), QStringLiteral("框内"), {0.6, 0.5}),
+        };
+        canvas.setGroups({QStringLiteral("框内")});
+        canvas.setVisibleGroups({QStringLiteral("框内")});
+        canvas.setImage(QStringLiteral("test.png"), QImage(200, 200, QImage::Format_ARGB32_Premultiplied), labels);
+        canvas.setSelectedLabels({0});
+
+        connect(&canvas, &ImageCanvas::labelSelected, &canvas, [&canvas](int index) { canvas.setSelectedLabel(index); });
+        QSignalSpy selectionSpy(&canvas, &ImageCanvas::labelSelected);
+        QSignalSpy singleMoveSpy(&canvas, &ImageCanvas::labelMoveRequested);
+        QSignalSpy batchMoveSpy(&canvas, &ImageCanvas::labelsMoveRequested);
+
+        const QPoint markerPosition = canvas.mapFromGlobal(canvas.globalPositionForLabel(1));
+        const QPoint dragPosition = markerPosition + QPoint(QApplication::startDragDistance() + 30, 0);
+
+        QTest::mousePress(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, markerPosition);
+        QTest::mouseMove(canvas.viewport(), dragPosition);
+        QCOMPARE(selectionSpy.count(), 1);
+        QCOMPARE(selectionSpy.first().at(0).toInt(), 1);
+        QTest::mouseRelease(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, dragPosition);
+
+        QCOMPARE(batchMoveSpy.count(), 0);
+        QCOMPARE(singleMoveSpy.count(), 1);
+        QCOMPARE(singleMoveSpy.first().at(0).toInt(), 1);
+        const QPointF movedPosition = singleMoveSpy.first().at(1).toPointF();
+        QVERIFY(movedPosition.x() > 0.6);
     }
 
     void projectMergeUsesSingleInvolvedPageAutomatically()

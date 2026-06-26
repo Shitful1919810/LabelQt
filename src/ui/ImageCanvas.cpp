@@ -22,6 +22,15 @@
 #include <cmath>
 #include <utility>
 
+namespace {
+
+QPointF clampedNormalizedPosition(QPointF position)
+{
+    return {std::clamp(position.x(), 0.0, 1.0), std::clamp(position.y(), 0.0, 1.0)};
+}
+
+} // namespace
+
 ImageCanvas::ImageCanvas(QWidget* parent) : QGraphicsView(parent)
 {
     m_textBubbleFont = QApplication::font();
@@ -508,9 +517,8 @@ void ImageCanvas::mouseMoveEvent(QMouseEvent* event)
     }
 
     if (!m_readOnly && m_pointerState == PointerInteractionState::MovingLabel && m_pixmapItem != nullptr &&
-        m_movingLabelIndex >= 0 && m_movingLabelIndex < m_labels.size()) {
-        m_labels[m_movingLabelIndex].setPosition(normalizedPositionFromScene(mapToScene(event->pos())));
-        rebuildLabelItems();
+        !m_movingLabelIndexes.isEmpty() && m_movingLabelIndexes.size() == m_movingLabelStartPositions.size()) {
+        previewMovingLabels(event->pos());
         event->accept();
         return;
     }
@@ -522,7 +530,31 @@ void ImageCanvas::mouseMoveEvent(QMouseEvent* event)
         m_pendingLabelMoveIndex = -1;
         m_pendingLabelSelectIndex = -1;
         m_pendingLabelSelectModifiers = Qt::NoModifier;
-        emit labelSelected(m_movingLabelIndex);
+        const bool movingSelectedLabel = m_selectedLabels.contains(m_movingLabelIndex);
+        if (!movingSelectedLabel) {
+            emit labelSelected(m_movingLabelIndex);
+        }
+        m_movingLabelIndexes =
+            movingSelectedLabel ? QVector<int>(m_selectedLabels.cbegin(), m_selectedLabels.cend())
+                                : QVector<int>{m_movingLabelIndex};
+        std::sort(m_movingLabelIndexes.begin(), m_movingLabelIndexes.end());
+        m_movingLabelIndexes.erase(std::unique(m_movingLabelIndexes.begin(), m_movingLabelIndexes.end()),
+                                   m_movingLabelIndexes.end());
+        m_movingLabelStartPositions.clear();
+        m_movingLabelStartPositions.reserve(m_movingLabelIndexes.size());
+        for (int labelIndex : std::as_const(m_movingLabelIndexes)) {
+            if (labelIndex >= 0 && labelIndex < m_labels.size()) {
+                m_movingLabelStartPositions.append(m_labels.at(labelIndex).position());
+            }
+        }
+        if (m_movingLabelStartPositions.size() != m_movingLabelIndexes.size()) {
+            resetPointerInteraction();
+            event->accept();
+            return;
+        }
+        if (m_movingLabelIndex >= 0 && m_movingLabelIndex < m_labels.size()) {
+            m_movingLabelAnchorStartPosition = m_labels.at(m_movingLabelIndex).position();
+        }
         hideHoveredLabelToolTip();
         event->accept();
         return;
@@ -576,15 +608,34 @@ void ImageCanvas::mouseReleaseEvent(QMouseEvent* event)
     }
 
     if (!m_readOnly && event->button() == Qt::LeftButton && m_pointerState == PointerInteractionState::MovingLabel) {
-        const int labelIndex = m_movingLabelIndex;
+        const QVector<int> labelIndexes = m_movingLabelIndexes;
+        QVector<QPointF> normalizedPositions;
+        normalizedPositions.reserve(labelIndexes.size());
         m_pointerState = PointerInteractionState::Idle;
         m_movingLabelIndex = -1;
-        if (m_pixmapItem != nullptr && labelIndex >= 0 && labelIndex < m_labels.size()) {
-            const QPointF normalizedPosition = normalizedPositionFromScene(mapToScene(event->pos()));
-            m_labels[labelIndex].setPosition(normalizedPosition);
+        if (m_pixmapItem != nullptr && !labelIndexes.isEmpty() &&
+            labelIndexes.size() == m_movingLabelStartPositions.size()) {
+            normalizedPositions = movingLabelPositionsForViewportPosition(event->pos());
+            for (int i = 0; i < labelIndexes.size() && i < normalizedPositions.size(); ++i) {
+                const int labelIndex = labelIndexes.at(i);
+                if (labelIndex < 0 || labelIndex >= m_labels.size()) {
+                    continue;
+                }
+                m_labels[labelIndex].setPosition(normalizedPositions.at(i));
+                normalizedPositions[i] = m_labels.at(labelIndex).position();
+            }
             rebuildLabelItems();
-            emit labelMoveRequested(labelIndex, m_labels.at(labelIndex).position());
+            if (labelIndexes.size() == normalizedPositions.size()) {
+                if (labelIndexes.size() == 1) {
+                    emit labelMoveRequested(labelIndexes.first(), normalizedPositions.first());
+                }
+                else {
+                    emit labelsMoveRequested(labelIndexes, normalizedPositions);
+                }
+            }
         }
+        m_movingLabelIndexes.clear();
+        m_movingLabelStartPositions.clear();
         event->accept();
         return;
     }
@@ -968,6 +1019,42 @@ void ImageCanvas::resetPointerInteraction()
     m_pendingLabelMoveIndex = -1;
     m_movingLabelIndex = -1;
     m_pendingLabelSelectModifiers = Qt::NoModifier;
+    m_movingLabelIndexes.clear();
+    m_movingLabelStartPositions.clear();
+    m_movingLabelAnchorStartPosition = {};
+}
+
+QVector<QPointF> ImageCanvas::movingLabelPositionsForViewportPosition(QPoint viewportPosition) const
+{
+    QVector<QPointF> positions;
+    if (m_pixmapItem == nullptr || m_movingLabelIndexes.size() != m_movingLabelStartPositions.size()) {
+        return positions;
+    }
+
+    const QPointF anchorPosition = normalizedPositionFromScene(mapToScene(viewportPosition));
+    const QPointF delta = anchorPosition - m_movingLabelAnchorStartPosition;
+    positions.reserve(m_movingLabelStartPositions.size());
+    for (const QPointF& startPosition : m_movingLabelStartPositions) {
+        positions.append(clampedNormalizedPosition(startPosition + delta));
+    }
+    return positions;
+}
+
+void ImageCanvas::previewMovingLabels(QPoint viewportPosition)
+{
+    const QVector<QPointF> positions = movingLabelPositionsForViewportPosition(viewportPosition);
+    if (positions.size() != m_movingLabelIndexes.size()) {
+        return;
+    }
+
+    for (int i = 0; i < m_movingLabelIndexes.size(); ++i) {
+        const int labelIndex = m_movingLabelIndexes.at(i);
+        if (labelIndex < 0 || labelIndex >= m_labels.size()) {
+            continue;
+        }
+        m_labels[labelIndex].setPosition(positions.at(i));
+    }
+    rebuildLabelItems();
 }
 
 labelqt::core::LabelGroupStyle ImageCanvas::styleForGroup(const QString& group) const

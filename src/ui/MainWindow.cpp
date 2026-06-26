@@ -76,6 +76,38 @@ constexpr int minimumLabelNumberColumnWidth = 40;
 constexpr int minimumLabelTextColumnWidth = 120;
 constexpr int minimumLabelGroupColumnWidth = 60;
 
+QMessageBox::StandardButton showMainWindowMessageBox(QWidget* parent, QMessageBox::Icon icon, const QString& title,
+                                                     const QString& text,
+                                                     QMessageBox::StandardButtons buttons = QMessageBox::Ok,
+                                                     QMessageBox::StandardButton defaultButton = QMessageBox::NoButton)
+{
+    QMessageBox messageBox(parent);
+    messageBox.setWindowTitle(title);
+    messageBox.setText(text);
+    messageBox.setIcon(icon);
+    messageBox.setStandardButtons(buttons);
+    if (defaultButton != QMessageBox::NoButton) {
+        messageBox.setDefaultButton(defaultButton);
+    }
+    messageBox.setAttribute(Qt::WA_DeleteOnClose, false);
+    return static_cast<QMessageBox::StandardButton>(messageBox.exec());
+}
+
+void showMainWindowInformation(QWidget* parent, const QString& title, const QString& text)
+{
+    showMainWindowMessageBox(parent, QMessageBox::Information, title, text);
+}
+
+void showMainWindowWarning(QWidget* parent, const QString& title, const QString& text)
+{
+    showMainWindowMessageBox(parent, QMessageBox::Warning, title, text);
+}
+
+void showMainWindowCritical(QWidget* parent, const QString& title, const QString& text)
+{
+    showMainWindowMessageBox(parent, QMessageBox::Critical, title, text);
+}
+
 } // namespace
 
 MainWindow::MainWindow(QWidget* parent)
@@ -304,7 +336,6 @@ void MainWindow::closeEvent(QCloseEvent* event)
         return;
     }
 
-    commitActiveTextInput();
     if (!promptToSaveIfDirty()) {
         event->ignore();
         return;
@@ -607,6 +638,7 @@ void MainWindow::createCentralWidget()
 
     connect(m_canvas, &ImageCanvas::labelCreateRequested, this, &MainWindow::addLabel);
     connect(m_canvas, &ImageCanvas::labelMoveRequested, this, &MainWindow::moveLabel);
+    connect(m_canvas, &ImageCanvas::labelsMoveRequested, this, &MainWindow::moveLabels);
     connect(m_canvas, &ImageCanvas::labelSelected, this, &MainWindow::selectLabel);
     connect(m_canvas, &ImageCanvas::labelClicked, this, &MainWindow::selectLabelFromCanvas);
     connect(m_canvas, &ImageCanvas::emptyAreaClicked, this, &MainWindow::clearCurrentLabelSelection);
@@ -714,6 +746,7 @@ void MainWindow::newProject()
                                tr("%1 already exists. Create the project with the next available name instead?")
                                    .arg(result.existingFileName),
                                QMessageBox::NoButton, this);
+        messageBox.setAttribute(Qt::WA_DeleteOnClose, false);
         QPushButton* tryAnotherNameButton = messageBox.addButton(tr("Try another name"), QMessageBox::AcceptRole);
         messageBox.addButton(tr("Cancel"), QMessageBox::RejectRole);
         messageBox.exec();
@@ -726,11 +759,11 @@ void MainWindow::newProject()
     }
 
     if (result.status == labelqt::services::NewProjectResult::Status::NoImages) {
-        QMessageBox::warning(this, tr("New project failed"), tr("No supported image files were found in this folder."));
+        showMainWindowWarning(this, tr("New project failed"), tr("No supported image files were found in this folder."));
         return;
     }
     if (result.status == labelqt::services::NewProjectResult::Status::Failed) {
-        QMessageBox::critical(this, tr("New project failed"), result.error);
+        showMainWindowCritical(this, tr("New project failed"), result.error);
         return;
     }
     if (result.status == labelqt::services::NewProjectResult::Status::Created && openProjectFile(result.projectPath)) {
@@ -781,20 +814,20 @@ void MainWindow::mergeProjects()
         mergePlan = m_projectWorkflowController->createMergePlan(paths);
     }
     catch (const std::exception& error) {
-        QMessageBox::critical(this, tr("Merge failed"), QString::fromUtf8(error.what()));
+        showMainWindowCritical(this, tr("Merge failed"), QString::fromUtf8(error.what()));
         return;
     }
 
     if (mergePlan.mergedProject.images().isEmpty()) {
-        QMessageBox::warning(this, tr("Merge Projects"), tr("No image pages were found in the selected projects."));
+        showMainWindowWarning(this, tr("Merge Projects"), tr("No image pages were found in the selected projects."));
         return;
     }
 
     QVector<int> selectedCandidateIndexes;
     bool openMergedProjectAfterSave = m_sessionStateStore.shouldOpenMergedProjectAfterSave();
     if (mergePlan.conflicts.isEmpty()) {
-        QMessageBox::information(this, tr("Merge Projects"),
-                                 tr("No page conflicts were found. The selected projects can be merged directly."));
+        showMainWindowInformation(this, tr("Merge Projects"),
+                                  tr("No page conflicts were found. The selected projects can be merged directly."));
     }
     else {
         ProjectMergeDialog dialog(mergePlan, m_preferences, this);
@@ -834,7 +867,7 @@ void MainWindow::mergeProjects()
         m_projectWorkflowController->saveProject(mergedProject, savePath);
     }
     catch (const std::exception& error) {
-        QMessageBox::critical(this, tr("Merge failed"), QString::fromUtf8(error.what()));
+        showMainWindowCritical(this, tr("Merge failed"), QString::fromUtf8(error.what()));
         return;
     }
 
@@ -856,7 +889,7 @@ void MainWindow::reorderPages()
 
     commitActiveTextInput();
     if (project().images().isEmpty()) {
-        QMessageBox::information(this, tr("Reorder Pages"), tr("There are no pages to reorder."));
+        showMainWindowInformation(this, tr("Reorder Pages"), tr("There are no pages to reorder."));
         return;
     }
 
@@ -961,7 +994,7 @@ bool MainWindow::loadProjectFile(const QString& path, bool showErrors, const QSt
         m_sessionStateStore.removeRecentProjectPath(path);
         updateRecentProjectsMenu();
         if (showErrors) {
-            QMessageBox::critical(this, tr("Open failed"), QString::fromUtf8(error.what()));
+            showMainWindowCritical(this, tr("Open failed"), QString::fromUtf8(error.what()));
         }
         return false;
     }
@@ -992,7 +1025,7 @@ void MainWindow::openRecentProjectFromAction()
         QTimer::singleShot(0, this, [this, path]() {
             m_sessionStateStore.removeRecentProjectPath(path);
             updateRecentProjectsMenu();
-            QMessageBox::warning(this, tr("Open failed"), tr("%1 does not exist.").arg(path));
+            showMainWindowWarning(this, tr("Open failed"), tr("%1 does not exist.").arg(path));
         });
         return;
     }
@@ -1041,7 +1074,7 @@ bool MainWindow::saveProject()
         return true;
     }
     catch (const std::exception& error) {
-        QMessageBox::critical(this, tr("Save failed"), QString::fromUtf8(error.what()));
+        showMainWindowCritical(this, tr("Save failed"), QString::fromUtf8(error.what()));
         return false;
     }
 }
@@ -1083,7 +1116,7 @@ bool MainWindow::saveProjectAs()
     }
     catch (const std::exception& error) {
         project().setFilePath(oldPath);
-        QMessageBox::critical(this, tr("Save failed"), QString::fromUtf8(error.what()));
+        showMainWindowCritical(this, tr("Save failed"), QString::fromUtf8(error.what()));
         return false;
     }
 }
@@ -1159,6 +1192,7 @@ void MainWindow::removeGroup()
                                .arg(coloredGroup, coloredFallback));
         confirmBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
         confirmBox.setDefaultButton(QMessageBox::No);
+        confirmBox.setAttribute(Qt::WA_DeleteOnClose, false);
         if (confirmBox.exec() != QMessageBox::Yes) {
             return;
         }
@@ -1819,6 +1853,47 @@ void MainWindow::moveLabel(int index, QPointF normalizedPosition)
 
     refreshCanvasLabels();
     selectLabel(index);
+}
+
+void MainWindow::moveLabels(QVector<int> indexes, QVector<QPointF> normalizedPositions)
+{
+    if (isProjectEditingBlocked()) {
+        return;
+    }
+
+    labelqt::core::ImageEntry* image = currentImage();
+    if (image == nullptr || indexes.size() != normalizedPositions.size() || indexes.isEmpty() ||
+        m_labelEditController == nullptr) {
+        return;
+    }
+
+    QVector<int> visibleIndexes;
+    QVector<QPointF> visiblePositions;
+    visibleIndexes.reserve(indexes.size());
+    visiblePositions.reserve(indexes.size());
+    for (int i = 0; i < indexes.size(); ++i) {
+        const int labelIndex = indexes.at(i);
+        if (labelIndex < 0 || labelIndex >= image->labels.size() ||
+            !isLabelVisibleByGroupFilter(image->labels.at(labelIndex))) {
+            continue;
+        }
+        visibleIndexes.append(labelIndex);
+        visiblePositions.append(normalizedPositions.at(i));
+    }
+    if (visibleIndexes.isEmpty()) {
+        refreshCanvasLabels();
+        return;
+    }
+
+    const labelqt::services::LabelEditResult result =
+        m_labelEditController->setLabelPositions(m_currentImageIndex, visibleIndexes, visiblePositions);
+    refreshCanvasLabels();
+    if (result.changed) {
+        selectLabelIndexes(result.selectedLabelIndexes, result.selectedLabelIndex);
+    }
+    else {
+        selectLabelIndexes(visibleIndexes, visibleIndexes.last());
+    }
 }
 
 void MainWindow::undoLastOperation()
@@ -2632,8 +2707,8 @@ void MainWindow::applyPreferences(labelqt::core::AppPreferencesLoadResult result
     configureBackupTimer();
     showPreferenceWarnings();
     if (languageChanged) {
-        QMessageBox::information(this, tr("Language Changed"),
-                                 tr("The language change will take effect after restarting the application."));
+        showMainWindowInformation(this, tr("Language Changed"),
+                                  tr("The language change will take effect after restarting the application."));
     }
     statusBar()->showMessage(tr("Preferences applied"), 4000);
 }
@@ -2791,9 +2866,10 @@ bool MainWindow::promptToSaveIfDirty()
         return true;
     }
 
-    const QMessageBox::StandardButton result = QMessageBox::warning(
-        this, tr("Unsaved changes"), tr("The current project has unsaved changes. Do you want to save them?"),
-        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+    const QMessageBox::StandardButton result =
+        showMainWindowMessageBox(this, QMessageBox::Warning, tr("Unsaved changes"),
+                                 tr("The current project has unsaved changes. Do you want to save them?"),
+                                 QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
 
     if (result == QMessageBox::Cancel) {
         return false;

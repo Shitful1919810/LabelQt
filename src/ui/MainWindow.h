@@ -116,6 +116,7 @@ private:
     void cancelCanvasLabelTextEditor();
     void closeCanvasLabelTextEditor();
     void moveLabel(int index, QPointF normalizedPosition);
+    void moveLabels(QVector<int> indexes, QVector<QPointF> normalizedPositions);
     void undoLastOperation();
     void redoLastOperation();
     void updateEditShortcuts();
