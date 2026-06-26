@@ -648,7 +648,7 @@ python script.py --input input.json --output output.json
 提交前建议运行：
 
 ```bash
-scripts/check_translations.sh
+python scripts/check_translations.py
 cmake --build --preset linux-debug --target release_translations
 cmake --build --preset linux-debug
 ctest --preset linux-debug

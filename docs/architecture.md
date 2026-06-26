@@ -247,7 +247,7 @@ scripts/custom      用户自定义脚本
   - `translations/labelqt_zh_TW.ts`
   - `translations/labelqt_ja_JP.ts`
   - `translations/labelqt_en_US.ts`
-- 运行 `scripts/check_translations.sh`。
+- 运行 `python scripts/check_translations.py`。
 - 构建时通过 `qt_add_translations()` 将 `.qm` 编进资源路径 `/i18n`。
 
 `TranslationManager` 会从 `:/i18n` 和可执行文件旁的 `i18n` 目录发现语言。当前发行方式主要依赖内置资源，因此二进制旁边没有 `i18n` 目录时仍可切换已编入的语言。

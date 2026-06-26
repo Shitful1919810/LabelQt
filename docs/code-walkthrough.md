@@ -361,7 +361,7 @@ Python 脚本不应该直接写 `.txt` 工程文件。要修改工程时输出 `
 
 - 新增用户可见 UI 文本必须 `tr()`。
 - 同步四份 `.ts`。
-- 运行 `scripts/check_translations.sh`。
+- 运行 `python scripts/check_translations.py`。
 - 构建时 `.qm` 会进入资源路径 `/i18n`。
 
 ## 测试

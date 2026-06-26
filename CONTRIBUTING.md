@@ -68,7 +68,7 @@ See `docs/architecture.md` for more detail.
 - Then run:
 
 ```bash
-scripts/check_translations.sh
+python scripts/check_translations.py
 cmake --build --preset linux-debug --target release_translations
 ```
 
@@ -102,19 +102,32 @@ For normal development:
 cmake --preset linux-debug
 cmake --build --preset linux-debug
 ctest --preset linux-debug
-scripts/check_translations.sh
+python scripts/check_translations.py
 ```
 
 For quick pre-commit checks:
 
 ```bash
-scripts/check_fast.sh
+python scripts/check_fast.py
 ```
 
 For the full local check set:
 
 ```bash
-scripts/check_all.sh
+python scripts/check_all.py
+```
+
+`check_all.py` chooses the default debug preset for the current platform. You can pass a preset explicitly when needed,
+for example on Windows with Visual Studio:
+
+```bash
+python scripts/check_all.py windows-vs-debug
+```
+
+Or use an environment variable:
+
+```bash
+LABELQT_CHECK_PRESET=windows-vs-debug python scripts/check_all.py
 ```
 
 For Qt model/view or widget interaction changes:

@@ -41,7 +41,7 @@ cmake -E env CCACHE_DISABLE=1 ctest --preset linux-debug
 - Never run `clang-format` on CMake files such as `CMakeLists.txt` or `CMakePresets.json`; format CMake changes manually to match the existing style.
 - New user-visible UI text must use `tr()`.
 - When adding or changing `tr()` strings, update `translations/labelqt_zh_CN.ts`, `translations/labelqt_zh_TW.ts`, `translations/labelqt_ja_JP.ts` and `translations/labelqt_en_US.ts`.
-- Run `scripts/check_translations.sh` after UI text changes.
+- Run `python scripts/check_translations.py` after UI text changes.
 - Configurable UI behavior should go through `AppPreferences` and `preference.json`.
 - Reversible project edits must use the Qt-backed `UndoStack`; add undo and redo behavior in the same change that introduces the edit.
 - Label edits should go through `LabelEditController` rather than adding new label mutation paths in `MainWindow`.

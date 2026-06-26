@@ -5,8 +5,6 @@ contract with a compact API so official scripts can demonstrate a clean style
 without hiding the data model from script authors.
 """
 
-from __future__ import annotations
-
 import json
 import os
 import sys

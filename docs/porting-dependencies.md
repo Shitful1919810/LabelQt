@@ -152,7 +152,7 @@ DEB/RPM 不会把 Python 解释器、OCR 模型或自动化脚本依赖打包进
 3. 运行：
 
 ```bash
-scripts/check_translations.sh
+python scripts/check_translations.py
 cmake --build --preset linux-debug --target release_translations
 ```
 

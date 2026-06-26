@@ -15,7 +15,13 @@ cmake -E env CCACHE_DISABLE=1 ctest --preset linux-debug
 也可以运行完整检查脚本：
 
 ```bash
-scripts/check_all.sh
+python scripts/check_all.py
+```
+
+`check_all.py` 会按当前平台选择默认 debug preset；如果要在 Windows 上使用 VS2022 preset，可以显式指定：
+
+```bash
+python scripts/check_all.py windows-vs-debug
 ```
 
 测试目标已设置 `QT_QPA_PLATFORM=offscreen`，因此基础 Qt Widget 交互测试可以在无图形桌面的环境中运行。
