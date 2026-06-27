@@ -76,7 +76,7 @@ Windows zip 应包含：
 
 打包后在一个干净目录里解压 zip，并从解压目录直接运行 `labelqt.exe`。不要只测试构建目录中的 exe。
 
-可选：在 Windows 上安装 WiX Toolset v4+ 后，可以基于同一个已部署的 Release 目录生成 MSI：
+可选：在 Windows 上安装 WiX Toolset v4+ 及其 UI 扩展后，可以基于同一个已部署的 Release 目录生成带标准安装向导的 MSI：
 
 ```powershell
 python scripts/package_windows_msi.py `
@@ -85,7 +85,7 @@ python scripts/package_windows_msi.py `
   --output-dir dist
 ```
 
-MSI 会把程序安装到 `Program Files\LabelQt`，并携带与 zip 相同的运行时文件、默认 `preference.json` 和官方脚本。发布 MSI 前应额外在干净 Windows 环境中测试安装、启动、卸载和升级流程。
+MSI 会显示“下一步、安装路径、完成”等标准界面，把程序安装到 `Program Files\LabelQt`，并携带与 zip 相同的运行时文件、默认 `preference.json` 和官方脚本。发布 MSI 前应额外在干净 Windows 环境中测试安装、启动、卸载和升级流程。
 
 ## Linux 原生包
 

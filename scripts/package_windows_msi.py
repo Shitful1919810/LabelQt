@@ -20,11 +20,16 @@ from release_packaging import copy_release_notices, copy_release_tree, validate_
 
 
 WIX_NAMESPACE = "http://wixtoolset.org/schemas/v4/wxs"
+WIX_UI_NAMESPACE = "http://wixtoolset.org/schemas/v4/wxs/ui"
 UPGRADE_CODE = uuid.UUID("7f3c9c85-82be-5ff8-b590-df1919cb7b63")
 
 
 def wix_tag(name: str) -> str:
     return f"{{{WIX_NAMESPACE}}}{name}"
+
+
+def wix_ui_tag(name: str) -> str:
+    return f"{{{WIX_UI_NAMESPACE}}}{name}"
 
 
 def sanitize_identifier(value: str) -> str:
@@ -48,13 +53,25 @@ def msi_version(version: str) -> str:
     return ".".join(parts)
 
 
+def rtf_escape(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}").replace("\n", "\\par\n")
+
+
+def write_license_rtf(repository_root: Path, destination: Path) -> None:
+    license_text = (repository_root / "LICENSE.txt").read_text(encoding="utf-8")
+    destination.write_text(r"{\rtf1\ansi\deff0" + "\n" + rtf_escape(license_text) + "\n}", encoding="utf-8")
+
+
 class WixDocumentBuilder:
-    def __init__(self, package_root: Path, product_name: str, manufacturer: str, version: str) -> None:
+    def __init__(self, package_root: Path, product_name: str, manufacturer: str, version: str,
+                 license_rtf_path: Path) -> None:
         ET.register_namespace("", WIX_NAMESPACE)
+        ET.register_namespace("ui", WIX_UI_NAMESPACE)
         self.package_root = package_root
         self.product_name = product_name
         self.manufacturer = manufacturer
         self.version = version
+        self.license_rtf_path = license_rtf_path
         self.component_refs: list[str] = []
 
     def build(self) -> ET.ElementTree:
@@ -76,6 +93,8 @@ class WixDocumentBuilder:
             {"DowngradeErrorMessage": "A newer version of LabelQt is already installed."},
         )
         ET.SubElement(package, wix_tag("MediaTemplate"), {"EmbedCab": "yes"})
+        ET.SubElement(package, wix_tag("WixVariable"), {"Id": "WixUILicenseRtf", "Value": str(self.license_rtf_path)})
+        ET.SubElement(package, wix_ui_tag("WixUI"), {"Id": "WixUI_InstallDir", "InstallDirectory": "INSTALLFOLDER"})
 
         program_files = ET.SubElement(package, wix_tag("StandardDirectory"), {"Id": "ProgramFiles64Folder"})
         install_folder = ET.SubElement(program_files, wix_tag("Directory"), {"Id": "INSTALLFOLDER", "Name": "LabelQt"})
@@ -144,8 +163,9 @@ class WixDocumentBuilder:
         ET.SubElement(feature, wix_tag("ComponentRef"), {"Id": "StartMenuShortcut"})
 
 
-def write_wxs(package_root: Path, wxs_path: Path, product_name: str, manufacturer: str, version: str) -> None:
-    builder = WixDocumentBuilder(package_root, product_name, manufacturer, version)
+def write_wxs(package_root: Path, wxs_path: Path, product_name: str, manufacturer: str, version: str,
+              license_rtf_path: Path) -> None:
+    builder = WixDocumentBuilder(package_root, product_name, manufacturer, version, license_rtf_path)
     tree = builder.build()
     ET.indent(tree, space="  ")
     tree.write(wxs_path, encoding="utf-8", xml_declaration=True)
@@ -158,6 +178,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default=Path("dist"), type=Path, help="Directory for the generated MSI.")
     parser.add_argument("--repo-root", default=Path.cwd(), type=Path, help="Repository root containing release notices.")
     parser.add_argument("--wix", default="wix", help="WiX command path. Defaults to wix from PATH.")
+    parser.add_argument("--wix-ui-extension", default="WixToolset.UI.wixext",
+                        help="WiX UI extension passed to wix build. Defaults to WixToolset.UI.wixext.")
     parser.add_argument("--manufacturer", default="LabelQt contributors", help="MSI manufacturer.")
     return parser.parse_args()
 
@@ -181,11 +203,23 @@ def main() -> int:
         temporary_root = Path(temporary_directory)
         package_root = temporary_root / "LabelQt"
         wxs_path = temporary_root / "LabelQt.wxs"
+        license_rtf_path = temporary_root / "LICENSE.rtf"
         copy_release_tree(source, package_root)
         copy_release_notices(repository_root, package_root)
-        write_wxs(package_root, wxs_path, "LabelQt", args.manufacturer, version)
+        write_license_rtf(repository_root, license_rtf_path)
+        write_wxs(package_root, wxs_path, "LabelQt", args.manufacturer, version, license_rtf_path)
         subprocess.run(
-            [args.wix, "build", "-arch", "x64", "-out", str(msi_path), str(wxs_path)],
+            [
+                args.wix,
+                "build",
+                "-arch",
+                "x64",
+                "-ext",
+                args.wix_ui_extension,
+                "-out",
+                str(msi_path),
+                str(wxs_path),
+            ],
             check=True,
         )
 

@@ -154,7 +154,7 @@ DLL 和 Qt 插件目录，去掉测试程序 `LabelQtTests.exe` 与 `Qt6Test.dll
 python scripts/package_windows_release.py --source path\to\Release --version v0.1.0-alpha.2 --output-dir dist
 ```
 
-如果需要生成 Windows MSI 安装包，可在 Windows 上安装 WiX Toolset v4+，然后运行：
+如果需要生成带安装向导的 Windows MSI 安装包，可在 Windows 上安装 WiX Toolset v4+ 及其 UI 扩展，然后运行：
 
 ```powershell
 python scripts/package_windows_msi.py --source path\to\Release --version v0.1.0-alpha.2 --output-dir dist
