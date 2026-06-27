@@ -1,5 +1,7 @@
 #include "core/TranslationManager.h"
 
+#include "core/RuntimePaths.h"
+
 #include <QApplication>
 #include <QDir>
 #include <QLocale>
@@ -13,11 +15,6 @@ namespace labelqt::core {
 namespace {
 constexpr auto translationPrefix = "labelqt_";
 constexpr auto translationSuffix = ".qm";
-
-QString i18nDirectoryPath()
-{
-    return QDir(QApplication::applicationDirPath()).filePath(QStringLiteral("i18n"));
-}
 
 QString localeNameFromTranslationFile(const QString& fileName)
 {
@@ -63,8 +60,9 @@ QString displayNameForLocale(const QString& localeName)
 QVector<ApplicationLanguage> availableApplicationLanguages()
 {
     QSet<QString> locales;
-    collectLocalesFromDirectory(QStringLiteral(":/i18n"), locales);
-    collectLocalesFromDirectory(i18nDirectoryPath(), locales);
+    for (const QString& directory : i18nDirectoryCandidates()) {
+        collectLocalesFromDirectory(directory, locales);
+    }
 
     QVector<ApplicationLanguage> languages;
     languages.reserve(locales.size());
@@ -81,8 +79,12 @@ QVector<ApplicationLanguage> availableApplicationLanguages()
 bool loadApplicationTranslator(QTranslator& translator, const QString& localeName)
 {
     const QLocale locale = localeName.trimmed().isEmpty() ? QLocale() : QLocale(localeName.trimmed());
-    return translator.load(locale, QStringLiteral("labelqt"), QStringLiteral("_"), QStringLiteral(":/i18n")) ||
-           translator.load(locale, QStringLiteral("labelqt"), QStringLiteral("_"), i18nDirectoryPath());
+    for (const QString& directory : i18nDirectoryCandidates()) {
+        if (translator.load(locale, QStringLiteral("labelqt"), QStringLiteral("_"), directory)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace labelqt::core

@@ -107,8 +107,8 @@ cpack --config build/linux/release/CPackConfig.cmake -G RPM
 ```
 
 生成 `.deb` 通常需要 `dpkg-dev` / `fakeroot`，生成 `.rpm` 通常需要 `rpm-build`。安装包会包含
-`labelqt` 可执行文件、默认 `preference.json`、官方自动化脚本、空的 `scripts/custom` 目录、桌面入口、
-图标、许可证和第三方声明。Python、OCR 模型与自动化脚本依赖不会被打包进安装包。
+`labelqt` 可执行文件、桌面入口、图标、许可证和第三方声明。默认偏好设置由程序内置提供；Python、OCR 模型、
+官方自动化脚本与自动化脚本依赖不会被打包进安装包。
 
 ### Windows
 
@@ -147,8 +147,18 @@ cmake --build --preset windows-vs-release --target deploy_windows
 ```
 
 制作 Windows 预编译发布包时，以 `deploy_windows` 生成后的 Release 目录为准，保留 `labelqt.exe`、运行所需
-DLL、Qt 插件目录、`preference.json` 和 `scripts` 目录，去掉测试程序 `LabelQtTests.exe` 与
-`Qt6Test.dll`。仓库根目录的 `LICENSE.txt` 和 `THIRD_PARTY_NOTICES.md` 应随包发布。
+DLL 和 Qt 插件目录，去掉测试程序 `LabelQtTests.exe` 与 `Qt6Test.dll`。仓库根目录的 `LICENSE.txt` 和
+`THIRD_PARTY_NOTICES.md` 应随包发布。推荐使用统一打包脚本：
+
+```powershell
+python scripts/package_windows_release.py --source path\to\Release --version v0.1.0-alpha.2 --output-dir dist
+```
+
+如果需要生成 Windows MSI 安装包，可在 Windows 上安装 WiX Toolset v4+，然后运行：
+
+```powershell
+python scripts/package_windows_msi.py --source path\to\Release --version v0.1.0-alpha.2 --output-dir dist
+```
 
 实验性 Windows 静态单 exe 构建：
 
@@ -240,11 +250,11 @@ cmake --build --preset windows-vs-release --target deploy_windows
 
 ## 偏好设置
 
-运行时界面偏好位于仓库根目录的 `preference.json`，由 `AppPreferences` 统一读取。无效或损坏的配置会回退到默认值，并在状态栏显示常驻警告。
+运行时界面偏好由 `AppPreferences` 统一读取。程序会先查找可执行文件目录旁边的 `preference.json`，再查找系统用户配置目录中的 `preference.json`。如果两者都不存在，则使用 C++ 内置默认值。无效或损坏的配置会回退到默认值，并在状态栏显示常驻警告。
 
 也可以在程序内通过“文件 > 偏好设置”打开偏好设置窗口，使用结构化表单编辑常用选项，或直接调用系统文本编辑器打开 `preference.json`。
 
-完整示例见仓库根目录 `preference.json`。如果该文件缺失或损坏，程序会使用 `AppPreferences` 中的内置默认值。下面片段展示主要结构：
+完整示例见仓库根目录 `preference.json`。便携版可以把这份文件放在 exe 旁边；Linux 安装包通常不安装这份可编辑配置。如果没有 exe 旁边的配置文件，用户保存偏好设置时会写入用户配置目录。下面片段展示主要结构：
 
 ```json
 {
@@ -372,7 +382,7 @@ cmake --build --preset windows-vs-release --target deploy_windows
 
 ## 自动化脚本
 
-程序会在可执行文件所在目录下读取自动化脚本：
+程序会优先读取可执行文件目录旁边的自动化脚本；如果没有便携脚本目录，则读取安装到系统数据目录的官方脚本。用户自定义脚本只从用户脚本目录读取，可以通过“自动化 > 打开用户脚本目录”打开该目录：
 
 ```text
 scripts/official    官方脚本
@@ -635,13 +645,13 @@ python script.py --input input.json --output output.json
 
 其中 `x` 和 `y` 是归一化图片坐标。主程序会校验页名、标签下标和分组名，应用成功后统一注册到撤销/重做栈。
 
-仓库内置示例脚本包括：
+仓库提供的官方示例脚本包括：
 
 - `scripts/official/test`：测试用脚本目录，会在自动化菜单中显示为 `Test` 子菜单，包含字数统计、分组互换和等待 5 秒等脚本。
 - `scripts/official/ocr_preview`：对当前选区、当前页或指定页码区间运行 OCR。`Configure OCR` 会通过参数窗口写入用户配置目录下的本机配置，用于保存 OCR 引擎、语言、设备、本地 manga-ocr 模型目录、默认标签分组、排序方向以及非预览入口完成后是否弹出结果报告等设置。预览入口会展示后处理后的文本块；生成标签入口会复用同一套后处理结果并输出 `addLabel` 操作。选区 OCR 会合并为一个 label，整页和跨页 OCR 会为每个文本块生成一个 label。
 - `scripts/official/ai_translate`：通过 DeepSeek API 翻译当前选中的 label；如果没有选中 label，则翻译当前页所有 label。`Configure AI Translation` 会将 API key 保存到系统 keychain，并在用户配置目录下保存 API base URL、模型、目标语言、翻译风格、自定义 prompt 以及应用翻译后是否弹出结果报告等非敏感设置。预览入口只展示译文或译文加分析；应用入口会输出 `setLabelText` 操作并由主程序注册撤销/重做；跨页入口会让用户输入 1-based 页码区间，并把整个区间的 label 一次性提交给模型作为上下文，再应用返回的译文。
 
-用户本机脚本建议放在 `scripts/custom`，该目录下除 `.gitkeep` 外默认不会提交到仓库。
+自动化脚本来源分为一个官方来源和一个用户来源。官方来源优先使用 exe 旁边的 `scripts/official`，否则使用 Linux 安装包中的 `/usr/share/labelqt/scripts/official`；用户来源优先使用 exe 旁边的 `scripts/custom`，否则使用程序打开的用户脚本目录。这样便携版可以直接携带脚本，DEB/RPM 用户也能看到系统安装的官方脚本，同时不会重复加载两套 official 或 custom。
 
 ## 开发检查
 

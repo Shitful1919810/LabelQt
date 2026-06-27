@@ -53,9 +53,9 @@ ImageCanvas::ImageCanvas(QWidget* parent) : QGraphicsView(parent)
     m_hoverToolTip->setTextFormat(Qt::RichText);
     m_hoverToolTip->setMargin(6);
     m_hoverToolTip->setStyleSheet(QStringLiteral("QLabel {"
-                                                 "background: palette(toolTipBase);"
-                                                 "color: palette(toolTipText);"
-                                                 "border: 1px solid palette(mid);"
+                                                 "background-color: rgba(31, 41, 55, 245);"
+                                                 "color: white;"
+                                                 "border: 1px solid rgba(17, 24, 39, 230);"
                                                  "border-radius: 3px;"
                                                  "}"));
     m_hoverOpacityEffect = new QGraphicsOpacityEffect(m_hoverToolTip);

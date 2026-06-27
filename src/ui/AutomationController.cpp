@@ -1,15 +1,18 @@
 #include "ui/AutomationController.h"
 
+#include "core/RuntimePaths.h"
 #include "ui/AutomationParameterDialog.h"
 #include "ui/AutomationRunDialog.h"
 
 #include <QAction>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QHash>
 #include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
+#include <QUrl>
 
 #include <algorithm>
 #include <optional>
@@ -141,6 +144,10 @@ void AutomationController::rebuildMenu()
     }
 
     m_menu->addSeparator();
+    QAction* openUserScriptFolderAction = m_menu->addAction(tr("Open User Script Folder"));
+    openUserScriptFolderAction->setObjectName(QStringLiteral("automationOpenUserScriptFolderAction"));
+    connect(openUserScriptFolderAction, &QAction::triggered, this, &AutomationController::openUserScriptFolder);
+
     QAction* refreshAction = m_menu->addAction(tr("Refresh Scripts"));
     refreshAction->setObjectName(QStringLiteral("automationRefreshAction"));
     refreshAction->setEnabled(!m_running);
@@ -165,6 +172,9 @@ void AutomationController::updateMenuEnabledState()
             }
             else if (action->objectName() == QStringLiteral("automationEmptyAction")) {
                 action->setEnabled(false);
+            }
+            else if (action->objectName() == QStringLiteral("automationOpenUserScriptFolderAction")) {
+                action->setEnabled(true);
             }
             else {
                 action->setEnabled(!m_running);
@@ -262,6 +272,25 @@ void AutomationController::runScript(const labelqt::services::AutomationScript& 
                       m_preferences.automationAutoInstallRequirements(),
                       m_preferences.automationPipIndexUrl(),
                   });
+}
+
+void AutomationController::openUserScriptFolder()
+{
+    const QString path = labelqt::core::userAutomationScriptsDirectory();
+    if (path.isEmpty()) {
+        QMessageBox::warning(m_window.data(), tr("Automation"), tr("Could not open the user script folder."));
+        return;
+    }
+
+    QDir directory(path);
+    if (!directory.exists() && !directory.mkpath(QStringLiteral("."))) {
+        QMessageBox::warning(m_window.data(), tr("Automation"), tr("Could not open the user script folder."));
+        return;
+    }
+
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(directory.absolutePath()))) {
+        QMessageBox::warning(m_window.data(), tr("Automation"), tr("Could not open the user script folder."));
+    }
 }
 
 void AutomationController::finishScript(labelqt::services::AutomationRunner* runner, AutomationRunDialog* dialog,

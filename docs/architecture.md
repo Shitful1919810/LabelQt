@@ -149,14 +149,14 @@ tests          Qt Test 测试
 
 ## 自动化脚本边界
 
-自动化脚本采用外部 Python 进程，不嵌入 Python 解释器。脚本目录：
+自动化脚本采用外部 Python 进程，不嵌入 Python 解释器。仓库里的脚本目录：
 
 ```text
 scripts/official    官方脚本和示例
 scripts/custom      用户自定义脚本
 ```
 
-每个脚本目录包含 `script.json` 和 Python 入口文件。`script.json` 可以定义单个脚本，也可以用顶层 `scripts` 数组定义多个子脚本。菜单显示顺序必须与脚本清单顺序一致，方便配置脚本始终排在第一项。
+运行时脚本分成 official 和 custom 两个来源，各自最多选择一个目录，避免重复加载。official 优先从可执行文件目录旁边的 `scripts/official` 读取，否则从安装数据目录（例如 `/usr/share/labelqt/scripts/official`）读取；custom 优先从可执行文件目录旁边的 `scripts/custom` 读取，否则从用户脚本目录读取。仓库里的 `scripts/official` 主要作为官方脚本模板和示例，开发构建与 Windows 便携包可以直接携带它；用户自定义脚本建议放在用户脚本目录中。每个脚本目录包含 `script.json` 和 Python 入口文件。`script.json` 可以定义单个脚本，也可以用顶层 `scripts` 数组定义多个子脚本。菜单显示顺序必须与脚本清单顺序一致，方便配置脚本始终排在第一项。
 
 脚本输入/输出规则：
 

@@ -1,6 +1,7 @@
 #include "services/AutomationService.h"
 
 #include "core/CommandLineUtils.h"
+#include "core/RuntimePaths.h"
 #include "services/AutomationManifestParser.h"
 #include "services/AutomationPythonResolver.h"
 #include "services/SecretStore.h"
@@ -719,15 +720,7 @@ void AutomationRunner::finishWithResult(AutomationRunResult result)
 
 QStringList AutomationService::scriptsRootCandidates()
 {
-    const QString applicationScriptsPath =
-        QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("scripts"));
-    const QString scriptsPath = QDir(applicationScriptsPath).exists()
-                                    ? applicationScriptsPath
-                                    : QDir::current().filePath(QStringLiteral("scripts"));
-    return {
-        QDir(scriptsPath).filePath(QStringLiteral("official")),
-        QDir(scriptsPath).filePath(QStringLiteral("custom")),
-    };
+    return labelqt::core::automationScriptsRootCandidates();
 }
 
 } // namespace labelqt::services

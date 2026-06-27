@@ -35,6 +35,10 @@
         <translation>找不到自動化腳本</translation>
     </message>
     <message>
+        <source>Open User Script Folder</source>
+        <translation>開啟使用者腳本目錄</translation>
+    </message>
+    <message>
         <location filename="../src/ui/AutomationController.cpp" line="149"/>
         <source>Refresh Scripts</source>
         <translation>重新整理腳本</translation>
@@ -50,6 +54,10 @@
         <location filename="../src/ui/AutomationController.cpp" line="196"/>
         <source>Open a project before running automation scripts.</source>
         <translation>請先開啟專案，再執行自動化腳本。</translation>
+    </message>
+    <message>
+        <source>Could not open the user script folder.</source>
+        <translation>無法開啟使用者腳本目錄。</translation>
     </message>
     <message>
         <location filename="../src/ui/AutomationController.cpp" line="224"/>

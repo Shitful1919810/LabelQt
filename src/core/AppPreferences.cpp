@@ -1,9 +1,9 @@
 #include "core/AppPreferences.h"
 
 #include "core/ApplicationTheme.h"
+#include "core/RuntimePaths.h"
 
 #include <QByteArray>
-#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
@@ -21,15 +21,6 @@
 namespace labelqt::core {
 
 namespace {
-QString preferencePath()
-{
-    const QString localPath = QDir::current().filePath(QStringLiteral("preference.json"));
-    if (QFile::exists(localPath)) {
-        return localPath;
-    }
-    return QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("preference.json"));
-}
-
 QColor colorFromJsonValue(const QJsonValue& value)
 {
     if (value.isString()) {
@@ -742,7 +733,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
 
 QString AppPreferences::defaultFilePath()
 {
-    return preferencePath();
+    return preferenceFilePathForWriting();
 }
 
 AppPreferences AppPreferences::load()
@@ -752,11 +743,15 @@ AppPreferences AppPreferences::load()
 
 AppPreferencesLoadResult AppPreferences::loadWithDiagnostics()
 {
-    return loadFromFile(preferencePath());
+    return loadFromFile(preferenceFilePathForReading());
 }
 
 AppPreferencesLoadResult AppPreferences::loadFromFile(const QString& path)
 {
+    if (!QFile::exists(path)) {
+        return {AppPreferences{}, {}};
+    }
+
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
         AppPreferences preferences;

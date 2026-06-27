@@ -8,6 +8,7 @@ qt_add_executable(LabelQtTests
     ../src/core/LabelPlusDocument.cpp
     ../src/core/Label.cpp
     ../src/core/Project.cpp
+    ../src/core/RuntimePaths.cpp
     ../src/core/UndoStack.cpp
     ../src/services/AutomationManifestParser.cpp
     ../src/services/AutomationOperationApplier.cpp

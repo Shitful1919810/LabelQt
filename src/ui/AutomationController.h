@@ -58,6 +58,7 @@ private:
     void rebuildMenu();
     void updateMenuEnabledState();
     void runScript(const labelqt::services::AutomationScript& script);
+    void openUserScriptFolder();
     void finishScript(labelqt::services::AutomationRunner* runner, AutomationRunDialog* dialog,
                       labelqt::services::AutomationScript script, const labelqt::services::AutomationRunResult& result);
     void setRunning(bool running);
