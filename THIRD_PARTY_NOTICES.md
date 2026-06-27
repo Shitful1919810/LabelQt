@@ -53,7 +53,13 @@ Some SVG assets included with BreezeStyleSheets carry the Apache License 2.0 not
 - License: Apache License 2.0
 - Local license file: `third_party/diff-match-patch/LICENSE`
 
-The dependency is tracked as a Git submodule. Keep the submodule license file available when updating or packaging this dependency.
+The dependency is tracked as a Git submodule. Keep the submodule license file available when updating this dependency.
+
+Release packages should include third-party license texts under a `licenses/` directory:
+
+- `licenses/BreezeStyleSheets-LICENSE.md`
+- `licenses/MaterialUi-LICENSE.txt`
+- `licenses/diff-match-patch-LICENSE.txt`
 
 ## Official Automation Scripts
 

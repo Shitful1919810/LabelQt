@@ -59,9 +59,11 @@ Qt GRPC、Qt HTTP Server、Qt MQTT、Qt Virtual Keyboard、Qt Wayland Compositor
 模块前请先核对 Qt 官方许可文档。
 
 仓库内置的 BreezeStyleSheets 主题资源位于 `resources/themes/breeze`，遵循 MIT 许可证；其中部分 SVG
-图标资源带有 Apache License 2.0 notice。QtKeychain、可选 LibArchive、内置主题资源、官方 Python
-脚本依赖和外部 API 的说明见 `THIRD_PARTY_NOTICES.md`。如果发布包选择捆绑 Python 运行时、OCR
-模型或 Python wheel，还需要额外附带这些组件自己的许可证与 notice。
+图标资源带有 Apache License 2.0 notice。校对文本差异使用的 `diff-match-patch` 位于
+`third_party/diff-match-patch`，遵循 Apache License 2.0。QtKeychain、可选 LibArchive、内置主题资源、
+官方 Python 脚本依赖和外部 API 的说明见 `THIRD_PARTY_NOTICES.md`。发布包应随带 `licenses/` 目录中的
+第三方许可证文本；如果发布包选择捆绑 Python 运行时、OCR 模型或 Python wheel，还需要额外附带这些组件自己的
+许可证与 notice。
 
 ## 环境要求
 
@@ -148,7 +150,7 @@ cmake --build --preset windows-vs-release --target deploy_windows
 
 制作 Windows 预编译发布包时，以 `deploy_windows` 生成后的 Release 目录为准，保留 `labelqt.exe`、运行所需
 DLL 和 Qt 插件目录，去掉测试程序 `LabelQtTests.exe` 与 `Qt6Test.dll`。仓库根目录的 `LICENSE.txt` 和
-`THIRD_PARTY_NOTICES.md` 应随包发布。推荐使用统一打包脚本：
+`THIRD_PARTY_NOTICES.md` 以及 `licenses/` 目录中的第三方许可证文本应随包发布。推荐使用统一打包脚本：
 
 ```powershell
 python scripts/package_windows_release.py --source path\to\Release --version v0.1.0-alpha.2 --output-dir dist

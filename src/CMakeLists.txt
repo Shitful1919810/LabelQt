@@ -253,6 +253,24 @@ install(FILES
 )
 
 install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/LICENSE.md"
+    DESTINATION share/doc/labelqt/licenses
+    RENAME BreezeStyleSheets-LICENSE.md
+)
+
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/MaterialUi.LICENSE"
+    DESTINATION share/doc/labelqt/licenses
+    RENAME MaterialUi-LICENSE.txt
+)
+
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/diff-match-patch/LICENSE"
+    DESTINATION share/doc/labelqt/licenses
+    RENAME diff-match-patch-LICENSE.txt
+)
+
+install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../resources/linux/org.labelqt.LabelQt.desktop"
     DESTINATION share/applications
 )

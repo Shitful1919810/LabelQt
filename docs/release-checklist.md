@@ -65,6 +65,7 @@ Windows zip 应包含：
 - 空的 `scripts/custom` 目录
 - `LICENSE.txt`
 - `THIRD_PARTY_NOTICES.md`
+- `licenses/` 下的第三方许可证文本
 
 不应包含：
 
@@ -113,6 +114,7 @@ cpack --config build/linux/release/CPackConfig.cmake -G RPM
 
 - 可执行文件：`/usr/bin/labelqt`
 - 文档和许可证：`/usr/share/doc/labelqt`
+- 第三方许可证文本：`/usr/share/doc/labelqt/licenses`
 - 桌面入口：`/usr/share/applications/org.labelqt.LabelQt.desktop`
 - 图标：`/usr/share/icons/hicolor/scalable/apps/org.labelqt.LabelQt.svg`
 
