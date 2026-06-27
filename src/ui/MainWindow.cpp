@@ -1084,11 +1084,9 @@ void MainWindow::compareWithProject()
     }
 
     labelqt::services::ReviewMetadata metadata =
-        labelqt::services::ProjectComparisonService::captureSnapshot(
-            baselineProject, labelqt::services::ProjectComparisonMatchMode::PageAndLabelIndex);
+        labelqt::services::ProjectComparisonService::captureSnapshot(baselineProject);
     QVector<labelqt::services::ReviewChange> changes =
-        labelqt::services::ProjectComparisonService::changesForProject(
-            project(), metadata, labelqt::services::ProjectComparisonMatchMode::PageAndLabelIndex);
+        labelqt::services::ProjectComparisonService::changesForProject(project(), metadata);
     if (changes.isEmpty()) {
         showMainWindowInformation(this, tr("Compare Projects"), tr("No differences from the selected project."));
         return;
@@ -1625,12 +1623,6 @@ void MainWindow::pasteLabelsFromClipboard()
     QVector<labelqt::core::Label> pastedLabels =
         labelqt::services::LabelPastePlanner::labelsAdjustedForPaste(clipboardLabels.labels, *image, visibleGroups,
                                                                      pasteOptions);
-    if (clipboardLabels.pasteBehavior == labelqt::services::ClipboardLabels::PasteBehavior::OffsetOnPaste) {
-        for (labelqt::core::Label& label : pastedLabels) {
-            label.resetStableId();
-        }
-    }
-
     const QVector<int> selectedIndexes = selectedVisibleLabelIndexes();
     const int insertAfterLabelIndex =
         selectedIndexes.isEmpty() ? -1 : *std::max_element(selectedIndexes.cbegin(), selectedIndexes.cend());

@@ -55,7 +55,6 @@ ReviewMetadata metadataFromObject(const QJsonObject& root)
 ReviewLabelSnapshot snapshotFromObject(const QJsonObject& object)
 {
     return {
-        object.value(QStringLiteral("id")).toString(),
         object.value(QStringLiteral("page")).toString(),
         object.value(QStringLiteral("text")).toString(),
         object.value(QStringLiteral("group")).toString(),
@@ -69,9 +68,6 @@ QJsonObject objectFromSnapshot(const ReviewLabelSnapshot& snapshot)
     QJsonObject object;
     object.insert(QStringLiteral("page"), snapshot.imageName);
     object.insert(QStringLiteral("labelIndex"), snapshot.labelIndex);
-    if (!snapshot.stableId.isEmpty()) {
-        object.insert(QStringLiteral("id"), snapshot.stableId);
-    }
     object.insert(QStringLiteral("text"), snapshot.text);
     object.insert(QStringLiteral("group"), snapshot.group);
     object.insert(QStringLiteral("x"), snapshot.position.x());
@@ -112,21 +108,13 @@ ReviewLabelSnapshot ReviewMetadata::baselineFor(const QString& imageName, int la
 
 void ReviewMetadata::setBaseline(const QString& imageName, int labelIndex, ReviewLabelSnapshot snapshot)
 {
-    const QString key = snapshot.stableId.isEmpty() ? ReviewMetadataService::keyForLabel(imageName, labelIndex)
-                                                    : QStringLiteral("id:%1").arg(snapshot.stableId);
-    setBaselineWithKey(key, imageName, labelIndex, std::move(snapshot));
-}
-
-void ReviewMetadata::setBaselineWithKey(const QString& key, const QString& imageName, int labelIndex,
-                                        ReviewLabelSnapshot snapshot)
-{
     if (snapshot.imageName.isEmpty()) {
         snapshot.imageName = imageName;
     }
     if (snapshot.labelIndex < 0) {
         snapshot.labelIndex = labelIndex;
     }
-    m_baselineLabels.insert(key, std::move(snapshot));
+    m_baselineLabels.insert(ReviewMetadataService::keyForLabel(imageName, labelIndex), std::move(snapshot));
     m_hasBaseline = true;
 }
 
@@ -148,7 +136,7 @@ bool ReviewMetadataService::projectHasBaseline(const labelqt::core::Project& pro
 
 ReviewMetadata ReviewMetadataService::captureBaseline(const labelqt::core::Project& project)
 {
-    return ProjectComparisonService::captureSnapshot(project, ProjectComparisonMatchMode::StableId);
+    return ProjectComparisonService::captureSnapshot(project);
 }
 
 ReviewMetadata ReviewMetadataService::metadataForProject(const labelqt::core::Project& project)
@@ -160,7 +148,7 @@ ReviewMetadata ReviewMetadataService::metadataForProject(const labelqt::core::Pr
 QVector<ReviewChange> ReviewMetadataService::changesForProject(const labelqt::core::Project& project,
                                                                const ReviewMetadata& metadata)
 {
-    return ProjectComparisonService::changesForProject(project, metadata, ProjectComparisonMatchMode::StableId);
+    return ProjectComparisonService::changesForProject(project, metadata);
 }
 
 QVector<labelqt::core::Label> ReviewMetadataService::baselineImageLabels(const labelqt::core::Project& project,

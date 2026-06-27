@@ -25,6 +25,8 @@ set(LABELQT_SERVICE_SOURCES
     services/LabelClipboardService.cpp
     services/LabelClipboardService.h
     services/LabelEditController.cpp
+    services/LabelSequenceDiffService.cpp
+    services/LabelSequenceDiffService.h
     services/LabelPastePlanner.cpp
     services/LabelPastePlanner.h
     services/LabelNavigator.cpp

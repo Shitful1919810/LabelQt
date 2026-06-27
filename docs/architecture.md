@@ -188,7 +188,6 @@ LabelQt 会把自身需要随工程流转的内部元数据写入 LabelPlus comm
 
 压缩前的 JSON object 当前包含这些 section：
 
-- `labelIds`：label 的稳定 ID，由 `LabelPlusDocument` 保存和恢复。
 - `mergeSources`：合并工程后每段页面来源，由 `PageSourceInfoService` 读写。
 - `review`：校对基线快照，由 `ReviewMetadataService` 读写。
 
@@ -201,11 +200,14 @@ LabelQt 会把自身需要随工程流转的内部元数据写入 LabelPlus comm
 校对流程应贴合校对人员直接编辑工程的习惯：校对人员打开工程后仍在主界面修改文本、增删
 label、移动 marker 和调整顺序。校对功能只提供一层透明记录和汇总，不引入 Word 式接受/拒绝修订流程。
 
-`LabelPlusDocument` 会在统一项目元数据里维护 `labelIds`，为 label 保存稳定 ID。`ReviewMetadataService`
-则维护 `review` section，用于保存“开始校对”时的 label 基线快照。之后的校对变更优先通过稳定 ID 匹配当前
-label 与基线 label，再比较文本、类别、marker 坐标和页内顺序。这样页内调整 label 顺序时不会被误判为删除加
-新增，同时仍保持经典 LabelPlus 文本主体兼容，也避免把校对逻辑散落到各个编辑入口。如果工程经过外部工具编辑
-导致 `labelIds` 丢失，校对系统可能把部分标签识别为删除/新增；这种情况下功能可以降级，但不能崩溃。
+`ReviewMetadataService` 维护 `review` section，用于保存“开始校对”时的 label 基线快照。之后的校对变更由
+`ProjectComparisonService` 按页组织，并交给 `LabelSequenceDiffService` 把每页 label 列表看作类似 diff
+里的行序列进行启发式对齐。匹配主要关注文本，页内顺序用于保序对齐，类别和坐标只作为弱消歧信号。这样可以在
+不向经典 LabelPlus 文本主体引入稳定 ID 的前提下，识别常见的文本修改、增删、marker 变化和页内顺序移动。
+如果工程经过外部工具编辑导致文本变化过大或重复短句过多，校对系统可能退化为新增/删除或粗粒度修改；这种情况
+下功能可以降级，但不能崩溃。
+
+详细算法、判定逻辑和已知边界见 [校对差异算法说明](proofreading-diff.md)。
 
 开始或替换校对基线本质上只修改 `commentLines`，必须走 `UndoStack`。变更汇总窗口只读展示差异并提供跳转，
 不承担 label 编辑职责；具体编辑仍应继续通过 `LabelEditController` 等现有路径完成。

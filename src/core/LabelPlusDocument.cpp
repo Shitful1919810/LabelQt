@@ -5,8 +5,6 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QHash>
-#include <QJsonArray>
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QTextStream>
@@ -64,73 +62,10 @@ int groupIndex(const QStringList& groups, const QString& group)
     return index >= 0 ? index + 1 : 1;
 }
 
-QHash<QString, QString> labelIdsFromCommentLines(const QStringList& commentLines)
-{
-    QHash<QString, QString> labelIds;
-    const QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(commentLines);
-    const QJsonArray labels = metadata.value(QStringLiteral("labelIds")).toArray();
-    for (const QJsonValue& value : labels) {
-        if (!value.isObject()) {
-            continue;
-        }
-        const QJsonObject object = value.toObject();
-        const QString page = object.value(QStringLiteral("page")).toString();
-        const int labelIndex = object.value(QStringLiteral("labelIndex")).toInt(-1);
-        const QString id = object.value(QStringLiteral("id")).toString();
-        if (!page.isEmpty() && labelIndex >= 0 && !id.isEmpty()) {
-            labelIds.insert(QStringLiteral("%1#%2").arg(page, QString::number(labelIndex)), id);
-        }
-    }
-    return labelIds;
-}
-
-void applyLabelIds(Project& project)
-{
-    const QHash<QString, QString> labelIds = labelIdsFromCommentLines(project.commentLines());
-    for (ImageEntry& image : project.images()) {
-        for (int labelIndex = 0; labelIndex < image.labels.size(); ++labelIndex) {
-            Label& label = image.labels[labelIndex];
-            const QString key = QStringLiteral("%1#%2").arg(image.name, QString::number(labelIndex));
-            if (labelIds.contains(key)) {
-                label.setStableId(labelIds.value(key));
-            }
-            label.ensureStableId();
-        }
-    }
-}
-
-QJsonArray labelIdsArray(const Project& project)
-{
-    QJsonArray labels;
-    for (const ImageEntry& image : project.images()) {
-        for (int labelIndex = 0; labelIndex < image.labels.size(); ++labelIndex) {
-            const Label& label = image.labels.at(labelIndex);
-            if (label.isDeleted()) {
-                continue;
-            }
-            QJsonObject object;
-            object.insert(QStringLiteral("page"), image.name);
-            object.insert(QStringLiteral("labelIndex"), labelIndex);
-            object.insert(QStringLiteral("id"), label.stableId());
-            labels.append(object);
-        }
-    }
-    return labels;
-}
-
 QStringList commentLinesWithMetadata(const Project& project)
 {
     QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(project.commentLines());
-    if (metadata.contains(QStringLiteral("review"))) {
-        const QJsonArray labelIds = labelIdsArray(project);
-        if (labelIds.isEmpty()) {
-            metadata.remove(QStringLiteral("labelIds"));
-        } else {
-            metadata.insert(QStringLiteral("labelIds"), labelIds);
-        }
-    } else {
-        metadata.remove(QStringLiteral("labelIds"));
-    }
+    metadata.remove(QStringLiteral("labelIds"));
     return labelqt::core::ProjectMetadataService::rewriteCommentLines(project.commentLines(), metadata);
 }
 } // namespace
@@ -236,7 +171,6 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
     if (project.groups().isEmpty()) {
         project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
     }
-    applyLabelIds(project);
 
     return project;
 }

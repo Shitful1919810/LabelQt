@@ -1298,7 +1298,6 @@ private slots:
         project.setCommentLines({QStringLiteral("# ordinary comment")});
         project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
         project.images().last().labels.append(Label(QStringLiteral("text"), QStringLiteral("框内"), {}));
-        const QString stableId = project.images().last().labels.last().stableId();
 
         LabelPlusDocument::saveToFile(project, filePath);
 
@@ -1308,13 +1307,11 @@ private slots:
         QVERIFY(!reloaded.commentLines().contains(QStringLiteral("# LabelQtMetadata v1")));
         QCOMPARE(reloaded.images().size(), 1);
         QCOMPARE(reloaded.images().first().labels.first().text(), QStringLiteral("text"));
-        QVERIFY(!reloaded.images().first().labels.first().stableId().isEmpty());
-        QVERIFY(reloaded.images().first().labels.first().stableId() != stableId);
     }
 
-    void labelPlusDocumentPersistsStableIdsWhenReviewMetadataExists()
+    void labelPlusDocumentPreservesReviewMetadataWithoutLabelIds()
     {
-        const QString dirPath = QDir::temp().filePath("labelqt_review_label_ids_test");
+        const QString dirPath = QDir::temp().filePath("labelqt_review_metadata_test");
         QDir().mkpath(dirPath);
         const QString filePath = QDir(dirPath).filePath("translation.txt");
 
@@ -1322,7 +1319,6 @@ private slots:
         project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
         project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
         project.images().last().labels.append(Label(QStringLiteral("text"), QStringLiteral("框内"), {}));
-        const QString stableId = project.images().last().labels.last().stableId();
 
         const labelqt::services::ReviewMetadata metadata =
             labelqt::services::ReviewMetadataService::captureBaseline(project);
@@ -1334,8 +1330,9 @@ private slots:
         const auto reloaded = LabelPlusDocument::loadFromFile(filePath);
         QVERIFY(reloaded.commentLines().contains(QStringLiteral("# LabelQtMetadata v1")));
         QCOMPARE(reloaded.images().size(), 1);
-        QCOMPARE(reloaded.images().first().labels.first().stableId(), stableId);
         QVERIFY(labelqt::services::ReviewMetadataService::metadataForProject(reloaded).hasBaseline());
+        const QJsonObject metadataObject = labelqt::core::ProjectMetadataService::metadataObject(reloaded.commentLines());
+        QVERIFY(!metadataObject.contains(QStringLiteral("labelIds")));
     }
 
     void preferencesReadMarkerFloatingPointSizes()
@@ -1548,7 +1545,6 @@ private slots:
             labelqt::services::ReviewMetadataService::metadataForProject(project);
         QVERIFY(parsed.hasBaseline());
         const labelqt::services::ReviewLabelSnapshot parsedEntry = parsed.baselineFor(QStringLiteral("001.png"), 0);
-        QCOMPARE(parsedEntry.stableId, project.images().at(0).labels.at(0).stableId());
         QCOMPARE(parsedEntry.imageName, QStringLiteral("001.png"));
         QCOMPARE(parsedEntry.labelIndex, 0);
         QCOMPARE(parsedEntry.text, QStringLiteral("旧译文"));
@@ -1602,7 +1598,7 @@ private slots:
         }));
     }
 
-    void reviewMetadataDetectsLabelOrderChangesByStableId()
+    void reviewMetadataDetectsLabelOrderChangesBySequenceDiff()
     {
         labelqt::core::Project project;
         labelqt::core::ImageEntry image;
@@ -1613,7 +1609,6 @@ private slots:
         image.labels.append(labelqt::core::Label(QStringLiteral("第四句"), QStringLiteral("框内"), QPointF(0.55, 0.5)));
         project.images().append(image);
 
-        const QString movedStableId = project.images().at(0).labels.at(3).stableId();
         const labelqt::services::ReviewMetadata metadata =
             labelqt::services::ReviewMetadataService::captureBaseline(project);
 
@@ -1629,12 +1624,11 @@ private slots:
                    !change.textChanged && !change.groupChanged && !change.positionChanged;
         }));
 
-        QCOMPARE(changes.first().current.stableId, movedStableId);
         QCOMPARE(changes.first().baselineLabelIndex, 3);
         QCOMPARE(changes.first().currentLabelIndex, 1);
     }
 
-    void projectComparisonFallsBackToPageAndLabelIndex()
+    void projectComparisonDetectsReorderedLabelsBySequenceDiff()
     {
         labelqt::core::Project baselineProject;
         labelqt::core::ImageEntry baselineImage;
@@ -1657,11 +1651,12 @@ private slots:
         const QVector<labelqt::services::ReviewChange> changes =
             labelqt::services::ProjectComparisonService::changesBetweenProjects(baselineProject, currentProject);
 
-        QCOMPARE(changes.size(), 2);
-        QVERIFY(std::ranges::all_of(changes, [](const labelqt::services::ReviewChange& change) {
-            return change.kind == labelqt::services::ReviewChangeKind::Modified && change.textChanged &&
-                   change.positionChanged && !change.orderChanged;
-        }));
+        QCOMPARE(changes.size(), 1);
+        QCOMPARE(changes.first().kind, labelqt::services::ReviewChangeKind::Modified);
+        QVERIFY(changes.first().orderChanged);
+        QVERIFY(!changes.first().textChanged);
+        QVERIFY(!changes.first().groupChanged);
+        QVERIFY(!changes.first().positionChanged);
     }
 
     void reviewMetadataBuildsBaselinePreviewLabels()
@@ -1683,7 +1678,6 @@ private slots:
 
         QCOMPARE(baselineLabels.size(), 2);
         QCOMPARE(baselineLabels.at(0).text(), QStringLiteral("会删除"));
-        QCOMPARE(baselineLabels.at(0).stableId(), project.images().at(0).labels.at(0).stableId());
         QVERIFY(!baselineLabels.at(0).isDeleted());
         QVERIFY(baselineLabels.at(1).isDeleted());
     }

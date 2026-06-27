@@ -17,6 +17,7 @@ qt_add_executable(LabelQtTests
     ../src/services/AutomationService.cpp
     ../src/services/LabelClipboardService.cpp
     ../src/services/LabelEditController.cpp
+    ../src/services/LabelSequenceDiffService.cpp
     ../src/services/LabelPastePlanner.cpp
     ../src/services/LabelNavigator.cpp
     ../src/services/PageSourceInfoService.cpp

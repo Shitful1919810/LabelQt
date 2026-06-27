@@ -14,13 +14,11 @@ constexpr QLatin1StringView metadataEndMarker{"# EndLabelQtMetadata"};
 constexpr qsizetype encodedPayloadLineLength = 120;
 
 constexpr std::array legacyStartMarkers{
-    QLatin1StringView{"# LabelQtLabelIds"},
     QLatin1StringView{"# LabelQtMergeSources"},
     QLatin1StringView{"# LabelQtReview"},
 };
 
 constexpr std::array legacyEndMarkers{
-    QLatin1StringView{"# EndLabelQtLabelIds"},
     QLatin1StringView{"# EndLabelQtMergeSources"},
     QLatin1StringView{"# EndLabelQtReview"},
 };
