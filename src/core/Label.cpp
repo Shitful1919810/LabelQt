@@ -1,5 +1,7 @@
 #include "core/Label.h"
 
+#include <QUuid>
+
 #include <algorithm>
 #include <utility>
 
@@ -12,10 +14,39 @@ double clampUnit(double value)
 }
 } // namespace
 
+Label::Label()
+{
+    ensureStableId();
+}
+
 Label::Label(QString text, QString group, QPointF normalizedPosition)
     : m_text(std::move(text)), m_group(std::move(group))
 {
+    ensureStableId();
     setPosition(normalizedPosition);
+}
+
+const QString& Label::stableId() const noexcept
+{
+    return m_stableId;
+}
+
+void Label::setStableId(QString stableId)
+{
+    m_stableId = std::move(stableId);
+}
+
+void Label::resetStableId()
+{
+    m_stableId.clear();
+    ensureStableId();
+}
+
+void Label::ensureStableId()
+{
+    if (m_stableId.isEmpty()) {
+        m_stableId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    }
 }
 
 const QString& Label::text() const noexcept

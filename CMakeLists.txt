@@ -21,8 +21,11 @@ option(LABELQT_ENABLE_STATIC_QT_EXPERIMENT
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(Dependencies)
+include(DiffMatchPatch)
 include(ProjectWarnings)
 include(GNUInstallDirs)
+
+labelqt_add_diff_match_patch(DiffMatchPatch)
 
 add_subdirectory(src)
 

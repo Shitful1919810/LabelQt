@@ -171,6 +171,21 @@ scripts/custom      用户自定义脚本
 
 不要在自动化 action 的触发栈内销毁或重建整个自动化菜单。脚本运行状态变化时只更新 action enabled 状态；需要重新发现脚本时，使用显式刷新或在当前调用栈结束后延迟执行。
 
+## 校对元数据
+
+校对流程应贴合校对人员直接编辑工程的习惯：校对人员打开工程后仍在主界面修改文本、增删
+label、移动 marker 和调整顺序。校对功能只提供一层透明记录和汇总，不引入 Word 式接受/拒绝修订流程。
+
+`LabelPlusDocument` 会在 LabelPlus comment 区域维护 `LabelQtLabelIds` JSON 块，为 label 保存稳定
+ID。`ReviewMetadataService` 则维护 `LabelQtReview` JSON 块，用于保存“开始校对”时的 label 基线快照。
+之后的校对变更优先通过稳定 ID 匹配当前 label 与基线 label，再比较文本、类别、marker 坐标和页内顺序。
+这样页内调整 label 顺序时不会被误判为删除加新增，同时仍保持经典 LabelPlus 文本主体兼容，也避免把校对
+逻辑散落到各个编辑入口。如果工程经过外部工具编辑导致 `LabelQtLabelIds` 丢失，校对系统应退回到页名和
+序号匹配，功能可能降级但不能崩溃。
+
+开始或替换校对基线本质上只修改 `commentLines`，必须走 `UndoStack`。变更汇总窗口只读展示差异并提供跳转，
+不承担 label 编辑职责；具体编辑仍应继续通过 `LabelEditController` 等现有路径完成。
+
 ## 偏好设置
 
 运行时 UI 配置通过 `AppPreferences` 和 `preference.json` 管理。不要在 UI 类里直接解析 JSON。

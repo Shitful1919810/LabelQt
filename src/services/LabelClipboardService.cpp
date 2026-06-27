@@ -17,6 +17,7 @@ constexpr QLatin1StringView pasteBehaviorKey{"pasteBehavior"};
 constexpr QLatin1StringView sourceImageKey{"sourceImage"};
 constexpr QLatin1StringView labelsKey{"labels"};
 constexpr QLatin1StringView textKey{"text"};
+constexpr QLatin1StringView idKey{"id"};
 constexpr QLatin1StringView groupKey{"group"};
 constexpr QLatin1StringView xKey{"x"};
 constexpr QLatin1StringView yKey{"y"};
@@ -41,6 +42,7 @@ QJsonObject labelToJson(const labelqt::core::Label& label)
 {
     const QPointF position = label.position();
     return {
+        {QString(idKey), label.stableId()},
         {QString(textKey), label.text()},
         {QString(groupKey), label.group()},
         {QString(xKey), position.x()},
@@ -56,6 +58,7 @@ std::optional<labelqt::core::Label> labelFromJson(const QJsonValue& value)
 
     const QJsonObject object = value.toObject();
     const QJsonValue text = object.value(QString(textKey));
+    const QJsonValue id = object.value(QString(idKey));
     const QJsonValue group = object.value(QString(groupKey));
     const QJsonValue x = object.value(QString(xKey));
     const QJsonValue y = object.value(QString(yKey));
@@ -63,7 +66,11 @@ std::optional<labelqt::core::Label> labelFromJson(const QJsonValue& value)
         return std::nullopt;
     }
 
-    return labelqt::core::Label(text.toString(), group.toString(), QPointF(x.toDouble(), y.toDouble()));
+    labelqt::core::Label label(text.toString(), group.toString(), QPointF(x.toDouble(), y.toDouble()));
+    if (id.isString() && !id.toString().isEmpty()) {
+        label.setStableId(id.toString());
+    }
+    return label;
 }
 } // namespace
 

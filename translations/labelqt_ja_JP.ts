@@ -1113,6 +1113,66 @@ Last error: %2</source>
         <source>%1 must be a string; using the pip default index.</source>
         <translation>%1 は文字列である必要があります。pip の既定インデックスを使用します。</translation>
     </message>
+    <message>
+        <source>Start Proofreading Baseline</source>
+        <translation>校正基準を開始</translation>
+    </message>
+    <message>
+        <source>End Proofreading</source>
+        <translation>校正を終了</translation>
+    </message>
+    <message>
+        <source>Show Proofreading Changes...</source>
+        <translation>校正変更を表示...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校正</translation>
+    </message>
+    <message>
+        <source>Open a project before starting proofreading.</source>
+        <translation>校正を開始する前にプロジェクトを開いてください。</translation>
+    </message>
+    <message>
+        <source>Replace the existing proofreading baseline with the current project state?</source>
+        <translation>既存の校正基準を現在のプロジェクト状態で置き換えますか？</translation>
+    </message>
+    <message>
+        <source>Start proofreading baseline</source>
+        <translation>校正基準を開始</translation>
+    </message>
+    <message>
+        <source>End proofreading</source>
+        <translation>校正を終了</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline updated.</source>
+        <translation>校正基準を更新しました。</translation>
+    </message>
+    <message>
+        <source>Proofreading ended.</source>
+        <translation>校正を終了しました。</translation>
+    </message>
+    <message>
+        <source>Open a project before viewing proofreading changes.</source>
+        <translation>校正変更を表示する前にプロジェクトを開いてください。</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before viewing changes.</source>
+        <translation>変更を表示する前に校正基準を開始してください。</translation>
+    </message>
+    <message>
+        <source>No proofreading changes since the baseline.</source>
+        <translation>基準以降の校正変更はありません。</translation>
+    </message>
+    <message>
+        <source>Revision mode</source>
+        <translation>修正モード</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline is active.</source>
+        <translation>校正基準が有効です。</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderDialog</name>
@@ -1758,6 +1818,113 @@ Last error: %2</source>
         <location filename="../src/main.cpp" line="54"/>
         <source>LabelPlus text project to open.</source>
         <translation>開く LabelPlus テキストプロジェクト。</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadChangesDialog</name>
+    <message>
+        <source>%n proofreading change(s)</source>
+        <translation>%n 件の校正変更</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>ページ</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>変更</translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation>概要</translation>
+    </message>
+    <message>
+        <source>Before</source>
+        <translation>変更前</translation>
+    </message>
+    <message>
+        <source>After</source>
+        <translation>変更後</translation>
+    </message>
+    <message>
+        <source>Details</source>
+        <translation>詳細</translation>
+    </message>
+    <message>
+        <source>Jump to Label</source>
+        <translation>ラベルへ移動</translation>
+    </message>
+    <message>
+        <source>Page: %1</source>
+        <translation>ページ：%1</translation>
+    </message>
+    <message>
+        <source>Label: %1</source>
+        <translation>ラベル：%1</translation>
+    </message>
+    <message>
+        <source>Change: %1</source>
+        <translation>変更：%1</translation>
+    </message>
+    <message>
+        <source>Before group: %1</source>
+        <translation>変更前グループ：%1</translation>
+    </message>
+    <message>
+        <source>Before position: %1</source>
+        <translation>変更前位置：%1</translation>
+    </message>
+    <message>
+        <source>After group: %1</source>
+        <translation>変更後グループ：%1</translation>
+    </message>
+    <message>
+        <source>After position: %1</source>
+        <translation>変更後位置：%1</translation>
+    </message>
+    <message>
+        <source>Added</source>
+        <translation>追加</translation>
+    </message>
+    <message>
+        <source>Deleted</source>
+        <translation>削除</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>変更</translation>
+    </message>
+    <message>
+        <source>text</source>
+        <translation>テキスト</translation>
+    </message>
+    <message>
+        <source>group</source>
+        <translation>グループ</translation>
+    </message>
+    <message>
+        <source>marker</source>
+        <translation>マーカー</translation>
+    </message>
+    <message>
+        <source>order</source>
+        <translation>順序</translation>
+    </message>
+    <message>
+        <source>x=%1, y=%2</source>
+        <translation>x=%1、y=%2</translation>
+    </message>
+    <message>
+        <source>Proofreading Changes</source>
+        <translation>校正変更</translation>
+    </message>
+    <message>
+        <source>Text Difference</source>
+        <translation>テキスト差分</translation>
+    </message>
+    <message>
+        <source>No text change.</source>
+        <translation>テキストの変更はありません。</translation>
     </message>
 </context>
 </TS>

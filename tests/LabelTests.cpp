@@ -14,8 +14,10 @@
 #include "services/ProjectImageValidator.h"
 #include "services/ProjectMergeService.h"
 #include "services/ProjectPageOrderService.h"
+#include "services/ReviewMetadataService.h"
 #include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
+#include "services/TextDiffService.h"
 #include "ui/ImageCanvas.h"
 #include "ui/LabelSelectionController.h"
 #include "ui/LabelTableModel.h"
@@ -43,6 +45,7 @@
 #include <expected>
 #include <memory>
 #include <optional>
+#include <ranges>
 
 using labelqt::core::Label;
 using labelqt::core::LabelPlusDocument;
@@ -1261,14 +1264,19 @@ private slots:
                                  QStringLiteral("# EndLabelQtMergeSources")});
         project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
         project.images().last().labels.append(Label(QStringLiteral("text"), QStringLiteral("框内"), {}));
+        const QString stableId = project.images().last().labels.last().stableId();
 
         LabelPlusDocument::saveToFile(project, filePath);
 
         const auto reloaded = LabelPlusDocument::loadFromFile(filePath);
         QCOMPARE(reloaded.sourceName(), QStringLiteral("source.zip"));
-        QCOMPARE(reloaded.commentLines(), project.commentLines());
+        for (const QString& line : project.commentLines()) {
+            QVERIFY(reloaded.commentLines().contains(line));
+        }
+        QVERIFY(reloaded.commentLines().contains(QStringLiteral("# LabelQtLabelIds v1")));
         QCOMPARE(reloaded.images().size(), 1);
         QCOMPARE(reloaded.images().first().labels.first().text(), QStringLiteral("text"));
+        QCOMPARE(reloaded.images().first().labels.first().stableId(), stableId);
     }
 
     void preferencesReadMarkerFloatingPointSizes()
@@ -1453,6 +1461,155 @@ private slots:
         QCOMPARE(result.preferences.backupIntervalSeconds(), 60);
         QCOMPARE(result.preferences.groupStyles().size(), 3);
         QCOMPARE(result.preferences.groupStyles().at(0).groupColor, QColor(QStringLiteral("#ef4444")));
+    }
+
+    void reviewMetadataRoundTripsCommentBlock()
+    {
+        labelqt::core::Project project;
+        project.setCommentLines({QStringLiteral("plain comment")});
+        labelqt::core::ImageEntry image;
+        image.name = QStringLiteral("001.png");
+        image.labels.append(labelqt::core::Label(QStringLiteral("旧译文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        project.images().append(image);
+
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+
+        project.setCommentLines(
+            labelqt::services::ReviewMetadataService::rewriteCommentLines(project.commentLines(), metadata));
+        QVERIFY(project.commentLines().contains(QStringLiteral("# LabelQtReview v1")));
+        QVERIFY(project.commentLines().contains(QStringLiteral("plain comment")));
+
+        const labelqt::services::ReviewMetadata parsed =
+            labelqt::services::ReviewMetadataService::metadataForProject(project);
+        QVERIFY(parsed.hasBaseline());
+        const labelqt::services::ReviewLabelSnapshot parsedEntry = parsed.baselineFor(QStringLiteral("001.png"), 0);
+        QCOMPARE(parsedEntry.stableId, project.images().at(0).labels.at(0).stableId());
+        QCOMPARE(parsedEntry.imageName, QStringLiteral("001.png"));
+        QCOMPARE(parsedEntry.labelIndex, 0);
+        QCOMPARE(parsedEntry.text, QStringLiteral("旧译文"));
+        QCOMPARE(parsedEntry.group, QStringLiteral("框内"));
+        QCOMPARE(parsedEntry.position, QPointF(0.25, 0.5));
+    }
+
+    void reviewMetadataDetectsProjectChanges()
+    {
+        labelqt::core::Project project;
+        labelqt::core::ImageEntry image;
+        image.name = QStringLiteral("001.png");
+        image.labels.append(labelqt::core::Label(QStringLiteral("旧译文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        image.labels.append(labelqt::core::Label(QStringLiteral("会删除"), QStringLiteral("框外"), QPointF(0.75, 0.5)));
+        project.images().append(image);
+
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+        project.images()[0].labels[0].setText(QStringLiteral("新译文"));
+        project.images()[0].labels[1].setDeleted(true);
+        project.images()[0].labels.append(
+            labelqt::core::Label(QStringLiteral("新增"), QStringLiteral("框内"), QPointF(0.5, 0.5)));
+
+        const QVector<labelqt::services::ReviewChange> changes =
+            labelqt::services::ReviewMetadataService::changesForProject(project, metadata);
+
+        QCOMPARE(changes.size(), 3);
+        QVERIFY(std::ranges::any_of(changes, [](const labelqt::services::ReviewChange& change) {
+            return change.kind == labelqt::services::ReviewChangeKind::Modified && change.textChanged;
+        }));
+        QVERIFY(std::ranges::any_of(changes, [](const labelqt::services::ReviewChange& change) {
+            return change.kind == labelqt::services::ReviewChangeKind::Deleted;
+        }));
+        QVERIFY(std::ranges::any_of(changes, [](const labelqt::services::ReviewChange& change) {
+            return change.kind == labelqt::services::ReviewChangeKind::Added;
+        }));
+    }
+
+    void reviewMetadataDetectsLabelOrderChangesByStableId()
+    {
+        labelqt::core::Project project;
+        labelqt::core::ImageEntry image;
+        image.name = QStringLiteral("001.png");
+        image.labels.append(labelqt::core::Label(QStringLiteral("第一句"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        image.labels.append(labelqt::core::Label(QStringLiteral("第二句"), QStringLiteral("框内"), QPointF(0.35, 0.5)));
+        image.labels.append(labelqt::core::Label(QStringLiteral("第三句"), QStringLiteral("框内"), QPointF(0.45, 0.5)));
+        image.labels.append(labelqt::core::Label(QStringLiteral("第四句"), QStringLiteral("框内"), QPointF(0.55, 0.5)));
+        project.images().append(image);
+
+        const QString movedStableId = project.images().at(0).labels.at(3).stableId();
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+
+        labelqt::core::Label movedLabel = project.images()[0].labels.takeAt(3);
+        project.images()[0].labels.insert(1, std::move(movedLabel));
+
+        const QVector<labelqt::services::ReviewChange> changes =
+            labelqt::services::ReviewMetadataService::changesForProject(project, metadata);
+
+        QCOMPARE(changes.size(), 1);
+        QVERIFY(std::ranges::all_of(changes, [](const labelqt::services::ReviewChange& change) {
+            return change.kind == labelqt::services::ReviewChangeKind::Modified && change.orderChanged &&
+                   !change.textChanged && !change.groupChanged && !change.positionChanged;
+        }));
+
+        QCOMPARE(changes.first().current.stableId, movedStableId);
+        QCOMPARE(changes.first().baselineLabelIndex, 3);
+        QCOMPARE(changes.first().currentLabelIndex, 1);
+    }
+
+    void reviewMetadataBuildsBaselinePreviewLabels()
+    {
+        labelqt::core::Project project;
+        labelqt::core::ImageEntry image;
+        image.name = QStringLiteral("001.png");
+        image.labels.append(labelqt::core::Label(QStringLiteral("会删除"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        project.images().append(image);
+
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+        project.images()[0].labels[0].setDeleted(true);
+        project.images()[0].labels.append(
+            labelqt::core::Label(QStringLiteral("新增"), QStringLiteral("框外"), QPointF(0.75, 0.5)));
+
+        const QVector<labelqt::core::Label> baselineLabels =
+            labelqt::services::ReviewMetadataService::baselineImageLabels(project, metadata, QStringLiteral("001.png"));
+
+        QCOMPARE(baselineLabels.size(), 2);
+        QCOMPARE(baselineLabels.at(0).text(), QStringLiteral("会删除"));
+        QCOMPARE(baselineLabels.at(0).stableId(), project.images().at(0).labels.at(0).stableId());
+        QVERIFY(!baselineLabels.at(0).isDeleted());
+        QVERIFY(baselineLabels.at(1).isDeleted());
+    }
+
+    void reviewMetadataRewriteRemovesEmptyBlock()
+    {
+        const QStringList commentLines = {
+            QStringLiteral("keep me"),
+            QStringLiteral("# LabelQtReview v1"),
+            QStringLiteral("# {\"version\":1,\"labels\":[{\"page\":\"001.png\",\"labelIndex\":0,\"status\":\"confirmed\"}]}"),
+            QStringLiteral("# EndLabelQtReview"),
+        };
+
+        labelqt::services::ReviewMetadata metadata;
+        const QStringList rewritten =
+            labelqt::services::ReviewMetadataService::rewriteCommentLines(commentLines, metadata);
+
+        QCOMPARE(rewritten, QStringList{QStringLiteral("keep me")});
+    }
+
+    void textDiffServiceSplitsMultipleChangedRegions()
+    {
+        const QVector<labelqt::services::TextDiffChunk> chunks =
+            labelqt::services::TextDiffService::diff(QStringLiteral("欢迎光临\n你是谁"),
+                                                     QStringLiteral("欢迎光临啊\n你是谁呢"));
+
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Insert && chunk.text == QStringLiteral("啊");
+        }));
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Insert && chunk.text == QStringLiteral("呢");
+        }));
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Equal && chunk.text.contains(QStringLiteral("你是谁"));
+        }));
     }
 };
 

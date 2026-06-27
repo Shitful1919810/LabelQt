@@ -1113,6 +1113,66 @@ Last error: %2</source>
         <source>%1 must be a string; using the pip default index.</source>
         <translation>%1 必須是字串；將使用 pip 預設來源。</translation>
     </message>
+    <message>
+        <source>Start Proofreading Baseline</source>
+        <translation>開始校對基線</translation>
+    </message>
+    <message>
+        <source>End Proofreading</source>
+        <translation>結束校對</translation>
+    </message>
+    <message>
+        <source>Show Proofreading Changes...</source>
+        <translation>檢視校對變更...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校對</translation>
+    </message>
+    <message>
+        <source>Open a project before starting proofreading.</source>
+        <translation>請先開啟工程，再開始校對。</translation>
+    </message>
+    <message>
+        <source>Replace the existing proofreading baseline with the current project state?</source>
+        <translation>是否用目前工程狀態取代既有校對基線？</translation>
+    </message>
+    <message>
+        <source>Start proofreading baseline</source>
+        <translation>開始校對基線</translation>
+    </message>
+    <message>
+        <source>End proofreading</source>
+        <translation>結束校對</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline updated.</source>
+        <translation>校對基線已更新。</translation>
+    </message>
+    <message>
+        <source>Proofreading ended.</source>
+        <translation>校對已結束。</translation>
+    </message>
+    <message>
+        <source>Open a project before viewing proofreading changes.</source>
+        <translation>請先開啟工程，再檢視校對變更。</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before viewing changes.</source>
+        <translation>請先開始校對基線，再檢視變更。</translation>
+    </message>
+    <message>
+        <source>No proofreading changes since the baseline.</source>
+        <translation>自基線以來沒有校對變更。</translation>
+    </message>
+    <message>
+        <source>Revision mode</source>
+        <translation>修訂模式</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline is active.</source>
+        <translation>校對基線已啟用。</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderDialog</name>
@@ -1758,6 +1818,113 @@ Last error: %2</source>
         <location filename="../src/main.cpp" line="54"/>
         <source>LabelPlus text project to open.</source>
         <translation>要開啟的 LabelPlus 文字專案。</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadChangesDialog</name>
+    <message>
+        <source>%n proofreading change(s)</source>
+        <translation>%n 筆校對變更</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>頁面</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>變更</translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation>摘要</translation>
+    </message>
+    <message>
+        <source>Before</source>
+        <translation>修改前</translation>
+    </message>
+    <message>
+        <source>After</source>
+        <translation>修改後</translation>
+    </message>
+    <message>
+        <source>Details</source>
+        <translation>詳情</translation>
+    </message>
+    <message>
+        <source>Jump to Label</source>
+        <translation>跳到標籤</translation>
+    </message>
+    <message>
+        <source>Page: %1</source>
+        <translation>頁面：%1</translation>
+    </message>
+    <message>
+        <source>Label: %1</source>
+        <translation>標籤：%1</translation>
+    </message>
+    <message>
+        <source>Change: %1</source>
+        <translation>變更：%1</translation>
+    </message>
+    <message>
+        <source>Before group: %1</source>
+        <translation>修改前類別：%1</translation>
+    </message>
+    <message>
+        <source>Before position: %1</source>
+        <translation>修改前座標：%1</translation>
+    </message>
+    <message>
+        <source>After group: %1</source>
+        <translation>修改後類別：%1</translation>
+    </message>
+    <message>
+        <source>After position: %1</source>
+        <translation>修改後座標：%1</translation>
+    </message>
+    <message>
+        <source>Added</source>
+        <translation>新增</translation>
+    </message>
+    <message>
+        <source>Deleted</source>
+        <translation>刪除</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>修改</translation>
+    </message>
+    <message>
+        <source>text</source>
+        <translation>文字</translation>
+    </message>
+    <message>
+        <source>group</source>
+        <translation>類別</translation>
+    </message>
+    <message>
+        <source>marker</source>
+        <translation>標記</translation>
+    </message>
+    <message>
+        <source>order</source>
+        <translation>順序</translation>
+    </message>
+    <message>
+        <source>x=%1, y=%2</source>
+        <translation>x=%1，y=%2</translation>
+    </message>
+    <message>
+        <source>Proofreading Changes</source>
+        <translation>校對變更</translation>
+    </message>
+    <message>
+        <source>Text Difference</source>
+        <translation>文字差異</translation>
+    </message>
+    <message>
+        <source>No text change.</source>
+        <translation>文字沒有變化。</translation>
     </message>
 </context>
 </TS>

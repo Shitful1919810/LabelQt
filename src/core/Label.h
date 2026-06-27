@@ -7,8 +7,13 @@ namespace labelqt::core {
 
 class Label {
 public:
-    Label() = default;
+    Label();
     Label(QString text, QString group, QPointF normalizedPosition);
+
+    const QString& stableId() const noexcept;
+    void setStableId(QString stableId);
+    void resetStableId();
+    void ensureStableId();
 
     const QString& text() const noexcept;
     void setText(QString text);
@@ -23,6 +28,7 @@ public:
     void setDeleted(bool deleted) noexcept;
 
 private:
+    QString m_stableId;
     QString m_text;
     QString m_group;
     QPointF m_position{0.0, 0.0};

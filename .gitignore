@@ -4,6 +4,8 @@ CMakeCache.txt
 compile_commands.json
 .cache/
 .claude/
+.codex/
+.agents
 
 # Qt Creator / CMake user files
 CMakeUserPresets.json

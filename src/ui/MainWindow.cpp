@@ -5,6 +5,7 @@
 #include "services/LabelNavigator.h"
 #include "services/LabelPastePlanner.h"
 #include "services/ProjectImageValidator.h"
+#include "services/ReviewMetadataService.h"
 #include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
 #include "ui/AutomationController.h"
@@ -14,10 +15,12 @@
 #include "ui/ImagePageViewController.h"
 #include "ui/LabelEditDelegates.h"
 #include "ui/LabelSelectionController.h"
+#include "ui/LabelTableView.h"
 #include "ui/MainWindowShortcutController.h"
 #include "ui/PageOrderDialog.h"
 #include "ui/PageSelectorComboBox.h"
 #include "ui/PreferenceDialog.h"
+#include "ui/ProofreadChangesDialog.h"
 #include "ui/ProjectMergeDialog.h"
 #include "ui/ProjectViewController.h"
 #include "ui/ThemeManager.h"
@@ -306,12 +309,20 @@ MainWindow::MainWindow(QWidget* parent)
     m_warningLabel->setStyleSheet(QStringLiteral("QLabel { color: #b26a00; font-weight: 600; }"));
     m_warningLabel->setVisible(false);
     statusBar()->addPermanentWidget(m_warningLabel);
+    m_proofreadingStatusLabel = new QLabel(tr("Revision mode"), this);
+    m_proofreadingStatusLabel->setStyleSheet(QStringLiteral(
+        "QLabel { color: #7c2d12; background: #fed7aa; border: 1px solid #fb923c; padding: 2px 6px; "
+        "font-weight: 700; }"));
+    m_proofreadingStatusLabel->setToolTip(tr("Proofreading baseline is active."));
+    m_proofreadingStatusLabel->setVisible(false);
+    statusBar()->addPermanentWidget(m_proofreadingStatusLabel);
     statusBar()->showMessage(tr("Ready"));
     showPreferenceWarnings();
     restoreLayoutState();
     m_backupTimer = new QTimer(this);
     connect(m_backupTimer, &QTimer::timeout, this, &MainWindow::performAutoBackup);
     configureBackupTimer();
+    updateProofreadingStatusUi();
 }
 
 MainWindow::~MainWindow()
@@ -387,6 +398,12 @@ void MainWindow::createActions()
     m_reorderPagesAction = new QAction(tr("Reorder &Pages..."), this);
     connect(m_reorderPagesAction, &QAction::triggered, this, &MainWindow::reorderPages);
 
+    m_startProofreadingAction = new QAction(tr("Start Proofreading Baseline"), this);
+    connect(m_startProofreadingAction, &QAction::triggered, this, &MainWindow::startProofreadingBaseline);
+
+    m_showProofreadingChangesAction = new QAction(tr("Show Proofreading Changes..."), this);
+    connect(m_showProofreadingChangesAction, &QAction::triggered, this, &MainWindow::showProofreadingChanges);
+
     m_saveProjectAction = new QAction(tr("&Save"), this);
     m_saveProjectAction->setShortcut(QKeySequence::Save);
     connect(m_saveProjectAction, &QAction::triggered, this, &MainWindow::saveProject);
@@ -444,6 +461,8 @@ void MainWindow::createMenus()
     editMenu->addAction(m_redoAction);
     editMenu->addSeparator();
     editMenu->addAction(m_reorderPagesAction);
+    editMenu->addAction(m_startProofreadingAction);
+    editMenu->addAction(m_showProofreadingChangesAction);
 
     QMenu* automationMenu = menuBar()->addMenu(tr("&Automation"));
     if (m_automationController != nullptr) {
@@ -550,7 +569,7 @@ void MainWindow::createCentralWidget()
     m_rightSplitter = new QSplitter(Qt::Vertical, rightPanel);
     m_rightSplitter->setChildrenCollapsible(false);
 
-    m_labelView = new QTableView(m_rightSplitter);
+    m_labelView = new LabelTableView(m_rightSplitter);
     m_defaultLabelTableFont = m_labelView->font();
     m_labelView->setModel(m_labelModel);
     m_labelView->setItemDelegateForColumn(1, m_labelTextDelegate);
@@ -908,6 +927,128 @@ void MainWindow::reorderPages()
         m_canvas == nullptr ? QPointF(0.5, 0.5) : m_canvas->normalizedViewCenter(),
     };
     m_projectWorkflowController->applyPageOrder(dialog.pageOrder(), viewState);
+}
+
+void MainWindow::startProofreadingBaseline()
+{
+    if (isProjectEditingBlocked()) {
+        return;
+    }
+
+    commitActiveTextInput();
+    if (project().images().isEmpty()) {
+        showMainWindowInformation(this, tr("Proofreading"), tr("Open a project before starting proofreading."));
+        return;
+    }
+
+    const labelqt::services::ReviewMetadata oldMetadata =
+        labelqt::services::ReviewMetadataService::metadataForProject(project());
+    if (oldMetadata.hasBaseline()) {
+        endProofreadingBaseline();
+        return;
+    }
+
+    const QStringList oldCommentLines = project().commentLines();
+    const labelqt::services::ReviewMetadata newMetadata =
+        labelqt::services::ReviewMetadataService::captureBaseline(project());
+    const QStringList newCommentLines =
+        labelqt::services::ReviewMetadataService::rewriteCommentLines(oldCommentLines, newMetadata);
+    if (oldCommentLines == newCommentLines) {
+        return;
+    }
+
+    project().setCommentLines(newCommentLines);
+    const QString message = tr("Start proofreading baseline");
+    m_undoStack.push(
+        message, message, message,
+        [this, oldCommentLines]() {
+            project().setCommentLines(oldCommentLines);
+            updateProofreadingStatusUi();
+            markDirty();
+        },
+        [this, newCommentLines]() {
+            project().setCommentLines(newCommentLines);
+            updateProofreadingStatusUi();
+            markDirty();
+        });
+    markDirty();
+    updateProofreadingStatusUi();
+    statusBar()->showMessage(tr("Proofreading baseline updated."), 4000);
+}
+
+void MainWindow::endProofreadingBaseline()
+{
+    if (isProjectEditingBlocked()) {
+        return;
+    }
+
+    commitActiveTextInput();
+    const QStringList oldCommentLines = project().commentLines();
+    const QStringList newCommentLines =
+        labelqt::services::ReviewMetadataService::rewriteCommentLines(oldCommentLines, {});
+    if (oldCommentLines == newCommentLines) {
+        updateProofreadingStatusUi();
+        return;
+    }
+
+    project().setCommentLines(newCommentLines);
+    const QString message = tr("End proofreading");
+    m_undoStack.push(
+        message, message, message,
+        [this, oldCommentLines]() {
+            project().setCommentLines(oldCommentLines);
+            updateProofreadingStatusUi();
+            markDirty();
+        },
+        [this, newCommentLines]() {
+            project().setCommentLines(newCommentLines);
+            updateProofreadingStatusUi();
+            markDirty();
+        });
+    markDirty();
+    updateProofreadingStatusUi();
+    statusBar()->showMessage(tr("Proofreading ended."), 4000);
+}
+
+void MainWindow::showProofreadingChanges()
+{
+    commitActiveTextInput();
+    if (project().images().isEmpty()) {
+        showMainWindowInformation(this, tr("Proofreading"), tr("Open a project before viewing proofreading changes."));
+        return;
+    }
+
+    const labelqt::services::ReviewMetadata metadata =
+        labelqt::services::ReviewMetadataService::metadataForProject(project());
+    if (!metadata.hasBaseline()) {
+        showMainWindowInformation(this, tr("Proofreading"),
+                                  tr("Start a proofreading baseline before viewing changes."));
+        return;
+    }
+
+    QVector<labelqt::services::ReviewChange> changes =
+        labelqt::services::ReviewMetadataService::changesForProject(project(), metadata);
+    if (changes.isEmpty()) {
+        showMainWindowInformation(this, tr("Proofreading"), tr("No proofreading changes since the baseline."));
+        return;
+    }
+
+    ProofreadChangesDialog dialog(project(), m_preferences, metadata, std::move(changes), this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const int imageIndex = dialog.selectedImageIndex();
+    const int labelIndex = dialog.selectedLabelIndex();
+    if (imageIndex < 0 || imageIndex >= project().images().size()) {
+        return;
+    }
+    if (labelIndex >= 0 && labelIndex < project().images().at(imageIndex).labels.size() &&
+        !project().images().at(imageIndex).labels.at(labelIndex).isDeleted()) {
+        selectLabelAndCenter(imageIndex, labelIndex);
+        return;
+    }
+    selectImage(imageIndex);
 }
 
 void MainWindow::showAutomationDiscoveryWarnings(const QStringList& warnings)
@@ -1422,6 +1563,11 @@ void MainWindow::pasteLabelsFromClipboard()
     QVector<labelqt::core::Label> pastedLabels =
         labelqt::services::LabelPastePlanner::labelsAdjustedForPaste(clipboardLabels.labels, *image, visibleGroups,
                                                                      pasteOptions);
+    if (clipboardLabels.pasteBehavior == labelqt::services::ClipboardLabels::PasteBehavior::OffsetOnPaste) {
+        for (labelqt::core::Label& label : pastedLabels) {
+            label.resetStableId();
+        }
+    }
 
     const QVector<int> selectedIndexes = selectedVisibleLabelIndexes();
     const int insertAfterLabelIndex =
@@ -2231,6 +2377,7 @@ void MainWindow::refreshProjectUi()
     m_currentImageIndex = project().images().isEmpty() ? -1 : 0;
     refreshImageUi();
     updateWindowTitle();
+    updateProofreadingStatusUi();
 }
 
 void MainWindow::detachProjectViewsFromProjectData()
@@ -2860,6 +3007,22 @@ void MainWindow::setDirty(bool dirty)
     updateWindowTitle();
 }
 
+void MainWindow::updateProofreadingStatusUi()
+{
+    const bool hasBaseline = labelqt::services::ReviewMetadataService::projectHasBaseline(project());
+    const bool hasProject = !project().isEmpty();
+    if (m_proofreadingStatusLabel != nullptr) {
+        m_proofreadingStatusLabel->setVisible(hasBaseline);
+    }
+    if (m_startProofreadingAction != nullptr) {
+        m_startProofreadingAction->setText(hasBaseline ? tr("End Proofreading") : tr("Start Proofreading Baseline"));
+        m_startProofreadingAction->setEnabled(!m_isAutomationRunning && hasProject);
+    }
+    if (m_showProofreadingChangesAction != nullptr) {
+        m_showProofreadingChangesAction->setEnabled(!m_isAutomationRunning && hasProject && hasBaseline);
+    }
+}
+
 bool MainWindow::promptToSaveIfDirty()
 {
     commitActiveTextInput();
@@ -3039,6 +3202,7 @@ void MainWindow::setAutomationRunning(bool running)
     if (m_nextPageAction != nullptr) {
         m_nextPageAction->setEnabled(hasProject && hasNextPage);
     }
+    updateProofreadingStatusUi();
 }
 
 bool MainWindow::isProjectEditingBlocked() const noexcept
