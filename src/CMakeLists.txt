@@ -6,6 +6,8 @@ set(LABELQT_CORE_SOURCES
     core/Label.cpp
     core/LabelPlusDocument.cpp
     core/Project.cpp
+    core/ProjectMetadataService.cpp
+    core/ProjectMetadataService.h
     core/RuntimePaths.cpp
     core/RuntimePaths.h
     core/TranslationManager.cpp

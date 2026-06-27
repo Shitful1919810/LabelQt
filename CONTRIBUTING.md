@@ -26,6 +26,14 @@ LabelQt is an independent C++/Qt 6 LabelPlus text project editor. Keep changes a
 
 See `docs/architecture.md` for more detail.
 
+## Project Metadata In LabelPlus Comments
+
+- LabelQt-specific project metadata must be stored in the unified compressed `LabelQtMetadata` comment block.
+- Use `ProjectMetadataService` for comment block encoding, decoding and rewriting.
+- Do not add new standalone `LabelQt...` comment blocks for future metadata sections.
+- The block is compressed and base64-encoded for compactness and text safety. It is not encrypted; do not store secrets
+  such as API keys in project metadata.
+
 ## Qt Licensing Constraints
 
 - Keep the application on LGPL-available Qt modules unless the project intentionally changes to a GPL-compatible release strategy.

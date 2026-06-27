@@ -1,7 +1,8 @@
 #include "services/ReviewMetadataService.h"
 
+#include "core/ProjectMetadataService.h"
+
 #include <QJsonArray>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QSet>
 
@@ -12,38 +13,47 @@
 
 namespace labelqt::services {
 namespace {
-constexpr QLatin1StringView startMarker{"# LabelQtReview"};
-constexpr QLatin1StringView endMarker{"# EndLabelQtReview"};
 constexpr double positionEpsilon = 0.000001;
 
-QString uncommentJsonLine(QString line)
+ReviewLabelSnapshot snapshotFromObject(const QJsonObject& object);
+QJsonObject objectFromSnapshot(const ReviewLabelSnapshot& snapshot);
+
+QJsonObject objectFromMetadata(const ReviewMetadata& metadata)
 {
-    line = line.trimmed();
-    if (line.startsWith(QLatin1Char('#'))) {
-        line.remove(0, 1);
+    QJsonArray labels;
+    QStringList keys = metadata.baselineLabels().keys();
+    keys.sort();
+    for (const QString& key : std::as_const(keys)) {
+        labels.append(objectFromSnapshot(metadata.baselineLabels().value(key)));
     }
-    return line.trimmed();
+
+    QJsonObject root;
+    root.insert(QStringLiteral("version"), 1);
+    root.insert(QStringLiteral("mode"), QStringLiteral("baseline"));
+    root.insert(QStringLiteral("labels"), labels);
+    return root;
 }
 
-QStringList withoutReviewCommentBlock(const QStringList& commentLines)
+ReviewMetadata metadataFromObject(const QJsonObject& root)
 {
-    QStringList filteredLines;
-    bool isInReviewBlock = false;
-    for (const QString& line : commentLines) {
-        const QString trimmedLine = line.trimmed();
-        if (trimmedLine.startsWith(startMarker)) {
-            isInReviewBlock = true;
-            continue;
-        }
-        if (isInReviewBlock && trimmedLine.startsWith(endMarker)) {
-            isInReviewBlock = false;
-            continue;
-        }
-        if (!isInReviewBlock) {
-            filteredLines.append(line);
-        }
+    ReviewMetadata metadata;
+    if (root.value(QStringLiteral("mode")).toString() != QStringLiteral("baseline")) {
+        return metadata;
     }
-    return filteredLines;
+
+    metadata.setHasBaseline(true);
+    const QJsonArray labels = root.value(QStringLiteral("labels")).toArray();
+    for (const QJsonValue& value : labels) {
+        if (!value.isObject()) {
+            continue;
+        }
+        const ReviewLabelSnapshot snapshot = snapshotFromObject(value.toObject());
+        if (snapshot.imageName.isEmpty() || snapshot.labelIndex < 0) {
+            continue;
+        }
+        metadata.setBaseline(snapshot.imageName, snapshot.labelIndex, snapshot);
+    }
+    return metadata;
 }
 
 QString stableIdKey(const QString& stableId)
@@ -184,22 +194,6 @@ QSet<QString> movedStableIds(const QHash<QString, ReviewLabelSnapshot>& baseline
     return movedIds;
 }
 
-QString reviewCommentLine(const ReviewMetadata& metadata)
-{
-    QJsonArray labels;
-    QStringList keys = metadata.baselineLabels().keys();
-    keys.sort();
-    for (const QString& key : std::as_const(keys)) {
-        labels.append(objectFromSnapshot(metadata.baselineLabels().value(key)));
-    }
-
-    QJsonObject root;
-    root.insert(QStringLiteral("version"), 1);
-    root.insert(QStringLiteral("mode"), QStringLiteral("baseline"));
-    root.insert(QStringLiteral("labels"), labels);
-    return QStringLiteral("# %1").arg(QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact)));
-}
-
 labelqt::core::Label labelFromSnapshot(const ReviewLabelSnapshot& snapshot)
 {
     labelqt::core::Label label(snapshot.text, snapshot.group, snapshot.position);
@@ -294,47 +288,8 @@ ReviewMetadata ReviewMetadataService::captureBaseline(const labelqt::core::Proje
 
 ReviewMetadata ReviewMetadataService::metadataForProject(const labelqt::core::Project& project)
 {
-    ReviewMetadata metadata;
-    bool isInReviewBlock = false;
-    QString jsonText;
-    for (const QString& line : project.commentLines()) {
-        const QString trimmedLine = line.trimmed();
-        if (trimmedLine.startsWith(startMarker)) {
-            isInReviewBlock = true;
-            continue;
-        }
-        if (isInReviewBlock && trimmedLine.startsWith(endMarker)) {
-            break;
-        }
-        if (isInReviewBlock) {
-            jsonText.append(uncommentJsonLine(line));
-        }
-    }
-
-    const QJsonDocument document = QJsonDocument::fromJson(jsonText.toUtf8());
-    if (!document.isObject()) {
-        return metadata;
-    }
-
-    const QJsonObject root = document.object();
-    if (root.value(QStringLiteral("mode")).toString() != QStringLiteral("baseline")) {
-        return metadata;
-    }
-
-    metadata.setHasBaseline(true);
-    const QJsonArray labels = root.value(QStringLiteral("labels")).toArray();
-    for (const QJsonValue& value : labels) {
-        if (!value.isObject()) {
-            continue;
-        }
-        const QJsonObject object = value.toObject();
-        const ReviewLabelSnapshot snapshot = snapshotFromObject(object);
-        if (snapshot.imageName.isEmpty() || snapshot.labelIndex < 0) {
-            continue;
-        }
-        metadata.setBaseline(snapshot.imageName, snapshot.labelIndex, snapshot);
-    }
-    return metadata;
+    const QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(project.commentLines());
+    return metadataFromObject(metadata.value(QStringLiteral("review")).toObject());
 }
 
 QVector<ReviewChange> ReviewMetadataService::changesForProject(const labelqt::core::Project& project,
@@ -466,18 +421,13 @@ QVector<labelqt::core::Label> ReviewMetadataService::baselineImageLabels(const l
 
 QStringList ReviewMetadataService::rewriteCommentLines(const QStringList& commentLines, const ReviewMetadata& metadata)
 {
-    QStringList lines = withoutReviewCommentBlock(commentLines);
-    if (!metadata.hasBaseline()) {
-        return lines;
+    QJsonObject projectMetadata = labelqt::core::ProjectMetadataService::metadataObject(commentLines);
+    if (metadata.hasBaseline()) {
+        projectMetadata.insert(QStringLiteral("review"), objectFromMetadata(metadata));
+    } else {
+        projectMetadata.remove(QStringLiteral("review"));
     }
-
-    if (!lines.isEmpty() && !lines.last().isEmpty()) {
-        lines.append(QString());
-    }
-    lines.append(QStringLiteral("# LabelQtReview v1"));
-    lines.append(reviewCommentLine(metadata));
-    lines.append(QStringLiteral("# EndLabelQtReview"));
-    return lines;
+    return labelqt::core::ProjectMetadataService::rewriteCommentLines(commentLines, projectMetadata);
 }
 
 } // namespace labelqt::services

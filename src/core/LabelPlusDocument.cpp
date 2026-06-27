@@ -1,11 +1,12 @@
 #include "core/LabelPlusDocument.h"
 
+#include "core/ProjectMetadataService.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QJsonArray>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QTextStream>
@@ -19,8 +20,6 @@ namespace labelqt::core {
 namespace {
 const QRegularExpression imageLineRegex(R"(>>>>>>>>\[(.*?)\]<<<<<<<<)");
 const QRegularExpression labelLineRegex(R"(----------------\[(\d+)\]----------------\[([0-9.]+),([0-9.]+),(\d+)\])");
-constexpr QLatin1StringView labelIdsStartMarker{"# LabelQtLabelIds"};
-constexpr QLatin1StringView labelIdsEndMarker{"# EndLabelQtLabelIds"};
 
 QString readTextFile(const QString& filePath)
 {
@@ -65,61 +64,11 @@ int groupIndex(const QStringList& groups, const QString& group)
     return index >= 0 ? index + 1 : 1;
 }
 
-QString uncommentJsonLine(QString line)
-{
-    line = line.trimmed();
-    if (line.startsWith(QLatin1Char('#'))) {
-        line.remove(0, 1);
-    }
-    return line.trimmed();
-}
-
-QStringList withoutLabelIdsCommentBlock(const QStringList& commentLines)
-{
-    QStringList filteredLines;
-    bool isInLabelIdsBlock = false;
-    for (const QString& line : commentLines) {
-        const QString trimmedLine = line.trimmed();
-        if (trimmedLine.startsWith(labelIdsStartMarker)) {
-            isInLabelIdsBlock = true;
-            continue;
-        }
-        if (isInLabelIdsBlock && trimmedLine.startsWith(labelIdsEndMarker)) {
-            isInLabelIdsBlock = false;
-            continue;
-        }
-        if (!isInLabelIdsBlock) {
-            filteredLines.append(line);
-        }
-    }
-    return filteredLines;
-}
-
 QHash<QString, QString> labelIdsFromCommentLines(const QStringList& commentLines)
 {
-    bool isInLabelIdsBlock = false;
-    QString jsonText;
-    for (const QString& line : commentLines) {
-        const QString trimmedLine = line.trimmed();
-        if (trimmedLine.startsWith(labelIdsStartMarker)) {
-            isInLabelIdsBlock = true;
-            continue;
-        }
-        if (isInLabelIdsBlock && trimmedLine.startsWith(labelIdsEndMarker)) {
-            break;
-        }
-        if (isInLabelIdsBlock) {
-            jsonText.append(uncommentJsonLine(line));
-        }
-    }
-
     QHash<QString, QString> labelIds;
-    const QJsonDocument document = QJsonDocument::fromJson(jsonText.toUtf8());
-    if (!document.isObject()) {
-        return labelIds;
-    }
-
-    const QJsonArray labels = document.object().value(QStringLiteral("labels")).toArray();
+    const QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(commentLines);
+    const QJsonArray labels = metadata.value(QStringLiteral("labelIds")).toArray();
     for (const QJsonValue& value : labels) {
         if (!value.isObject()) {
             continue;
@@ -150,7 +99,7 @@ void applyLabelIds(Project& project)
     }
 }
 
-QString labelIdsCommentLine(const Project& project)
+QJsonArray labelIdsArray(const Project& project)
 {
     QJsonArray labels;
     for (const ImageEntry& image : project.images()) {
@@ -166,23 +115,23 @@ QString labelIdsCommentLine(const Project& project)
             labels.append(object);
         }
     }
-
-    QJsonObject root;
-    root.insert(QStringLiteral("version"), 1);
-    root.insert(QStringLiteral("labels"), labels);
-    return QStringLiteral("# %1").arg(QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact)));
+    return labels;
 }
 
-QStringList commentLinesWithLabelIds(const Project& project)
+QStringList commentLinesWithMetadata(const Project& project)
 {
-    QStringList commentLines = withoutLabelIdsCommentBlock(project.commentLines());
-    if (!commentLines.isEmpty() && !commentLines.last().isEmpty()) {
-        commentLines.append(QString());
+    QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(project.commentLines());
+    if (metadata.contains(QStringLiteral("review"))) {
+        const QJsonArray labelIds = labelIdsArray(project);
+        if (labelIds.isEmpty()) {
+            metadata.remove(QStringLiteral("labelIds"));
+        } else {
+            metadata.insert(QStringLiteral("labelIds"), labelIds);
+        }
+    } else {
+        metadata.remove(QStringLiteral("labelIds"));
     }
-    commentLines.append(QStringLiteral("# LabelQtLabelIds v1"));
-    commentLines.append(labelIdsCommentLine(project));
-    commentLines.append(QStringLiteral("# EndLabelQtLabelIds"));
-    return commentLines;
+    return labelqt::core::ProjectMetadataService::rewriteCommentLines(project.commentLines(), metadata);
 }
 } // namespace
 
@@ -312,7 +261,7 @@ QString LabelPlusDocument::serialize(const Project& project)
     if (!project.sourceName().isEmpty()) {
         stream << QStringLiteral("关联文件:") << project.sourceName() << "\n";
     }
-    for (const QString& commentLine : commentLinesWithLabelIds(project)) {
+    for (const QString& commentLine : commentLinesWithMetadata(project)) {
         stream << commentLine << '\n';
     }
     stream << '\n';
