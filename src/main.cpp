@@ -36,14 +36,14 @@ void applyApplicationStyle(const QString& styleName)
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
+    QApplication::setApplicationName("LabelQt");
+    QApplication::setOrganizationName("LabelQt");
+    QApplication::setApplicationVersion(QStringLiteral("0.1.0"));
     app.setProperty("labelqt.defaultStyle", app.style()->objectName());
     const labelqt::core::AppPreferencesLoadResult preferences =
         labelqt::core::AppPreferences::loadWithDiagnostics();
     applyApplicationStyle(preferences.preferences.applicationStyle());
     labelqt::ui::applyApplicationTheme(preferences.preferences.applicationTheme());
-    QApplication::setApplicationName("LabelQt");
-    QApplication::setOrganizationName("LabelQt");
-    QApplication::setApplicationVersion(QStringLiteral("0.1.0"));
     installTranslator(app, preferences.preferences.applicationLanguage());
 
     QCommandLineParser parser;

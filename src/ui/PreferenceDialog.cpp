@@ -12,8 +12,10 @@
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFontDialog>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -783,6 +785,12 @@ void PreferenceDialog::savePreferences()
     }
 
     const QJsonDocument document = documentFromUi();
+    const QDir preferenceDirectory = QFileInfo(m_preferencePath).absoluteDir();
+    if (!preferenceDirectory.exists() && !preferenceDirectory.mkpath(QStringLiteral("."))) {
+        setMessage(tr("Could not save preference file."), true);
+        return;
+    }
+
     QFile file(m_preferencePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         setMessage(tr("Could not save preference file."), true);

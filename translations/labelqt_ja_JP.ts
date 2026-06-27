@@ -35,6 +35,10 @@
         <translation>自動化スクリプトが見つかりません</translation>
     </message>
     <message>
+        <source>Open User Script Folder</source>
+        <translation>ユーザースクリプトフォルダーを開く</translation>
+    </message>
+    <message>
         <location filename="../src/ui/AutomationController.cpp" line="149"/>
         <source>Refresh Scripts</source>
         <translation>スクリプトを再読み込み</translation>
@@ -50,6 +54,10 @@
         <location filename="../src/ui/AutomationController.cpp" line="196"/>
         <source>Open a project before running automation scripts.</source>
         <translation>自動化スクリプトを実行する前にプロジェクトを開いてください。</translation>
+    </message>
+    <message>
+        <source>Could not open the user script folder.</source>
+        <translation>ユーザースクリプトフォルダーを開けませんでした。</translation>
     </message>
     <message>
         <location filename="../src/ui/AutomationController.cpp" line="224"/>

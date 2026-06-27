@@ -1399,6 +1399,18 @@ private slots:
         QVERIFY(result.preferences.groupStyles().at(2).markerShape == labelqt::core::MarkerShape::Circle);
     }
 
+    void preferencesUseDefaultsWhenFileIsMissing()
+    {
+        const QString filePath = QDir::temp().filePath("labelqt_missing_preference.json");
+        QFile::remove(filePath);
+
+        const auto result = labelqt::core::AppPreferences::loadFromFile(filePath);
+
+        QVERIFY(result.warnings.isEmpty());
+        QCOMPARE(result.preferences.labelMarkerDiameterPixels(), 20.0);
+        QCOMPARE(result.preferences.groupStyles().size(), 3);
+    }
+
     void preferencesWarnOnInvalidJson()
     {
         const QString dirPath = QDir::temp().filePath("labelqt_preferences_test");

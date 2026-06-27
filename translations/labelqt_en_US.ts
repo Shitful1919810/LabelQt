@@ -35,6 +35,10 @@
         <translation>No automation scripts found</translation>
     </message>
     <message>
+        <source>Open User Script Folder</source>
+        <translation>Open User Script Folder</translation>
+    </message>
+    <message>
         <location filename="../src/ui/AutomationController.cpp" line="149"/>
         <source>Refresh Scripts</source>
         <translation>Refresh Scripts</translation>
@@ -50,6 +54,10 @@
         <location filename="../src/ui/AutomationController.cpp" line="196"/>
         <source>Open a project before running automation scripts.</source>
         <translation>Open a project before running automation scripts.</translation>
+    </message>
+    <message>
+        <source>Could not open the user script folder.</source>
+        <translation>Could not open the user script folder.</translation>
     </message>
     <message>
         <location filename="../src/ui/AutomationController.cpp" line="224"/>
