@@ -29,6 +29,8 @@ set(LABELQT_SERVICE_SOURCES
     services/LabelPastePlanner.h
     services/LabelNavigator.cpp
     services/PageSourceInfoService.cpp
+    services/ProjectComparisonService.cpp
+    services/ProjectComparisonService.h
     services/ProjectImageValidator.cpp
     services/ProjectPageOrderService.cpp
     services/ProjectMergeService.cpp

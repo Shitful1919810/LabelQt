@@ -1134,6 +1134,34 @@ Last error: %2</translation>
         <translation>Show Proofreading Changes...</translation>
     </message>
     <message>
+        <source>Compare With Project...</source>
+        <translation>Compare With Project...</translation>
+    </message>
+    <message>
+        <source>Compare Projects</source>
+        <translation>Compare Projects</translation>
+    </message>
+    <message>
+        <source>Open a project before comparing.</source>
+        <translation>Open a project before comparing.</translation>
+    </message>
+    <message>
+        <source>Select project to compare</source>
+        <translation>Select project to compare</translation>
+    </message>
+    <message>
+        <source>LabelPlus Text (*.txt);;All Files (*)</source>
+        <translation>LabelPlus Text (*.txt);;All Files (*)</translation>
+    </message>
+    <message>
+        <source>Failed to open comparison project: %1</source>
+        <translation>Failed to open comparison project: %1</translation>
+    </message>
+    <message>
+        <source>No differences from the selected project.</source>
+        <translation>No differences from the selected project.</translation>
+    </message>
+    <message>
         <source>Proofreading</source>
         <translation>Proofreading</translation>
     </message>

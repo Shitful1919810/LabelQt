@@ -10,6 +10,7 @@
 #include "services/LabelNavigator.h"
 #include "services/LabelPastePlanner.h"
 #include "services/PageSourceInfoService.h"
+#include "services/ProjectComparisonService.h"
 #include "services/ProjectController.h"
 #include "services/ProjectImageValidator.h"
 #include "core/ProjectMetadataService.h"
@@ -1633,6 +1634,36 @@ private slots:
         QCOMPARE(changes.first().currentLabelIndex, 1);
     }
 
+    void projectComparisonFallsBackToPageAndLabelIndex()
+    {
+        labelqt::core::Project baselineProject;
+        labelqt::core::ImageEntry baselineImage;
+        baselineImage.name = QStringLiteral("001.png");
+        baselineImage.labels.append(
+            labelqt::core::Label(QStringLiteral("第一句"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        baselineImage.labels.append(
+            labelqt::core::Label(QStringLiteral("第二句"), QStringLiteral("框内"), QPointF(0.35, 0.5)));
+        baselineProject.images().append(baselineImage);
+
+        labelqt::core::Project currentProject;
+        labelqt::core::ImageEntry currentImage;
+        currentImage.name = QStringLiteral("001.png");
+        currentImage.labels.append(
+            labelqt::core::Label(QStringLiteral("第二句"), QStringLiteral("框内"), QPointF(0.35, 0.5)));
+        currentImage.labels.append(
+            labelqt::core::Label(QStringLiteral("第一句"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        currentProject.images().append(currentImage);
+
+        const QVector<labelqt::services::ReviewChange> changes =
+            labelqt::services::ProjectComparisonService::changesBetweenProjects(baselineProject, currentProject);
+
+        QCOMPARE(changes.size(), 2);
+        QVERIFY(std::ranges::all_of(changes, [](const labelqt::services::ReviewChange& change) {
+            return change.kind == labelqt::services::ReviewChangeKind::Modified && change.textChanged &&
+                   change.positionChanged && !change.orderChanged;
+        }));
+    }
+
     void reviewMetadataBuildsBaselinePreviewLabels()
     {
         labelqt::core::Project project;
@@ -1687,6 +1718,25 @@ private slots:
         }));
         QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
             return chunk.operation == labelqt::services::TextDiffOperation::Equal && chunk.text.contains(QStringLiteral("你是谁"));
+        }));
+    }
+
+    void textDiffServiceHandlesUnrelatedParagraphs()
+    {
+        const QString beforeText =
+            QStringLiteral("勇者 魔理沙 出现了！\n这里是一段很长的旧稿文本，用来模拟毫不相干的工程。")
+                .repeated(20);
+        const QString afterText = QStringLiteral("初次见面的朋友们，很高兴认识你。\n我是本书的作者。").repeated(20);
+
+        const QVector<labelqt::services::TextDiffChunk> chunks =
+            labelqt::services::TextDiffService::diff(beforeText, afterText);
+
+        QVERIFY(!chunks.isEmpty());
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Delete;
+        }));
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Insert;
         }));
     }
 };

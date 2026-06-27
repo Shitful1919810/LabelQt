@@ -20,6 +20,7 @@ qt_add_executable(LabelQtTests
     ../src/services/LabelPastePlanner.cpp
     ../src/services/LabelNavigator.cpp
     ../src/services/PageSourceInfoService.cpp
+    ../src/services/ProjectComparisonService.cpp
     ../src/services/ProjectImageValidator.cpp
     ../src/services/ProjectController.cpp
     ../src/services/ProjectMergeService.cpp

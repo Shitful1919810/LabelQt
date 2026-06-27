@@ -18,7 +18,8 @@ class ProofreadChangesDialog final : public QDialog {
     Q_OBJECT
 
 public:
-    ProofreadChangesDialog(const labelqt::core::Project& project, labelqt::core::AppPreferences preferences,
+    ProofreadChangesDialog(const labelqt::core::Project& beforeProject, const labelqt::core::Project& currentProject,
+                           labelqt::core::AppPreferences preferences,
                            labelqt::services::ReviewMetadata metadata,
                            QVector<labelqt::services::ReviewChange> changes, QWidget* parent = nullptr);
 
@@ -41,7 +42,8 @@ private:
     QString diffHtml(const QString& beforeText, const QString& afterText) const;
     void syncPreviewCanvases(ImageCanvas* sourceCanvas, int zoomPercent, QPointF normalizedCenter);
 
-    const labelqt::core::Project& m_project;
+    const labelqt::core::Project& m_beforeProject;
+    const labelqt::core::Project& m_currentProject;
     labelqt::core::AppPreferences m_preferences;
     labelqt::services::ReviewMetadata m_metadata;
     labelqt::services::SessionStateStore m_sessionStateStore;

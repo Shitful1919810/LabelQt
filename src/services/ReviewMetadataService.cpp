@@ -1,20 +1,16 @@
 #include "services/ReviewMetadataService.h"
 
 #include "core/ProjectMetadataService.h"
+#include "services/ProjectComparisonService.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
-#include <QSet>
 
 #include <algorithm>
-#include <cmath>
-#include <tuple>
 #include <utility>
 
 namespace labelqt::services {
 namespace {
-constexpr double positionEpsilon = 0.000001;
-
 ReviewLabelSnapshot snapshotFromObject(const QJsonObject& object);
 QJsonObject objectFromSnapshot(const ReviewLabelSnapshot& snapshot);
 
@@ -56,22 +52,6 @@ ReviewMetadata metadataFromObject(const QJsonObject& root)
     return metadata;
 }
 
-QString stableIdKey(const QString& stableId)
-{
-    return QStringLiteral("id:%1").arg(stableId);
-}
-
-QString keyForSnapshot(const QString& imageName, int labelIndex, const ReviewLabelSnapshot& snapshot)
-{
-    return snapshot.stableId.isEmpty() ? ReviewMetadataService::keyForLabel(imageName, labelIndex)
-                                       : stableIdKey(snapshot.stableId);
-}
-
-ReviewLabelSnapshot snapshotFromLabel(const QString& imageName, int labelIndex, const labelqt::core::Label& label)
-{
-    return {label.stableId(), imageName, label.text(), label.group(), label.position(), labelIndex};
-}
-
 ReviewLabelSnapshot snapshotFromObject(const QJsonObject& object)
 {
     return {
@@ -99,119 +79,6 @@ QJsonObject objectFromSnapshot(const ReviewLabelSnapshot& snapshot)
     return object;
 }
 
-bool samePosition(QPointF lhs, QPointF rhs)
-{
-    return std::abs(lhs.x() - rhs.x()) <= positionEpsilon && std::abs(lhs.y() - rhs.y()) <= positionEpsilon;
-}
-
-bool isModified(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
-{
-    return baseline.text != current.text || baseline.group != current.group ||
-           !samePosition(baseline.position, current.position);
-}
-
-QSet<QString> longestCommonSubsequenceIds(const QVector<QString>& baselineIds, const QVector<QString>& currentIds)
-{
-    QVector<QVector<int>> lengths(baselineIds.size() + 1, QVector<int>(currentIds.size() + 1));
-    for (qsizetype i = 1; i <= baselineIds.size(); ++i) {
-        for (qsizetype j = 1; j <= currentIds.size(); ++j) {
-            if (baselineIds.at(i - 1) == currentIds.at(j - 1)) {
-                lengths[i][j] = lengths.at(i - 1).at(j - 1) + 1;
-            } else {
-                lengths[i][j] = std::max(lengths.at(i - 1).at(j), lengths.at(i).at(j - 1));
-            }
-        }
-    }
-
-    QSet<QString> ids;
-    qsizetype i = baselineIds.size();
-    qsizetype j = currentIds.size();
-    while (i > 0 && j > 0) {
-        if (baselineIds.at(i - 1) == currentIds.at(j - 1)) {
-            ids.insert(baselineIds.at(i - 1));
-            --i;
-            --j;
-        } else if (lengths.at(i - 1).at(j) >= lengths.at(i).at(j - 1)) {
-            --i;
-        } else {
-            --j;
-        }
-    }
-    return ids;
-}
-
-QVector<QString> stableIdsByLabelIndex(QVector<ReviewLabelSnapshot> snapshots)
-{
-    std::sort(snapshots.begin(), snapshots.end(), [](const ReviewLabelSnapshot& lhs, const ReviewLabelSnapshot& rhs) {
-        return lhs.labelIndex < rhs.labelIndex;
-    });
-
-    QVector<QString> stableIds;
-    stableIds.reserve(snapshots.size());
-    for (const ReviewLabelSnapshot& snapshot : std::as_const(snapshots)) {
-        if (!snapshot.stableId.isEmpty()) {
-            stableIds.append(snapshot.stableId);
-        }
-    }
-    return stableIds;
-}
-
-QSet<QString> movedStableIds(const QHash<QString, ReviewLabelSnapshot>& baselineSnapshots,
-                             const QHash<QString, ReviewLabelSnapshot>& currentSnapshots)
-{
-    QHash<QString, ReviewLabelSnapshot> currentByStableId;
-    for (const ReviewLabelSnapshot& snapshot : currentSnapshots) {
-        if (!snapshot.stableId.isEmpty()) {
-            currentByStableId.insert(snapshot.stableId, snapshot);
-        }
-    }
-
-    QHash<QString, QVector<ReviewLabelSnapshot>> baselineByImage;
-    QHash<QString, QVector<ReviewLabelSnapshot>> currentByImage;
-    for (const ReviewLabelSnapshot& baseline : baselineSnapshots) {
-        if (baseline.stableId.isEmpty()) {
-            continue;
-        }
-        const ReviewLabelSnapshot current = currentByStableId.value(baseline.stableId);
-        if (current.stableId.isEmpty() || current.imageName != baseline.imageName) {
-            continue;
-        }
-        baselineByImage[baseline.imageName].append(baseline);
-        currentByImage[current.imageName].append(current);
-    }
-
-    QSet<QString> movedIds;
-    for (auto it = baselineByImage.cbegin(); it != baselineByImage.cend(); ++it) {
-        const QVector<QString> baselineIds = stableIdsByLabelIndex(it.value());
-        const QVector<QString> currentIds = stableIdsByLabelIndex(currentByImage.value(it.key()));
-        const QSet<QString> commonOrderIds = longestCommonSubsequenceIds(baselineIds, currentIds);
-        for (const QString& stableId : baselineIds) {
-            if (!commonOrderIds.contains(stableId)) {
-                movedIds.insert(stableId);
-            }
-        }
-    }
-    return movedIds;
-}
-
-labelqt::core::Label labelFromSnapshot(const ReviewLabelSnapshot& snapshot)
-{
-    labelqt::core::Label label(snapshot.text, snapshot.group, snapshot.position);
-    if (!snapshot.stableId.isEmpty()) {
-        label.setStableId(snapshot.stableId);
-    }
-    return label;
-}
-
-int imageIndexByName(const labelqt::core::Project& project, const QString& imageName)
-{
-    for (int i = 0; i < project.images().size(); ++i) {
-        if (project.images().at(i).name == imageName) {
-            return i;
-        }
-    }
-    return -1;
-}
 } // namespace
 
 bool ReviewMetadata::hasBaseline() const noexcept
@@ -245,13 +112,21 @@ ReviewLabelSnapshot ReviewMetadata::baselineFor(const QString& imageName, int la
 
 void ReviewMetadata::setBaseline(const QString& imageName, int labelIndex, ReviewLabelSnapshot snapshot)
 {
+    const QString key = snapshot.stableId.isEmpty() ? ReviewMetadataService::keyForLabel(imageName, labelIndex)
+                                                    : QStringLiteral("id:%1").arg(snapshot.stableId);
+    setBaselineWithKey(key, imageName, labelIndex, std::move(snapshot));
+}
+
+void ReviewMetadata::setBaselineWithKey(const QString& key, const QString& imageName, int labelIndex,
+                                        ReviewLabelSnapshot snapshot)
+{
     if (snapshot.imageName.isEmpty()) {
         snapshot.imageName = imageName;
     }
     if (snapshot.labelIndex < 0) {
         snapshot.labelIndex = labelIndex;
     }
-    m_baselineLabels.insert(keyForSnapshot(imageName, labelIndex, snapshot), std::move(snapshot));
+    m_baselineLabels.insert(key, std::move(snapshot));
     m_hasBaseline = true;
 }
 
@@ -273,17 +148,7 @@ bool ReviewMetadataService::projectHasBaseline(const labelqt::core::Project& pro
 
 ReviewMetadata ReviewMetadataService::captureBaseline(const labelqt::core::Project& project)
 {
-    ReviewMetadata metadata;
-    metadata.setHasBaseline(true);
-    for (const labelqt::core::ImageEntry& image : project.images()) {
-        for (int labelIndex = 0; labelIndex < image.labels.size(); ++labelIndex) {
-            const labelqt::core::Label& label = image.labels.at(labelIndex);
-            if (!label.isDeleted()) {
-                metadata.setBaseline(image.name, labelIndex, snapshotFromLabel(image.name, labelIndex, label));
-            }
-        }
-    }
-    return metadata;
+    return ProjectComparisonService::captureSnapshot(project, ProjectComparisonMatchMode::StableId);
 }
 
 ReviewMetadata ReviewMetadataService::metadataForProject(const labelqt::core::Project& project)
@@ -295,128 +160,14 @@ ReviewMetadata ReviewMetadataService::metadataForProject(const labelqt::core::Pr
 QVector<ReviewChange> ReviewMetadataService::changesForProject(const labelqt::core::Project& project,
                                                                const ReviewMetadata& metadata)
 {
-    QVector<ReviewChange> changes;
-    if (!metadata.hasBaseline()) {
-        return changes;
-    }
-
-    QHash<QString, ReviewLabelSnapshot> currentSnapshots;
-    QHash<QString, int> currentImageIndexes;
-    for (int imageIndex = 0; imageIndex < project.images().size(); ++imageIndex) {
-        const labelqt::core::ImageEntry& image = project.images().at(imageIndex);
-        for (int labelIndex = 0; labelIndex < image.labels.size(); ++labelIndex) {
-            const labelqt::core::Label& label = image.labels.at(labelIndex);
-            if (label.isDeleted()) {
-                continue;
-            }
-            const ReviewLabelSnapshot snapshot = snapshotFromLabel(image.name, labelIndex, label);
-            const QString key = keyForSnapshot(image.name, labelIndex, snapshot);
-            currentSnapshots.insert(key, snapshot);
-            currentImageIndexes.insert(key, imageIndex);
-        }
-    }
-    const QSet<QString> orderChangedStableIds = movedStableIds(metadata.baselineLabels(), currentSnapshots);
-
-    QStringList keys = metadata.baselineLabels().keys();
-    keys.append(currentSnapshots.keys());
-    keys.sort();
-    keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
-
-    changes.reserve(keys.size());
-    for (const QString& key : std::as_const(keys)) {
-        const bool hadBaseline = metadata.baselineLabels().contains(key);
-        const bool hasCurrent = currentSnapshots.contains(key);
-        if (!hadBaseline && !hasCurrent) {
-            continue;
-        }
-
-        const ReviewLabelSnapshot baseline = metadata.baselineLabels().value(key);
-        const ReviewLabelSnapshot current = currentSnapshots.value(key);
-        ReviewChange change;
-        change.imageName = hasCurrent ? current.imageName : baseline.imageName;
-        change.imageIndex = hasCurrent ? currentImageIndexes.value(key, -1) : imageIndexByName(project, change.imageName);
-        change.baselineLabelIndex = hadBaseline ? baseline.labelIndex : -1;
-        change.currentLabelIndex = hasCurrent ? current.labelIndex : -1;
-        change.labelIndex = change.currentLabelIndex >= 0 ? change.currentLabelIndex : change.baselineLabelIndex;
-
-        if (!hadBaseline) {
-            change.kind = ReviewChangeKind::Added;
-            change.current = current;
-            changes.append(std::move(change));
-            continue;
-        }
-        if (!hasCurrent) {
-            change.kind = ReviewChangeKind::Deleted;
-            change.baseline = baseline;
-            changes.append(std::move(change));
-            continue;
-        }
-
-        const bool orderChanged = baseline.stableId.isEmpty() ? baseline.labelIndex != current.labelIndex
-                                                              : orderChangedStableIds.contains(baseline.stableId);
-        if (!isModified(baseline, current) && !orderChanged) {
-            continue;
-        }
-
-        change.kind = ReviewChangeKind::Modified;
-        change.baseline = baseline;
-        change.current = current;
-        change.textChanged = baseline.text != current.text;
-        change.groupChanged = baseline.group != current.group;
-        change.positionChanged = !samePosition(baseline.position, current.position);
-        change.orderChanged = orderChanged;
-        changes.append(std::move(change));
-    }
-
-    std::sort(changes.begin(), changes.end(), [](const ReviewChange& lhs, const ReviewChange& rhs) {
-        const auto lhsKey = std::tuple(lhs.imageIndex, lhs.labelIndex, static_cast<int>(lhs.kind), lhs.imageName);
-        const auto rhsKey = std::tuple(rhs.imageIndex, rhs.labelIndex, static_cast<int>(rhs.kind), rhs.imageName);
-        return lhsKey < rhsKey;
-    });
-
-    return changes;
+    return ProjectComparisonService::changesForProject(project, metadata, ProjectComparisonMatchMode::StableId);
 }
 
 QVector<labelqt::core::Label> ReviewMetadataService::baselineImageLabels(const labelqt::core::Project& project,
                                                                          const ReviewMetadata& metadata,
                                                                          const QString& imageName)
 {
-    int maxLabelIndex = -1;
-    QVector<labelqt::core::Label> currentLabels;
-    for (const labelqt::core::ImageEntry& image : project.images()) {
-        if (image.name == imageName) {
-            currentLabels = image.labels;
-            maxLabelIndex = std::max(maxLabelIndex, static_cast<int>(image.labels.size()) - 1);
-            break;
-        }
-    }
-
-    QHash<int, ReviewLabelSnapshot> baselineByIndex;
-    for (const ReviewLabelSnapshot& snapshot : metadata.baselineLabels()) {
-        if (snapshot.imageName != imageName || snapshot.labelIndex < 0) {
-            continue;
-        }
-        baselineByIndex.insert(snapshot.labelIndex, snapshot);
-        maxLabelIndex = std::max(maxLabelIndex, snapshot.labelIndex);
-    }
-
-    QVector<labelqt::core::Label> labels;
-    labels.reserve(std::max(0, maxLabelIndex + 1));
-    for (int labelIndex = 0; labelIndex <= maxLabelIndex; ++labelIndex) {
-        if (baselineByIndex.contains(labelIndex)) {
-            labels.append(labelFromSnapshot(baselineByIndex.value(labelIndex)));
-            continue;
-        }
-
-        labelqt::core::Label hiddenLabel;
-        if (labelIndex >= 0 && labelIndex < currentLabels.size()) {
-            hiddenLabel = currentLabels.at(labelIndex);
-        }
-        hiddenLabel.setDeleted(true);
-        labels.append(std::move(hiddenLabel));
-    }
-
-    return labels;
+    return ProjectComparisonService::baselineImageLabels(project, metadata, imageName);
 }
 
 QStringList ReviewMetadataService::rewriteCommentLines(const QStringList& commentLines, const ReviewMetadata& metadata)

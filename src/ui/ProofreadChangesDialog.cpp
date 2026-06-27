@@ -1,5 +1,6 @@
 #include "ui/ProofreadChangesDialog.h"
 
+#include "services/ProjectComparisonService.h"
 #include "services/TextDiffService.h"
 #include "ui/DialogWindowUtils.h"
 #include "ui/ImageCanvas.h"
@@ -55,14 +56,23 @@ const labelqt::core::ImageEntry* imageByName(const labelqt::core::Project& proje
     }
     return nullptr;
 }
+
+QPointF focusPositionForChange(const labelqt::services::ReviewChange& change)
+{
+    if (change.kind != labelqt::services::ReviewChangeKind::Deleted) {
+        return change.current.position;
+    }
+    return change.baseline.position;
+}
 } // namespace
 
-ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& project,
+ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& beforeProject,
+                                               const labelqt::core::Project& currentProject,
                                                labelqt::core::AppPreferences preferences,
                                                labelqt::services::ReviewMetadata metadata,
                                                QVector<labelqt::services::ReviewChange> changes, QWidget* parent)
-    : QDialog(parent), m_project(project), m_preferences(std::move(preferences)), m_metadata(std::move(metadata)),
-      m_changes(std::move(changes))
+    : QDialog(parent), m_beforeProject(beforeProject), m_currentProject(currentProject),
+      m_preferences(std::move(preferences)), m_metadata(std::move(metadata)), m_changes(std::move(changes))
 {
     buildUi();
 }
@@ -127,8 +137,8 @@ void ProofreadChangesDialog::buildUi()
     m_beforeCanvas = new ImageCanvas(beforeGroup);
     m_beforeCanvas->setReadOnly(true);
     m_beforeCanvas->setPreferences(m_preferences);
-    m_beforeCanvas->setGroups(m_project.groups());
-    m_beforeCanvas->setVisibleGroups(m_project.groups());
+    m_beforeCanvas->setGroups(m_currentProject.groups());
+    m_beforeCanvas->setVisibleGroups(m_currentProject.groups());
     beforeLayout->addWidget(m_beforeCanvas);
 
     auto* afterGroup = new QGroupBox(tr("After"), previewSplitter);
@@ -136,8 +146,8 @@ void ProofreadChangesDialog::buildUi()
     m_afterCanvas = new ImageCanvas(afterGroup);
     m_afterCanvas->setReadOnly(true);
     m_afterCanvas->setPreferences(m_preferences);
-    m_afterCanvas->setGroups(m_project.groups());
-    m_afterCanvas->setVisibleGroups(m_project.groups());
+    m_afterCanvas->setGroups(m_currentProject.groups());
+    m_afterCanvas->setVisibleGroups(m_currentProject.groups());
     afterLayout->addWidget(m_afterCanvas);
 
     previewSplitter->addWidget(beforeGroup);
@@ -248,21 +258,24 @@ void ProofreadChangesDialog::updatePreviewCanvases(const labelqt::services::Revi
         return;
     }
 
-    const labelqt::core::ImageEntry* image = imageByName(m_project, change.imageName);
-    if (image == nullptr) {
+    const labelqt::core::ImageEntry* beforeImage = imageByName(m_beforeProject, change.imageName);
+    const labelqt::core::ImageEntry* currentImage = imageByName(m_currentProject, change.imageName);
+    const labelqt::core::ImageEntry* displayImage = currentImage != nullptr ? currentImage : beforeImage;
+    if (displayImage == nullptr) {
         m_beforeCanvas->setImage(QString(), {});
         m_afterCanvas->setImage(QString(), {});
         return;
     }
 
     const int zoomPercent = m_afterCanvas->zoomPercent();
-    const QPointF normalizedCenter = m_afterCanvas->normalizedViewCenter();
+    const QPointF normalizedCenter = focusPositionForChange(change);
     const QVector<labelqt::core::Label> baselineLabels =
-        labelqt::services::ReviewMetadataService::baselineImageLabels(m_project, m_metadata, change.imageName);
+        labelqt::services::ProjectComparisonService::baselineImageLabels(m_currentProject, m_metadata, change.imageName);
 
     m_isSyncingCanvasViews = true;
-    m_beforeCanvas->setImage(image->path, baselineLabels);
-    m_afterCanvas->setImage(image->path, image->labels);
+    m_beforeCanvas->setImage(beforeImage == nullptr ? displayImage->path : beforeImage->path, baselineLabels);
+    m_afterCanvas->setImage(displayImage->path, currentImage == nullptr ? QVector<labelqt::core::Label>{}
+                                                                        : currentImage->labels);
     m_beforeCanvas->setSelectedLabel(change.baselineLabelIndex);
     m_afterCanvas->setSelectedLabel(change.currentLabelIndex);
     m_beforeCanvas->restoreView(zoomPercent, normalizedCenter);
@@ -279,10 +292,10 @@ void ProofreadChangesDialog::updateJumpButton()
     const int imageIndex = selectedImageIndex();
     const int labelIndex = selectedLabelIndex();
     const bool canJumpToLabel =
-        imageIndex >= 0 && imageIndex < m_project.images().size() && labelIndex >= 0 &&
-        labelIndex < m_project.images().at(imageIndex).labels.size() &&
-        !m_project.images().at(imageIndex).labels.at(labelIndex).isDeleted();
-    const bool canJumpToPage = imageIndex >= 0 && imageIndex < m_project.images().size();
+        imageIndex >= 0 && imageIndex < m_currentProject.images().size() && labelIndex >= 0 &&
+        labelIndex < m_currentProject.images().at(imageIndex).labels.size() &&
+        !m_currentProject.images().at(imageIndex).labels.at(labelIndex).isDeleted();
+    const bool canJumpToPage = imageIndex >= 0 && imageIndex < m_currentProject.images().size();
     m_jumpButton->setEnabled(canJumpToLabel || canJumpToPage);
 }
 

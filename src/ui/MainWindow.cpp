@@ -1,9 +1,11 @@
 #include "ui/MainWindow.h"
 
+#include "core/LabelPlusDocument.h"
 #include "services/AutomationOperationApplier.h"
 #include "services/LabelClipboardService.h"
 #include "services/LabelNavigator.h"
 #include "services/LabelPastePlanner.h"
+#include "services/ProjectComparisonService.h"
 #include "services/ProjectImageValidator.h"
 #include "services/ReviewMetadataService.h"
 #include "services/SaveChangesDecision.h"
@@ -404,6 +406,9 @@ void MainWindow::createActions()
     m_showProofreadingChangesAction = new QAction(tr("Show Proofreading Changes..."), this);
     connect(m_showProofreadingChangesAction, &QAction::triggered, this, &MainWindow::showProofreadingChanges);
 
+    m_compareWithProjectAction = new QAction(tr("Compare With Project..."), this);
+    connect(m_compareWithProjectAction, &QAction::triggered, this, &MainWindow::compareWithProject);
+
     m_saveProjectAction = new QAction(tr("&Save"), this);
     m_saveProjectAction->setShortcut(QKeySequence::Save);
     connect(m_saveProjectAction, &QAction::triggered, this, &MainWindow::saveProject);
@@ -463,6 +468,7 @@ void MainWindow::createMenus()
     editMenu->addAction(m_reorderPagesAction);
     editMenu->addAction(m_startProofreadingAction);
     editMenu->addAction(m_showProofreadingChangesAction);
+    editMenu->addAction(m_compareWithProjectAction);
 
     QMenu* automationMenu = menuBar()->addMenu(tr("&Automation"));
     if (m_automationController != nullptr) {
@@ -1033,7 +1039,63 @@ void MainWindow::showProofreadingChanges()
         return;
     }
 
-    ProofreadChangesDialog dialog(project(), m_preferences, metadata, std::move(changes), this);
+    ProofreadChangesDialog dialog(project(), project(), m_preferences, metadata, std::move(changes), this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const int imageIndex = dialog.selectedImageIndex();
+    const int labelIndex = dialog.selectedLabelIndex();
+    if (imageIndex < 0 || imageIndex >= project().images().size()) {
+        return;
+    }
+    if (labelIndex >= 0 && labelIndex < project().images().at(imageIndex).labels.size() &&
+        !project().images().at(imageIndex).labels.at(labelIndex).isDeleted()) {
+        selectLabelAndCenter(imageIndex, labelIndex);
+        return;
+    }
+    selectImage(imageIndex);
+}
+
+void MainWindow::compareWithProject()
+{
+    commitActiveTextInput();
+    if (project().images().isEmpty()) {
+        showMainWindowInformation(this, tr("Compare Projects"), tr("Open a project before comparing."));
+        return;
+    }
+
+    const QString path =
+        QFileDialog::getOpenFileName(this, tr("Select project to compare"),
+                                     m_sessionStateStore.lastFileDialogDirectory(),
+                                     tr("LabelPlus Text (*.txt);;All Files (*)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    m_sessionStateStore.saveLastFileDialogPath(path);
+
+    labelqt::core::Project baselineProject;
+    try {
+        baselineProject = labelqt::core::LabelPlusDocument::loadFromFile(path);
+    } catch (const std::exception& error) {
+        showMainWindowWarning(this, tr("Compare Projects"),
+                              tr("Failed to open comparison project: %1").arg(QString::fromLocal8Bit(error.what())));
+        return;
+    }
+
+    labelqt::services::ReviewMetadata metadata =
+        labelqt::services::ProjectComparisonService::captureSnapshot(
+            baselineProject, labelqt::services::ProjectComparisonMatchMode::PageAndLabelIndex);
+    QVector<labelqt::services::ReviewChange> changes =
+        labelqt::services::ProjectComparisonService::changesForProject(
+            project(), metadata, labelqt::services::ProjectComparisonMatchMode::PageAndLabelIndex);
+    if (changes.isEmpty()) {
+        showMainWindowInformation(this, tr("Compare Projects"), tr("No differences from the selected project."));
+        return;
+    }
+
+    ProofreadChangesDialog dialog(baselineProject, project(), m_preferences, std::move(metadata), std::move(changes),
+                                  this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -3020,6 +3082,9 @@ void MainWindow::updateProofreadingStatusUi()
     }
     if (m_showProofreadingChangesAction != nullptr) {
         m_showProofreadingChangesAction->setEnabled(!m_isAutomationRunning && hasProject && hasBaseline);
+    }
+    if (m_compareWithProjectAction != nullptr) {
+        m_compareWithProjectAction->setEnabled(!m_isAutomationRunning && hasProject);
     }
 }
 

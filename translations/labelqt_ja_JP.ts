@@ -1126,6 +1126,34 @@ Last error: %2</source>
         <translation>校正変更を表示...</translation>
     </message>
     <message>
+        <source>Compare With Project...</source>
+        <translation>プロジェクトと比較...</translation>
+    </message>
+    <message>
+        <source>Compare Projects</source>
+        <translation>プロジェクト比較</translation>
+    </message>
+    <message>
+        <source>Open a project before comparing.</source>
+        <translation>比較する前にプロジェクトを開いてください。</translation>
+    </message>
+    <message>
+        <source>Select project to compare</source>
+        <translation>比較するプロジェクトを選択</translation>
+    </message>
+    <message>
+        <source>LabelPlus Text (*.txt);;All Files (*)</source>
+        <translation>LabelPlus テキスト (*.txt);;すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <source>Failed to open comparison project: %1</source>
+        <translation>比較対象のプロジェクトを開けませんでした：%1</translation>
+    </message>
+    <message>
+        <source>No differences from the selected project.</source>
+        <translation>選択したプロジェクトとの差異はありません。</translation>
+    </message>
+    <message>
         <source>Proofreading</source>
         <translation>校正</translation>
     </message>

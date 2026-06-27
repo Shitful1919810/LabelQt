@@ -52,6 +52,8 @@ tests          Qt Test 测试
 - `ProjectPageOrderService`：校验并应用页面重排，负责在重排后保持来源元数据仍绑定到图片名。
 - `ProjectImageValidator`：扫描工程中缺失的图片文件，返回数据型诊断，由 UI 非阻塞展示。
 - `PageSourceInfoService`：解析和重写统一项目元数据里的合并来源 section。UI 不能自己解析 comment 行。
+- `ProjectComparisonService`：把校对基线或另一个工程与当前工程比较为结构化差异。UI 只展示结果，不直接实现
+  label 匹配或 diff 规则。
 - `SessionStateStore`：通过 `QSettings` 保存本机布局、最近工程、每个工程的页码/缩放/视图中心/选中标签等会话状态。
 - `LabelEditController`：新增、删除、移动、改文本、改类别、批量切换、重排标签和分组编辑，并注册撤销/重做。
 - `LabelNavigator`：在当前分组筛选下查找上一条/下一条可见标签，跨页导航逻辑放这里而不是写在 UI 事件处理里。

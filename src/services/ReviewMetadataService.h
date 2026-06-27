@@ -28,6 +28,7 @@ public:
 
     ReviewLabelSnapshot baselineFor(const QString& imageName, int labelIndex) const;
     void setBaseline(const QString& imageName, int labelIndex, ReviewLabelSnapshot snapshot);
+    void setBaselineWithKey(const QString& key, const QString& imageName, int labelIndex, ReviewLabelSnapshot snapshot);
     void clear();
 
 private:

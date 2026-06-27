@@ -1126,6 +1126,34 @@ Last error: %2</source>
         <translation>查看校对变更...</translation>
     </message>
     <message>
+        <source>Compare With Project...</source>
+        <translation>与工程对比...</translation>
+    </message>
+    <message>
+        <source>Compare Projects</source>
+        <translation>对比工程</translation>
+    </message>
+    <message>
+        <source>Open a project before comparing.</source>
+        <translation>请先打开工程，再进行对比。</translation>
+    </message>
+    <message>
+        <source>Select project to compare</source>
+        <translation>选择要对比的工程</translation>
+    </message>
+    <message>
+        <source>LabelPlus Text (*.txt);;All Files (*)</source>
+        <translation>LabelPlus 文本 (*.txt);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Failed to open comparison project: %1</source>
+        <translation>无法打开对比工程：%1</translation>
+    </message>
+    <message>
+        <source>No differences from the selected project.</source>
+        <translation>与所选工程没有差异。</translation>
+    </message>
+    <message>
         <source>Proofreading</source>
         <translation>校对</translation>
     </message>

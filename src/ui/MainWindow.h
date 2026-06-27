@@ -81,6 +81,7 @@ private:
     void startProofreadingBaseline();
     void endProofreadingBaseline();
     void showProofreadingChanges();
+    void compareWithProject();
     void showAutomationDiscoveryWarnings(const QStringList& warnings);
     void applyAutomationOperations(const QString& scriptName,
                                    const QVector<labelqt::services::AutomationOperation>& operations);
@@ -225,6 +226,7 @@ private:
     QAction* m_reorderPagesAction{nullptr};
     QAction* m_startProofreadingAction{nullptr};
     QAction* m_showProofreadingChangesAction{nullptr};
+    QAction* m_compareWithProjectAction{nullptr};
     QAction* m_saveProjectAction{nullptr};
     QAction* m_saveProjectAsAction{nullptr};
     QMenu* m_recentProjectsMenu{nullptr};
