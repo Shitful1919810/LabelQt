@@ -1126,6 +1126,74 @@ Last error: %2</source>
         <translation>校正変更を表示...</translation>
     </message>
     <message>
+        <source>Export Proofreading Report...</source>
+        <translation>校正レポートを書き出し...</translation>
+    </message>
+    <message>
+        <source>Open a project before exporting proofreading report.</source>
+        <translation>校正レポートを書き出す前にプロジェクトを開いてください。</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before exporting a report.</source>
+        <translation>レポートを書き出す前に校正基準を開始してください。</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>書き出す校正変更はありません。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>校正レポートを書き出し</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML ファイル (*.html);;すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>プロジェクト：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>校正レポートを書き出せませんでした：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校正レポートを書き出しました。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校正レポート</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>生成日時</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>変更総数</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>ラベル</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>変更種別</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>グループ変更</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>マーカー変更</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>順序変更</translation>
+    </message>
+    <message>
         <source>Compare With Project...</source>
         <translation>プロジェクトと比較...</translation>
     </message>
@@ -1953,6 +2021,70 @@ Last error: %2</source>
     <message>
         <source>No text change.</source>
         <translation>テキストの変更はありません。</translation>
+    </message>
+    <message>
+        <source>Export HTML...</source>
+        <translation>HTML を書き出し...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校正</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>書き出す校正変更はありません。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>校正レポートを書き出し</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML ファイル (*.html);;すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>プロジェクト：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>校正レポートを書き出せませんでした：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校正レポートを書き出しました。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校正レポート</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>生成日時</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>変更総数</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>ラベル</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>変更種別</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>グループ変更</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>マーカー変更</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>順序変更</translation>
     </message>
 </context>
 </TS>

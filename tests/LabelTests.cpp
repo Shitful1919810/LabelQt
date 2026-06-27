@@ -9,6 +9,7 @@
 #include "services/LabelEditController.h"
 #include "services/LabelNavigator.h"
 #include "services/LabelPastePlanner.h"
+#include "services/LabelSequenceDiffService.h"
 #include "services/PageSourceInfoService.h"
 #include "services/ProjectComparisonService.h"
 #include "services/ProjectController.h"
@@ -16,6 +17,7 @@
 #include "core/ProjectMetadataService.h"
 #include "services/ProjectMergeService.h"
 #include "services/ProjectPageOrderService.h"
+#include "services/ProofreadReportService.h"
 #include "services/ReviewMetadataService.h"
 #include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
@@ -1659,6 +1661,45 @@ private slots:
         QVERIFY(!changes.first().positionChanged);
     }
 
+    void labelSequenceDiffOnlyTreatsUpToThreeCharsAsShortSimilarText()
+    {
+        labelqt::services::ReviewLabelSnapshot baseline;
+        baseline.imageName = QStringLiteral("001.png");
+        baseline.group = QStringLiteral("框内");
+        baseline.position = QPointF(0.5, 0.5);
+        baseline.labelIndex = 0;
+
+        labelqt::services::ReviewLabelSnapshot current = baseline;
+
+        baseline.text = QStringLiteral("魔理沙");
+        current.text = QStringLiteral("魔理呀");
+        QVector<labelqt::services::LabelSequenceDiffEntry> sameIndexShortEntries =
+            labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
+        QCOMPARE(sameIndexShortEntries.size(), 1);
+        QCOMPARE(sameIndexShortEntries.first().baselineLabelIndex, 0);
+        QCOMPARE(sameIndexShortEntries.first().currentLabelIndex, 0);
+
+        current.labelIndex = 1;
+        QVector<labelqt::services::LabelSequenceDiffEntry> shortEntries =
+            labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
+        QCOMPARE(shortEntries.size(), 2);
+        QVERIFY(std::ranges::any_of(shortEntries, [](const labelqt::services::LabelSequenceDiffEntry& entry) {
+            return entry.baselineLabelIndex == 0 && entry.currentLabelIndex < 0;
+        }));
+        QVERIFY(std::ranges::any_of(shortEntries, [](const labelqt::services::LabelSequenceDiffEntry& entry) {
+            return entry.baselineLabelIndex < 0 && entry.currentLabelIndex == 1;
+        }));
+
+        baseline.text = QStringLiteral("魔理沙说");
+        current.text = QStringLiteral("魔理沙呀");
+        current.labelIndex = 1;
+        QVector<labelqt::services::LabelSequenceDiffEntry> normalEntries =
+            labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
+        QCOMPARE(normalEntries.size(), 1);
+        QCOMPARE(normalEntries.first().baselineLabelIndex, 0);
+        QCOMPARE(normalEntries.first().currentLabelIndex, 1);
+    }
+
     void reviewMetadataBuildsBaselinePreviewLabels()
     {
         labelqt::core::Project project;
@@ -1732,6 +1773,72 @@ private slots:
         QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
             return chunk.operation == labelqt::services::TextDiffOperation::Insert;
         }));
+    }
+
+    void proofreadReportServiceWritesHtml()
+    {
+        labelqt::services::ReviewChange change;
+        change.imageName = QStringLiteral("001.png");
+        change.imageIndex = 0;
+        change.labelIndex = 1;
+        change.baselineLabelIndex = 1;
+        change.currentLabelIndex = 1;
+        change.kind = labelqt::services::ReviewChangeKind::Modified;
+        change.baseline.text = QStringLiteral("欢迎光临");
+        change.current.text = QStringLiteral("欢迎光临啊");
+        change.baseline.group = QStringLiteral("框内");
+        change.current.group = QStringLiteral("框外");
+        change.baseline.position = QPointF(0.25, 0.5);
+        change.current.position = QPointF(0.30, 0.5);
+        change.textChanged = true;
+        change.groupChanged = true;
+        change.positionChanged = true;
+
+        const labelqt::services::ProofreadReportTexts texts{
+            .title = QStringLiteral("校对报告"),
+            .generatedAt = QStringLiteral("生成时间"),
+            .totalChanges = QStringLiteral("变更总数"),
+            .page = QStringLiteral("页面"),
+            .label = QStringLiteral("标签"),
+            .changeType = QStringLiteral("变更"),
+            .summary = QStringLiteral("摘要"),
+            .textDifference = QStringLiteral("文本差异"),
+            .groupChange = QStringLiteral("类别变化"),
+            .markerChange = QStringLiteral("标记变化"),
+            .orderChange = QStringLiteral("顺序变化"),
+            .before = QStringLiteral("修改前"),
+            .after = QStringLiteral("修改后"),
+            .added = QStringLiteral("新增"),
+            .deleted = QStringLiteral("删除"),
+            .modified = QStringLiteral("修改"),
+            .text = QStringLiteral("文本"),
+            .group = QStringLiteral("类别"),
+            .marker = QStringLiteral("标记"),
+            .order = QStringLiteral("顺序"),
+            .noTextChange = QStringLiteral("文本未变化"),
+        };
+
+        const QString html =
+            labelqt::services::ProofreadReportService::htmlReport({change}, texts, QStringLiteral("工程：demo.txt"));
+        QVERIFY(html.contains(QStringLiteral("<!doctype html>")));
+        QVERIFY(html.contains(QStringLiteral("<table>")));
+        QVERIFY(html.contains(QStringLiteral("<tr><td>1</td>")));
+        QVERIFY(html.contains(QStringLiteral("欢迎光临")));
+        QVERIFY(html.contains(QStringLiteral("啊")));
+        QVERIFY(html.contains(QStringLiteral("类别变化")));
+        QVERIFY(html.contains(QStringLiteral("工程：demo.txt")));
+
+        QTemporaryDir temporaryDir;
+        QVERIFY(temporaryDir.isValid());
+        const QString reportPath = temporaryDir.filePath(QStringLiteral("report.html"));
+        const std::expected<void, QString> result =
+            labelqt::services::ProofreadReportService::saveHtmlReport(reportPath, {change}, texts);
+        QVERIFY(result.has_value());
+
+        QFile reportFile(reportPath);
+        QVERIFY(reportFile.open(QIODevice::ReadOnly | QIODevice::Text));
+        const QString savedHtml = QString::fromUtf8(reportFile.readAll());
+        QVERIFY(savedHtml.contains(QStringLiteral("校对报告")));
     }
 };
 

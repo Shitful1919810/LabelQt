@@ -1126,6 +1126,74 @@ Last error: %2</source>
         <translation>查看校对变更...</translation>
     </message>
     <message>
+        <source>Export Proofreading Report...</source>
+        <translation>导出校对报告...</translation>
+    </message>
+    <message>
+        <source>Open a project before exporting proofreading report.</source>
+        <translation>请先打开工程，再导出校对报告。</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before exporting a report.</source>
+        <translation>请先开始校对基线，再导出报告。</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>没有可导出的校对变更。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>导出校对报告</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML 文件 (*.html);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>工程：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>导出校对报告失败：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校对报告已导出。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校对报告</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>生成时间</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>变更总数</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>标签</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>变更类型</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>类别变化</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>标记变化</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>顺序变化</translation>
+    </message>
+    <message>
         <source>Compare With Project...</source>
         <translation>与工程对比...</translation>
     </message>
@@ -1953,6 +2021,70 @@ Last error: %2</source>
     <message>
         <source>No text change.</source>
         <translation>文本没有变化。</translation>
+    </message>
+    <message>
+        <source>Export HTML...</source>
+        <translation>导出 HTML...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校对</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>没有可导出的校对变更。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>导出校对报告</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML 文件 (*.html);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>工程：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>导出校对报告失败：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校对报告已导出。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校对报告</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>生成时间</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>变更总数</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>标签</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>变更类型</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>类别变化</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>标记变化</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>顺序变化</translation>
     </message>
 </context>
 </TS>

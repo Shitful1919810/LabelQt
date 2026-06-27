@@ -1126,6 +1126,74 @@ Last error: %2</source>
         <translation>檢視校對變更...</translation>
     </message>
     <message>
+        <source>Export Proofreading Report...</source>
+        <translation>匯出校對報告...</translation>
+    </message>
+    <message>
+        <source>Open a project before exporting proofreading report.</source>
+        <translation>請先開啟工程，再匯出校對報告。</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before exporting a report.</source>
+        <translation>請先開始校對基線，再匯出報告。</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>沒有可匯出的校對變更。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>匯出校對報告</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML 檔案 (*.html);;所有檔案 (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>工程：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>匯出校對報告失敗：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校對報告已匯出。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校對報告</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>產生時間</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>變更總數</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>標籤</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>變更類型</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>類別變化</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>標記變化</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>順序變化</translation>
+    </message>
+    <message>
         <source>Compare With Project...</source>
         <translation>與工程比較...</translation>
     </message>
@@ -1953,6 +2021,70 @@ Last error: %2</source>
     <message>
         <source>No text change.</source>
         <translation>文字沒有變化。</translation>
+    </message>
+    <message>
+        <source>Export HTML...</source>
+        <translation>匯出 HTML...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校對</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>沒有可匯出的校對變更。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>匯出校對報告</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML 檔案 (*.html);;所有檔案 (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>工程：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>匯出校對報告失敗：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校對報告已匯出。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校對報告</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>產生時間</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>變更總數</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>標籤</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>變更類型</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>類別變化</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>標記變化</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>順序變化</translation>
     </message>
 </context>
 </TS>

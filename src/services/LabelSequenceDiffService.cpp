@@ -10,6 +10,7 @@ namespace {
 
 constexpr int gapPenalty = -24;
 constexpr int minimumPairScore = 42;
+constexpr int shortSimilarTextMaxLength = 3;
 
 QString normalizedText(QString text)
 {
@@ -53,7 +54,17 @@ int textSimilarityScore(const QString& baselineText, const QString& currentText)
     const int maxLength = static_cast<int>(std::max(baseline.size(), current.size()));
     const int score =
         static_cast<int>(std::round(100.0 * static_cast<double>(commonLength) / static_cast<double>(maxLength)));
-    return maxLength <= 8 ? std::min(score, 35) : score;
+    return score;
+}
+
+bool isShortChangedTextPair(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
+{
+    const QString baselineText = normalizedText(baseline.text);
+    const QString currentText = normalizedText(current.text);
+    if (baselineText == currentText) {
+        return false;
+    }
+    return std::max(baselineText.size(), currentText.size()) <= shortSimilarTextMaxLength;
 }
 
 int positionTieBreakScore(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
@@ -73,6 +84,9 @@ int positionTieBreakScore(const ReviewLabelSnapshot& baseline, const ReviewLabel
 int pairScore(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
 {
     int score = textSimilarityScore(baseline.text, current.text);
+    if (baseline.labelIndex != current.labelIndex && isShortChangedTextPair(baseline, current)) {
+        return -1000;
+    }
     if (baseline.group == current.group) {
         score += 3;
     }

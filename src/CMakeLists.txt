@@ -38,12 +38,16 @@ set(LABELQT_SERVICE_SOURCES
     services/ProjectMergeService.cpp
     services/ProjectController.cpp
     services/ProjectWorkflowController.cpp
+    services/ProofreadReportService.cpp
+    services/ProofreadReportService.h
     services/ReviewMetadataService.cpp
     services/ReviewMetadataService.h
     services/SaveChangesDecision.cpp
     services/SaveChangesDecision.h
     services/SessionStateStore.cpp
     services/SecretStore.cpp
+    services/TextDiffHtmlRenderer.cpp
+    services/TextDiffHtmlRenderer.h
     services/TextDiffService.cpp
     services/TextDiffService.h
 )

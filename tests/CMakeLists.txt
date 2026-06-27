@@ -26,10 +26,12 @@ qt_add_executable(LabelQtTests
     ../src/services/ProjectController.cpp
     ../src/services/ProjectMergeService.cpp
     ../src/services/ProjectPageOrderService.cpp
+    ../src/services/ProofreadReportService.cpp
     ../src/services/ReviewMetadataService.cpp
     ../src/services/SaveChangesDecision.cpp
     ../src/services/SessionStateStore.cpp
     ../src/services/SecretStore.cpp
+    ../src/services/TextDiffHtmlRenderer.cpp
     ../src/services/TextDiffService.cpp
     ../src/ui/CanvasLabelItems.cpp
     ../src/ui/ImageCanvas.cpp

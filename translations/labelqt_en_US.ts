@@ -1134,6 +1134,74 @@ Last error: %2</translation>
         <translation>Show Proofreading Changes...</translation>
     </message>
     <message>
+        <source>Export Proofreading Report...</source>
+        <translation>Export Proofreading Report...</translation>
+    </message>
+    <message>
+        <source>Open a project before exporting proofreading report.</source>
+        <translation>Open a project before exporting proofreading report.</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before exporting a report.</source>
+        <translation>Start a proofreading baseline before exporting a report.</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>No proofreading changes to export.</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>Export proofreading report</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML files (*.html);;All files (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>Project: %1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>Failed to export proofreading report: %1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>Proofreading report exported.</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>Proofreading Report</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>Generated at</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>Total changes</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>Label</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>Change Type</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>Group Change</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>Marker Change</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>Order Change</translation>
+    </message>
+    <message>
         <source>Compare With Project...</source>
         <translation>Compare With Project...</translation>
     </message>
@@ -1964,6 +2032,70 @@ Last error: %2</translation>
     <message>
         <source>No text change.</source>
         <translation>No text change.</translation>
+    </message>
+    <message>
+        <source>Export HTML...</source>
+        <translation>Export HTML...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>Proofreading</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>No proofreading changes to export.</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>Export proofreading report</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML files (*.html);;All files (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>Project: %1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>Failed to export proofreading report: %1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>Proofreading report exported.</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>Proofreading Report</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>Generated at</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>Total changes</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>Label</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>Change Type</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>Group Change</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>Marker Change</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>Order Change</translation>
     </message>
 </context>
 </TS>
