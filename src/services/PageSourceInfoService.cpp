@@ -1,8 +1,10 @@
 #include "services/PageSourceInfoService.h"
 
+#include "core/ProjectMetadataService.h"
+
 #include <QDir>
 #include <QFileInfo>
-#include <QJsonDocument>
+#include <QJsonArray>
 #include <QJsonObject>
 
 #include <algorithm>
@@ -10,18 +12,6 @@
 
 namespace labelqt::services {
 namespace {
-constexpr QLatin1StringView startMarker{"# LabelQtMergeSources"};
-constexpr QLatin1StringView endMarker{"# EndLabelQtMergeSources"};
-
-QString uncommentJsonLine(QString line)
-{
-    line = line.trimmed();
-    if (line.startsWith(QLatin1Char('#'))) {
-        line.remove(0, 1);
-    }
-    return line.trimmed();
-}
-
 QString resolvedSourcePath(const QString& sourcePath, const QString& projectPath)
 {
     if (sourcePath.isEmpty() || projectPath.isEmpty() || QFileInfo(sourcePath).isAbsolute()) {
@@ -95,8 +85,8 @@ int visibleLabelCount(const labelqt::core::ImageEntry& image)
                                           [](const labelqt::core::Label& label) { return !label.isDeleted(); }));
 }
 
-QString sourceCommentLine(const labelqt::core::Project& project, const PageSourceInfo& source,
-                          const QString& firstImageName, const QString& lastImageName, int pageCount, int labelCount)
+QJsonObject sourceObject(const labelqt::core::Project& project, const PageSourceInfo& source,
+                         const QString& firstImageName, const QString& lastImageName, int pageCount, int labelCount)
 {
     QJsonObject object;
     object.insert(QStringLiteral("firstImage"), firstImageName);
@@ -105,13 +95,13 @@ QString sourceCommentLine(const labelqt::core::Project& project, const PageSourc
     object.insert(QStringLiteral("sourcePath"), relativeSourcePathForOutput(source.sourcePath, project.filePath()));
     object.insert(QStringLiteral("pageCount"), pageCount);
     object.insert(QStringLiteral("labelCount"), labelCount);
-    return QStringLiteral("# %1").arg(QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact)));
+    return object;
 }
 
-QStringList sourceCommentLinesForCurrentOrder(const labelqt::core::Project& project,
-                                              const QHash<QString, PageSourceInfo>& sourcesByImageName)
+QJsonArray sourceArrayForCurrentOrder(const labelqt::core::Project& project,
+                                      const QHash<QString, PageSourceInfo>& sourcesByImageName)
 {
-    QStringList lines;
+    QJsonArray sources;
     PageSourceInfo rangeSource;
     QString rangeFirstImageName;
     QString rangeLastImageName;
@@ -122,11 +112,8 @@ QStringList sourceCommentLinesForCurrentOrder(const labelqt::core::Project& proj
         if (rangePageCount <= 0) {
             return;
         }
-        if (lines.isEmpty()) {
-            lines.append(QStringLiteral("# LabelQtMergeSources v2"));
-        }
-        lines.append(sourceCommentLine(project, rangeSource, rangeFirstImageName, rangeLastImageName, rangePageCount,
-                                       rangeLabelCount));
+        sources.append(sourceObject(project, rangeSource, rangeFirstImageName, rangeLastImageName, rangePageCount,
+                                    rangeLabelCount));
         rangeSource = {};
         rangeFirstImageName.clear();
         rangeLastImageName.clear();
@@ -155,31 +142,7 @@ QStringList sourceCommentLinesForCurrentOrder(const labelqt::core::Project& proj
     }
 
     flushRange();
-    if (!lines.isEmpty()) {
-        lines.append(QStringLiteral("# EndLabelQtMergeSources"));
-    }
-    return lines;
-}
-
-QStringList withoutSourceCommentBlock(const QStringList& commentLines)
-{
-    QStringList filteredLines;
-    bool isInSourceBlock = false;
-    for (const QString& line : commentLines) {
-        const QString trimmedLine = line.trimmed();
-        if (trimmedLine.startsWith(startMarker)) {
-            isInSourceBlock = true;
-            continue;
-        }
-        if (isInSourceBlock && trimmedLine.startsWith(endMarker)) {
-            isInSourceBlock = false;
-            continue;
-        }
-        if (!isInSourceBlock) {
-            filteredLines.append(line);
-        }
-    }
-    return filteredLines;
+    return sources;
 }
 } // namespace
 
@@ -191,25 +154,13 @@ QHash<QString, PageSourceInfo> PageSourceInfoService::sourcesForProject(const la
     }
 
     const QHash<QString, int> imageIndexes = imageIndexesByName(project.images());
-    bool isInSourceBlock = false;
-    for (const QString& line : project.commentLines()) {
-        const QString trimmedLine = line.trimmed();
-        if (trimmedLine.startsWith(startMarker)) {
-            isInSourceBlock = true;
+    const QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(project.commentLines());
+    const QJsonArray sources = metadata.value(QStringLiteral("mergeSources")).toArray();
+    for (const QJsonValue& value : sources) {
+        if (!value.isObject()) {
             continue;
         }
-        if (trimmedLine.startsWith(endMarker)) {
-            break;
-        }
-        if (!isInSourceBlock) {
-            continue;
-        }
-
-        const QJsonDocument document = QJsonDocument::fromJson(uncommentJsonLine(line).toUtf8());
-        if (!document.isObject()) {
-            continue;
-        }
-        appendRangeSource(result, project, imageIndexes, document.object());
+        appendRangeSource(result, project, imageIndexes, value.toObject());
     }
 
     return result;
@@ -222,15 +173,14 @@ void PageSourceInfoService::rewriteCommentLinesForCurrentImageOrder(
         return;
     }
 
-    QStringList commentLines = withoutSourceCommentBlock(project.commentLines());
-    const QStringList sourceLines = sourceCommentLinesForCurrentOrder(project, sourcesByImageName);
-    if (!sourceLines.isEmpty()) {
-        if (!commentLines.isEmpty() && !commentLines.last().isEmpty()) {
-            commentLines.append(QString());
-        }
-        commentLines.append(sourceLines);
+    QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(project.commentLines());
+    const QJsonArray sourceArray = sourceArrayForCurrentOrder(project, sourcesByImageName);
+    if (sourceArray.isEmpty()) {
+        metadata.remove(QStringLiteral("mergeSources"));
+    } else {
+        metadata.insert(QStringLiteral("mergeSources"), sourceArray);
     }
-    project.setCommentLines(std::move(commentLines));
+    project.setCommentLines(labelqt::core::ProjectMetadataService::rewriteCommentLines(project.commentLines(), metadata));
 }
 
 } // namespace labelqt::services

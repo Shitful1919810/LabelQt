@@ -1,8 +1,11 @@
 #include "core/LabelPlusDocument.h"
 
+#include "core/ProjectMetadataService.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonObject>
 #include <QRegularExpression>
 #include <QTextStream>
 #include <QVector>
@@ -57,6 +60,13 @@ int groupIndex(const QStringList& groups, const QString& group)
 {
     const int index = static_cast<int>(groups.indexOf(group));
     return index >= 0 ? index + 1 : 1;
+}
+
+QStringList commentLinesWithMetadata(const Project& project)
+{
+    QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(project.commentLines());
+    metadata.remove(QStringLiteral("labelIds"));
+    return labelqt::core::ProjectMetadataService::rewriteCommentLines(project.commentLines(), metadata);
 }
 } // namespace
 
@@ -185,7 +195,7 @@ QString LabelPlusDocument::serialize(const Project& project)
     if (!project.sourceName().isEmpty()) {
         stream << QStringLiteral("关联文件:") << project.sourceName() << "\n";
     }
-    for (const QString& commentLine : project.commentLines()) {
+    for (const QString& commentLine : commentLinesWithMetadata(project)) {
         stream << commentLine << '\n';
     }
     stream << '\n';

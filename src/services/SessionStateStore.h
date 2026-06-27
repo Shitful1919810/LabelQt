@@ -43,6 +43,8 @@ public:
     void saveLabelTableColumnWidths(int numberWidth, int groupWidth) const;
     int pageOrderOriginalIndexColumnWidth(int defaultWidth) const;
     void savePageOrderOriginalIndexColumnWidth(int width) const;
+    QVector<int> proofreadingChangesColumnWidths(const QVector<int>& defaultWidths) const;
+    void saveProofreadingChangesColumnWidths(const QVector<int>& widths) const;
     bool shouldOpenMergedProjectAfterSave() const;
     void saveShouldOpenMergedProjectAfterSave(bool shouldOpen) const;
 

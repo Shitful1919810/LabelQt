@@ -12,6 +12,8 @@ double clampUnit(double value)
 }
 } // namespace
 
+Label::Label() = default;
+
 Label::Label(QString text, QString group, QPointF normalizedPosition)
     : m_text(std::move(text)), m_group(std::move(group))
 {

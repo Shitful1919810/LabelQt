@@ -7,7 +7,7 @@ namespace labelqt::core {
 
 class Label {
 public:
-    Label() = default;
+    Label();
     Label(QString text, QString group, QPointF normalizedPosition);
 
     const QString& text() const noexcept;

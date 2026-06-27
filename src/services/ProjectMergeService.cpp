@@ -1,13 +1,11 @@
 #include "services/ProjectMergeService.h"
 
 #include "core/LabelPlusDocument.h"
+#include "services/PageSourceInfoService.h"
 #include "services/ProjectPageOrderService.h"
 
-#include <QDir>
 #include <QFileInfo>
 #include <QHash>
-#include <QJsonDocument>
-#include <QJsonObject>
 
 #include <algorithm>
 #include <utility>
@@ -56,81 +54,6 @@ ProjectMergePageSource pageSourceFromFirstOccurrence(const QString& imageName, c
     return {imageName, pageData.firstProjectIndex, pageData.firstProjectPath, 0};
 }
 
-bool canExtendPageSourceRange(const ProjectMergePageSource& lhs, const ProjectMergePageSource& rhs)
-{
-    return lhs.projectIndex == rhs.projectIndex && lhs.projectPath == rhs.projectPath;
-}
-
-QString relativeSourcePathForOutput(const QString& sourcePath, const QString& outputProjectPath)
-{
-    if (sourcePath.isEmpty() || outputProjectPath.isEmpty()) {
-        return sourcePath;
-    }
-
-    const QFileInfo outputFileInfo(outputProjectPath);
-    const QString outputDirectoryPath = outputFileInfo.absolutePath();
-    if (outputDirectoryPath.isEmpty()) {
-        return sourcePath;
-    }
-
-    return QDir(outputDirectoryPath).relativeFilePath(sourcePath);
-}
-
-QStringList mergeSourceCommentLines(const QVector<ProjectMergePageSource>& pageSources,
-                                    const QString& outputProjectPath)
-{
-    QStringList lines;
-    lines.reserve(pageSources.size() + 2);
-    lines.append(QStringLiteral("# LabelQtMergeSources v2"));
-
-    auto appendRange = [&lines, &outputProjectPath](const ProjectMergePageSource& firstPageSource,
-                                                    const QString& lastImageName, int pageCount, int labelCount) {
-        QJsonObject object;
-        object.insert(QStringLiteral("firstImage"), firstPageSource.imageName);
-        object.insert(QStringLiteral("lastImage"), lastImageName);
-        object.insert(QStringLiteral("sourceIndex"), firstPageSource.projectIndex + 1);
-        object.insert(QStringLiteral("sourcePath"),
-                      relativeSourcePathForOutput(firstPageSource.projectPath, outputProjectPath));
-        object.insert(QStringLiteral("pageCount"), pageCount);
-        object.insert(QStringLiteral("labelCount"), labelCount);
-        lines.append(
-            QStringLiteral("# %1").arg(QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact))));
-    };
-
-    ProjectMergePageSource rangeFirstPageSource;
-    QString rangeLastImageName;
-    int rangePageCount = 0;
-    int rangeLabelCount = 0;
-    for (const ProjectMergePageSource& pageSource : pageSources) {
-        if (rangePageCount == 0) {
-            rangeFirstPageSource = pageSource;
-            rangeLastImageName = pageSource.imageName;
-            rangePageCount = 1;
-            rangeLabelCount = pageSource.labelCount;
-            continue;
-        }
-
-        if (canExtendPageSourceRange(rangeFirstPageSource, pageSource)) {
-            rangeLastImageName = pageSource.imageName;
-            ++rangePageCount;
-            rangeLabelCount += pageSource.labelCount;
-            continue;
-        }
-
-        appendRange(rangeFirstPageSource, rangeLastImageName, rangePageCount, rangeLabelCount);
-        rangeFirstPageSource = pageSource;
-        rangeLastImageName = pageSource.imageName;
-        rangePageCount = 1;
-        rangeLabelCount = pageSource.labelCount;
-    }
-
-    if (rangePageCount > 0) {
-        appendRange(rangeFirstPageSource, rangeLastImageName, rangePageCount, rangeLabelCount);
-    }
-
-    lines.append(QStringLiteral("# EndLabelQtMergeSources"));
-    return lines;
-}
 } // namespace
 
 ProjectMergePlan ProjectMergeService::createPlan(const QStringList& projectPaths)
@@ -289,7 +212,13 @@ labelqt::core::Project ProjectMergeService::mergedProjectWithSelections(ProjectM
         finalPageSources = std::move(reorderedPageSources);
     }
 
-    plan.mergedProject.setCommentLines(mergeSourceCommentLines(finalPageSources, outputProjectPath));
+    plan.mergedProject.setFilePath(outputProjectPath);
+    QHash<QString, PageSourceInfo> sourcesByImageName;
+    sourcesByImageName.reserve(finalPageSources.size());
+    for (const ProjectMergePageSource& source : std::as_const(finalPageSources)) {
+        sourcesByImageName.insert(source.imageName, PageSourceInfo{source.projectIndex + 1, source.projectPath});
+    }
+    PageSourceInfoService::rewriteCommentLinesForCurrentImageOrder(plan.mergedProject, sourcesByImageName);
     return std::move(plan.mergedProject);
 }
 

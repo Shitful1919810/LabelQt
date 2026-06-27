@@ -44,6 +44,7 @@ class CanvasLabelTextEditController;
 class EditorStateController;
 class LabelGroupDelegate;
 class LabelSelectionController;
+class LabelTableView;
 class LabelTextDelegate;
 class ImagePageViewController;
 class MainWindowShortcutController;
@@ -77,6 +78,10 @@ private:
     void openProject();
     void mergeProjects();
     void reorderPages();
+    void startProofreadingBaseline();
+    void endProofreadingBaseline();
+    void showProofreadingChanges();
+    void compareWithProject();
     void showAutomationDiscoveryWarnings(const QStringList& warnings);
     void applyAutomationOperations(const QString& scriptName,
                                    const QVector<labelqt::services::AutomationOperation>& operations);
@@ -173,6 +178,7 @@ private:
     void setDirty(bool dirty);
     bool promptToSaveIfDirty();
     void updateWindowTitle();
+    void updateProofreadingStatusUi();
     bool loadProjectFile(const QString& path, bool showErrors, const QString& successMessage);
     void updateRecentProjectsMenu();
     void applyGroupStylesToCombo(QComboBox* comboBox);
@@ -192,7 +198,7 @@ private:
     LabelTextDelegate* m_labelTextDelegate{nullptr};
     LabelGroupDelegate* m_labelGroupDelegate{nullptr};
     std::unique_ptr<LabelSelectionController> m_labelSelectionController;
-    QTableView* m_labelView{nullptr};
+    LabelTableView* m_labelView{nullptr};
     ViewportFittedTableColumns* m_labelTableColumns{nullptr};
     QPlainTextEdit* m_textEdit{nullptr};
     CanvasLabelTextEditController* m_canvasTextEditController{nullptr};
@@ -208,6 +214,7 @@ private:
     QComboBox* m_labelGroupComboBox{nullptr};
     QLabel* m_pageSourceLabel{nullptr};
     QLabel* m_warningLabel{nullptr};
+    QLabel* m_proofreadingStatusLabel{nullptr};
     QLabel* m_operationMessageLabel{nullptr};
     QSlider* m_zoomSlider{nullptr};
     QSplitter* m_rootSplitter{nullptr};
@@ -217,6 +224,9 @@ private:
     QAction* m_newProjectAction{nullptr};
     QAction* m_mergeProjectsAction{nullptr};
     QAction* m_reorderPagesAction{nullptr};
+    QAction* m_startProofreadingAction{nullptr};
+    QAction* m_showProofreadingChangesAction{nullptr};
+    QAction* m_compareWithProjectAction{nullptr};
     QAction* m_saveProjectAction{nullptr};
     QAction* m_saveProjectAsAction{nullptr};
     QMenu* m_recentProjectsMenu{nullptr};

@@ -67,3 +67,15 @@ def copy_release_notices(repository_root: Path, destination: Path) -> None:
         if not source.is_file():
             raise FileNotFoundError(f"Required release notice file is missing: {source}")
         shutil.copy2(source, destination / file_name)
+
+    license_files = {
+        "BreezeStyleSheets-LICENSE.md": repository_root / "resources/themes/breeze/LICENSE.md",
+        "MaterialUi-LICENSE.txt": repository_root / "resources/themes/breeze/MaterialUi.LICENSE",
+        "diff-match-patch-LICENSE.txt": repository_root / "third_party/diff-match-patch/LICENSE",
+    }
+    licenses_dir = destination / "licenses"
+    licenses_dir.mkdir(exist_ok=True)
+    for target_name, source in license_files.items():
+        if not source.is_file():
+            raise FileNotFoundError(f"Required third-party license file is missing: {source}")
+        shutil.copy2(source, licenses_dir / target_name)

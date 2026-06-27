@@ -45,6 +45,22 @@ The bundled stylesheets provide Breeze-like Qt Widgets themes. The resource dire
 
 Some SVG assets included with BreezeStyleSheets carry the Apache License 2.0 notice.
 
+## diff-match-patch
+
+- Source: <https://github.com/google/diff-match-patch>
+- Bundled path: `third_party/diff-match-patch`
+- Usage: linked from the C++ Qt implementation to produce proofreading text differences.
+- License: Apache License 2.0
+- Local license file: `third_party/diff-match-patch/LICENSE`
+
+The dependency is tracked as a Git submodule. Keep the submodule license file available when updating this dependency.
+
+Release packages should include third-party license texts under a `licenses/` directory:
+
+- `licenses/BreezeStyleSheets-LICENSE.md`
+- `licenses/MaterialUi-LICENSE.txt`
+- `licenses/diff-match-patch-LICENSE.txt`
+
 ## Official Automation Scripts
 
 The repository includes official Python automation scripts under `scripts/official`. These scripts are launched as external Python processes and are not embedded into the C++ application binary.

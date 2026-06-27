@@ -51,7 +51,9 @@ tests          Qt Test 测试
 - `ProjectMergeService`：读取多个 LabelPlus 工程，按页生成合并计划，生成最终合并工程，并写入合并来源元数据。
 - `ProjectPageOrderService`：校验并应用页面重排，负责在重排后保持来源元数据仍绑定到图片名。
 - `ProjectImageValidator`：扫描工程中缺失的图片文件，返回数据型诊断，由 UI 非阻塞展示。
-- `PageSourceInfoService`：解析和重写 LabelQt 合并来源注释块。UI 不能自己解析这些注释行。
+- `PageSourceInfoService`：解析和重写统一项目元数据里的合并来源 section。UI 不能自己解析 comment 行。
+- `ProjectComparisonService`：把校对基线或另一个工程与当前工程比较为结构化差异。UI 只展示结果，不直接实现
+  label 匹配或 diff 规则。
 - `SessionStateStore`：通过 `QSettings` 保存本机布局、最近工程、每个工程的页码/缩放/视图中心/选中标签等会话状态。
 - `LabelEditController`：新增、删除、移动、改文本、改类别、批量切换、重排标签和分组编辑，并注册撤销/重做。
 - `LabelNavigator`：在当前分组筛选下查找上一条/下一条可见标签，跨页导航逻辑放这里而不是写在 UI 事件处理里。
@@ -171,6 +173,45 @@ scripts/custom      用户自定义脚本
 
 不要在自动化 action 的触发栈内销毁或重建整个自动化菜单。脚本运行状态变化时只更新 action enabled 状态；需要重新发现脚本时，使用显式刷新或在当前调用栈结束后延迟执行。
 
+## 项目元数据
+
+LabelQt 会把自身需要随工程流转的内部元数据写入 LabelPlus comment 区。所有这类数据必须通过
+`ProjectMetadataService` 进入统一的 `LabelQtMetadata` 块，不再新增独立的 `LabelQt...` comment 块。
+
+```text
+# LabelQtMetadata v1
+# compression=qCompress
+# encoding=base64
+# payload=...
+# EndLabelQtMetadata
+```
+
+压缩前的 JSON object 当前包含这些 section：
+
+- `mergeSources`：合并工程后每段页面来源，由 `PageSourceInfoService` 读写。
+- `review`：校对基线快照，由 `ReviewMetadataService` 读写。
+
+这个块只是 `qCompress` 压缩和 base64 编码，不是加密。不要在其中保存 API key、访问令牌或其他秘密。
+新增工程内 metadata 时，应给统一 JSON object 增加新 section，并让对应服务只读写自己的 section。这样可以
+最大化压缩效率，也能避免 comment 区散落多个相互重写的私有块。
+
+## 校对元数据
+
+校对流程应贴合校对人员直接编辑工程的习惯：校对人员打开工程后仍在主界面修改文本、增删
+label、移动 marker 和调整顺序。校对功能只提供一层透明记录和汇总，不引入 Word 式接受/拒绝修订流程。
+
+`ReviewMetadataService` 维护 `review` section，用于保存“开始校对”时的 label 基线快照。之后的校对变更由
+`ProjectComparisonService` 按页组织，并交给 `LabelSequenceDiffService` 把每页 label 列表看作类似 diff
+里的行序列进行启发式对齐。匹配主要关注文本，页内顺序用于保序对齐，类别和坐标只作为弱消歧信号。这样可以在
+不向经典 LabelPlus 文本主体引入稳定 ID 的前提下，识别常见的文本修改、增删、marker 变化和页内顺序移动。
+如果工程经过外部工具编辑导致文本变化过大或重复短句过多，校对系统可能退化为新增/删除或粗粒度修改；这种情况
+下功能可以降级，但不能崩溃。
+
+详细算法、判定逻辑和已知边界见 [校对差异算法说明](proofreading-diff.md)。
+
+开始或替换校对基线本质上只修改 `commentLines`，必须走 `UndoStack`。变更汇总窗口只读展示差异并提供跳转，
+不承担 label 编辑职责；具体编辑仍应继续通过 `LabelEditController` 等现有路径完成。
+
 ## 偏好设置
 
 运行时 UI 配置通过 `AppPreferences` 和 `preference.json` 管理。不要在 UI 类里直接解析 JSON。
@@ -217,18 +258,11 @@ scripts/custom      用户自定义脚本
 
 ## 合并来源元数据
 
-合并工程会在 LabelPlus comment 区写入页面来源信息。格式是带注释前缀的 JSON Lines，位于 `关联文件:` 行和第一个图片段之间：
-
-```text
-# LabelQtMergeSources v2
-# {"firstImage":"001.png","lastImage":"005.png","sourceIndex":1,"sourcePath":"member-a.txt","pageCount":5,"labelCount":42}
-# {"firstImage":"006.png","lastImage":"008.png","sourceIndex":2,"sourcePath":"parts/member-b.txt","pageCount":3,"labelCount":21}
-# EndLabelQtMergeSources
-```
+合并工程会在统一项目元数据的 `mergeSources` section 里写入页面来源信息。
 
 规则：
 
-- 每行 JSON 描述最终工程图片顺序中的一个连续区间。
+- 每个 JSON object 描述最终工程图片顺序中的一个连续区间。
 - `sourceIndex` 是用户选择合并文件时的一基序号。
 - `sourcePath` 相对于合并后工程的保存目录。
 - `pageCount` 是区间页数。

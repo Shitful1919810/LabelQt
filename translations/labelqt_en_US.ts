@@ -1121,6 +1121,162 @@ Last error: %2</translation>
         <source>%1 must be a string; using the pip default index.</source>
         <translation>%1 must be a string; using the pip default index.</translation>
     </message>
+    <message>
+        <source>Start Proofreading Baseline</source>
+        <translation>Start Proofreading Baseline</translation>
+    </message>
+    <message>
+        <source>End Proofreading</source>
+        <translation>End Proofreading</translation>
+    </message>
+    <message>
+        <source>Show Proofreading Changes...</source>
+        <translation>Show Proofreading Changes...</translation>
+    </message>
+    <message>
+        <source>Export Proofreading Report...</source>
+        <translation>Export Proofreading Report...</translation>
+    </message>
+    <message>
+        <source>Open a project before exporting proofreading report.</source>
+        <translation>Open a project before exporting proofreading report.</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before exporting a report.</source>
+        <translation>Start a proofreading baseline before exporting a report.</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>No proofreading changes to export.</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>Export proofreading report</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML files (*.html);;All files (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>Project: %1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>Failed to export proofreading report: %1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>Proofreading report exported.</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>Proofreading Report</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>Generated at</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>Total changes</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>Label</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>Change Type</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>Group Change</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>Marker Change</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>Order Change</translation>
+    </message>
+    <message>
+        <source>Compare With Project...</source>
+        <translation>Compare With Project...</translation>
+    </message>
+    <message>
+        <source>Compare Projects</source>
+        <translation>Compare Projects</translation>
+    </message>
+    <message>
+        <source>Open a project before comparing.</source>
+        <translation>Open a project before comparing.</translation>
+    </message>
+    <message>
+        <source>Select project to compare</source>
+        <translation>Select project to compare</translation>
+    </message>
+    <message>
+        <source>LabelPlus Text (*.txt);;All Files (*)</source>
+        <translation>LabelPlus Text (*.txt);;All Files (*)</translation>
+    </message>
+    <message>
+        <source>Failed to open comparison project: %1</source>
+        <translation>Failed to open comparison project: %1</translation>
+    </message>
+    <message>
+        <source>No differences from the selected project.</source>
+        <translation>No differences from the selected project.</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>Proofreading</translation>
+    </message>
+    <message>
+        <source>Open a project before starting proofreading.</source>
+        <translation>Open a project before starting proofreading.</translation>
+    </message>
+    <message>
+        <source>Replace the existing proofreading baseline with the current project state?</source>
+        <translation>Replace the existing proofreading baseline with the current project state?</translation>
+    </message>
+    <message>
+        <source>Start proofreading baseline</source>
+        <translation>Start proofreading baseline</translation>
+    </message>
+    <message>
+        <source>End proofreading</source>
+        <translation>End proofreading</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline updated.</source>
+        <translation>Proofreading baseline updated.</translation>
+    </message>
+    <message>
+        <source>Proofreading ended.</source>
+        <translation>Proofreading ended.</translation>
+    </message>
+    <message>
+        <source>Open a project before viewing proofreading changes.</source>
+        <translation>Open a project before viewing proofreading changes.</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before viewing changes.</source>
+        <translation>Start a proofreading baseline before viewing changes.</translation>
+    </message>
+    <message>
+        <source>No proofreading changes since the baseline.</source>
+        <translation>No proofreading changes since the baseline.</translation>
+    </message>
+    <message>
+        <source>Revision mode</source>
+        <translation>Revision mode</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline is active.</source>
+        <translation>Proofreading baseline is active.</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderDialog</name>
@@ -1769,6 +1925,177 @@ Last error: %2</translation>
         <location filename="../src/main.cpp" line="54"/>
         <source>LabelPlus text project to open.</source>
         <translation>LabelPlus text project to open.</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadChangesDialog</name>
+    <message>
+        <source>%n proofreading change(s)</source>
+        <translation>%n proofreading change(s)</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>Page</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>Change</translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation>Summary</translation>
+    </message>
+    <message>
+        <source>Before</source>
+        <translation>Before</translation>
+    </message>
+    <message>
+        <source>After</source>
+        <translation>After</translation>
+    </message>
+    <message>
+        <source>Details</source>
+        <translation>Details</translation>
+    </message>
+    <message>
+        <source>Jump to Label</source>
+        <translation>Jump to Label</translation>
+    </message>
+    <message>
+        <source>Page: %1</source>
+        <translation>Page: %1</translation>
+    </message>
+    <message>
+        <source>Label: %1</source>
+        <translation>Label: %1</translation>
+    </message>
+    <message>
+        <source>Change: %1</source>
+        <translation>Change: %1</translation>
+    </message>
+    <message>
+        <source>Before group: %1</source>
+        <translation>Before group: %1</translation>
+    </message>
+    <message>
+        <source>Before position: %1</source>
+        <translation>Before position: %1</translation>
+    </message>
+    <message>
+        <source>After group: %1</source>
+        <translation>After group: %1</translation>
+    </message>
+    <message>
+        <source>After position: %1</source>
+        <translation>After position: %1</translation>
+    </message>
+    <message>
+        <source>Added</source>
+        <translation>Added</translation>
+    </message>
+    <message>
+        <source>Deleted</source>
+        <translation>Deleted</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>Modified</translation>
+    </message>
+    <message>
+        <source>text</source>
+        <translation>text</translation>
+    </message>
+    <message>
+        <source>group</source>
+        <translation>group</translation>
+    </message>
+    <message>
+        <source>marker</source>
+        <translation>marker</translation>
+    </message>
+    <message>
+        <source>order</source>
+        <translation>order</translation>
+    </message>
+    <message>
+        <source>x=%1, y=%2</source>
+        <translation>x=%1, y=%2</translation>
+    </message>
+    <message>
+        <source>Proofreading Changes</source>
+        <translation>Proofreading Changes</translation>
+    </message>
+    <message>
+        <source>Text Difference</source>
+        <translation>Text Difference</translation>
+    </message>
+    <message>
+        <source>No text change.</source>
+        <translation>No text change.</translation>
+    </message>
+    <message>
+        <source>Export HTML...</source>
+        <translation>Export HTML...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>Proofreading</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>No proofreading changes to export.</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>Export proofreading report</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML files (*.html);;All files (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>Project: %1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>Failed to export proofreading report: %1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>Proofreading report exported.</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>Proofreading Report</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>Generated at</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>Total changes</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>Label</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>Change Type</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>Group Change</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>Marker Change</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>Order Change</translation>
     </message>
 </context>
 </TS>

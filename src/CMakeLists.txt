@@ -6,6 +6,8 @@ set(LABELQT_CORE_SOURCES
     core/Label.cpp
     core/LabelPlusDocument.cpp
     core/Project.cpp
+    core/ProjectMetadataService.cpp
+    core/ProjectMetadataService.h
     core/RuntimePaths.cpp
     core/RuntimePaths.h
     core/TranslationManager.cpp
@@ -23,19 +25,31 @@ set(LABELQT_SERVICE_SOURCES
     services/LabelClipboardService.cpp
     services/LabelClipboardService.h
     services/LabelEditController.cpp
+    services/LabelSequenceDiffService.cpp
+    services/LabelSequenceDiffService.h
     services/LabelPastePlanner.cpp
     services/LabelPastePlanner.h
     services/LabelNavigator.cpp
     services/PageSourceInfoService.cpp
+    services/ProjectComparisonService.cpp
+    services/ProjectComparisonService.h
     services/ProjectImageValidator.cpp
     services/ProjectPageOrderService.cpp
     services/ProjectMergeService.cpp
     services/ProjectController.cpp
     services/ProjectWorkflowController.cpp
+    services/ProofreadReportService.cpp
+    services/ProofreadReportService.h
+    services/ReviewMetadataService.cpp
+    services/ReviewMetadataService.h
     services/SaveChangesDecision.cpp
     services/SaveChangesDecision.h
     services/SessionStateStore.cpp
     services/SecretStore.cpp
+    services/TextDiffHtmlRenderer.cpp
+    services/TextDiffHtmlRenderer.h
+    services/TextDiffService.cpp
+    services/TextDiffService.h
 )
 
 file(GLOB LABELQT_TRANSLATION_FILES CONFIGURE_DEPENDS
@@ -62,6 +76,7 @@ set(LABELQT_UI_SOURCES
     ui/LabelEditDelegates.cpp
     ui/LabelSelectionController.cpp
     ui/LabelTableModel.cpp
+    ui/LabelTableView.cpp
     ui/MainWindow.cpp
     ui/MainWindowShortcutController.cpp
     ui/PageOrderDialog.cpp
@@ -69,6 +84,7 @@ set(LABELQT_UI_SOURCES
     ui/PageSelectorComboBox.cpp
     ui/PreferenceDialog.cpp
     ui/PreferenceDialogWidgets.cpp
+    ui/ProofreadChangesDialog.cpp
     ui/ProjectMergeDialog.cpp
     ui/ProjectViewController.cpp
     ui/ThemeManager.cpp
@@ -92,7 +108,7 @@ qt_add_executable(LabelQt
 target_include_directories(LabelQt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(LabelQt PRIVATE LABELQT_INSTALL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/labelqt")
 
-target_link_libraries(LabelQt PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6Keychain::Qt6Keychain)
+target_link_libraries(LabelQt PRIVATE DiffMatchPatch Qt6::Core Qt6::Gui Qt6::Widgets Qt6Keychain::Qt6Keychain)
 
 if(TARGET Qt6::Svg)
     target_link_libraries(LabelQt PRIVATE Qt6::Svg)
@@ -189,7 +205,7 @@ if(LABELQT_ENABLE_STATIC_QT_EXPERIMENT)
 
     target_include_directories(LabelQtStatic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_definitions(LabelQtStatic PRIVATE LABELQT_INSTALL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/labelqt")
-    target_link_libraries(LabelQtStatic PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6Keychain::Qt6Keychain)
+    target_link_libraries(LabelQtStatic PRIVATE DiffMatchPatch Qt6::Core Qt6::Gui Qt6::Widgets Qt6Keychain::Qt6Keychain)
 
     if(TARGET Qt6::Svg)
         target_link_libraries(LabelQtStatic PRIVATE Qt6::Svg)
@@ -238,6 +254,24 @@ install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE.txt"
     "${CMAKE_CURRENT_SOURCE_DIR}/../THIRD_PARTY_NOTICES.md"
     DESTINATION share/doc/labelqt
+)
+
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/LICENSE.md"
+    DESTINATION share/doc/labelqt/licenses
+    RENAME BreezeStyleSheets-LICENSE.md
+)
+
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/MaterialUi.LICENSE"
+    DESTINATION share/doc/labelqt/licenses
+    RENAME MaterialUi-LICENSE.txt
+)
+
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/diff-match-patch/LICENSE"
+    DESTINATION share/doc/labelqt/licenses
+    RENAME diff-match-patch-LICENSE.txt
 )
 
 install(FILES

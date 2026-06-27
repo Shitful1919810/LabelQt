@@ -1113,6 +1113,162 @@ Last error: %2</source>
         <source>%1 must be a string; using the pip default index.</source>
         <translation>%1 必須是字串；將使用 pip 預設來源。</translation>
     </message>
+    <message>
+        <source>Start Proofreading Baseline</source>
+        <translation>開始校對基線</translation>
+    </message>
+    <message>
+        <source>End Proofreading</source>
+        <translation>結束校對</translation>
+    </message>
+    <message>
+        <source>Show Proofreading Changes...</source>
+        <translation>檢視校對變更...</translation>
+    </message>
+    <message>
+        <source>Export Proofreading Report...</source>
+        <translation>匯出校對報告...</translation>
+    </message>
+    <message>
+        <source>Open a project before exporting proofreading report.</source>
+        <translation>請先開啟工程，再匯出校對報告。</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before exporting a report.</source>
+        <translation>請先開始校對基線，再匯出報告。</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>沒有可匯出的校對變更。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>匯出校對報告</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML 檔案 (*.html);;所有檔案 (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>工程：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>匯出校對報告失敗：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校對報告已匯出。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校對報告</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>產生時間</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>變更總數</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>標籤</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>變更類型</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>類別變化</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>標記變化</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>順序變化</translation>
+    </message>
+    <message>
+        <source>Compare With Project...</source>
+        <translation>與工程比較...</translation>
+    </message>
+    <message>
+        <source>Compare Projects</source>
+        <translation>比較工程</translation>
+    </message>
+    <message>
+        <source>Open a project before comparing.</source>
+        <translation>請先開啟工程，再進行比較。</translation>
+    </message>
+    <message>
+        <source>Select project to compare</source>
+        <translation>選擇要比較的工程</translation>
+    </message>
+    <message>
+        <source>LabelPlus Text (*.txt);;All Files (*)</source>
+        <translation>LabelPlus 文字 (*.txt);;所有檔案 (*)</translation>
+    </message>
+    <message>
+        <source>Failed to open comparison project: %1</source>
+        <translation>無法開啟比較工程：%1</translation>
+    </message>
+    <message>
+        <source>No differences from the selected project.</source>
+        <translation>與所選工程沒有差異。</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校對</translation>
+    </message>
+    <message>
+        <source>Open a project before starting proofreading.</source>
+        <translation>請先開啟工程，再開始校對。</translation>
+    </message>
+    <message>
+        <source>Replace the existing proofreading baseline with the current project state?</source>
+        <translation>是否用目前工程狀態取代既有校對基線？</translation>
+    </message>
+    <message>
+        <source>Start proofreading baseline</source>
+        <translation>開始校對基線</translation>
+    </message>
+    <message>
+        <source>End proofreading</source>
+        <translation>結束校對</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline updated.</source>
+        <translation>校對基線已更新。</translation>
+    </message>
+    <message>
+        <source>Proofreading ended.</source>
+        <translation>校對已結束。</translation>
+    </message>
+    <message>
+        <source>Open a project before viewing proofreading changes.</source>
+        <translation>請先開啟工程，再檢視校對變更。</translation>
+    </message>
+    <message>
+        <source>Start a proofreading baseline before viewing changes.</source>
+        <translation>請先開始校對基線，再檢視變更。</translation>
+    </message>
+    <message>
+        <source>No proofreading changes since the baseline.</source>
+        <translation>自基線以來沒有校對變更。</translation>
+    </message>
+    <message>
+        <source>Revision mode</source>
+        <translation>修訂模式</translation>
+    </message>
+    <message>
+        <source>Proofreading baseline is active.</source>
+        <translation>校對基線已啟用。</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderDialog</name>
@@ -1758,6 +1914,177 @@ Last error: %2</source>
         <location filename="../src/main.cpp" line="54"/>
         <source>LabelPlus text project to open.</source>
         <translation>要開啟的 LabelPlus 文字專案。</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadChangesDialog</name>
+    <message>
+        <source>%n proofreading change(s)</source>
+        <translation>%n 筆校對變更</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>頁面</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>變更</translation>
+    </message>
+    <message>
+        <source>Summary</source>
+        <translation>摘要</translation>
+    </message>
+    <message>
+        <source>Before</source>
+        <translation>修改前</translation>
+    </message>
+    <message>
+        <source>After</source>
+        <translation>修改後</translation>
+    </message>
+    <message>
+        <source>Details</source>
+        <translation>詳情</translation>
+    </message>
+    <message>
+        <source>Jump to Label</source>
+        <translation>跳到標籤</translation>
+    </message>
+    <message>
+        <source>Page: %1</source>
+        <translation>頁面：%1</translation>
+    </message>
+    <message>
+        <source>Label: %1</source>
+        <translation>標籤：%1</translation>
+    </message>
+    <message>
+        <source>Change: %1</source>
+        <translation>變更：%1</translation>
+    </message>
+    <message>
+        <source>Before group: %1</source>
+        <translation>修改前類別：%1</translation>
+    </message>
+    <message>
+        <source>Before position: %1</source>
+        <translation>修改前座標：%1</translation>
+    </message>
+    <message>
+        <source>After group: %1</source>
+        <translation>修改後類別：%1</translation>
+    </message>
+    <message>
+        <source>After position: %1</source>
+        <translation>修改後座標：%1</translation>
+    </message>
+    <message>
+        <source>Added</source>
+        <translation>新增</translation>
+    </message>
+    <message>
+        <source>Deleted</source>
+        <translation>刪除</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>修改</translation>
+    </message>
+    <message>
+        <source>text</source>
+        <translation>文字</translation>
+    </message>
+    <message>
+        <source>group</source>
+        <translation>類別</translation>
+    </message>
+    <message>
+        <source>marker</source>
+        <translation>標記</translation>
+    </message>
+    <message>
+        <source>order</source>
+        <translation>順序</translation>
+    </message>
+    <message>
+        <source>x=%1, y=%2</source>
+        <translation>x=%1，y=%2</translation>
+    </message>
+    <message>
+        <source>Proofreading Changes</source>
+        <translation>校對變更</translation>
+    </message>
+    <message>
+        <source>Text Difference</source>
+        <translation>文字差異</translation>
+    </message>
+    <message>
+        <source>No text change.</source>
+        <translation>文字沒有變化。</translation>
+    </message>
+    <message>
+        <source>Export HTML...</source>
+        <translation>匯出 HTML...</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校對</translation>
+    </message>
+    <message>
+        <source>No proofreading changes to export.</source>
+        <translation>沒有可匯出的校對變更。</translation>
+    </message>
+    <message>
+        <source>Export proofreading report</source>
+        <translation>匯出校對報告</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html);;All files (*)</source>
+        <translation>HTML 檔案 (*.html);;所有檔案 (*)</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>工程：%1</translation>
+    </message>
+    <message>
+        <source>Failed to export proofreading report: %1</source>
+        <translation>匯出校對報告失敗：%1</translation>
+    </message>
+    <message>
+        <source>Proofreading report exported.</source>
+        <translation>校對報告已匯出。</translation>
+    </message>
+    <message>
+        <source>Proofreading Report</source>
+        <translation>校對報告</translation>
+    </message>
+    <message>
+        <source>Generated at</source>
+        <translation>產生時間</translation>
+    </message>
+    <message>
+        <source>Total changes</source>
+        <translation>變更總數</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>標籤</translation>
+    </message>
+    <message>
+        <source>Change Type</source>
+        <translation>變更類型</translation>
+    </message>
+    <message>
+        <source>Group Change</source>
+        <translation>類別變化</translation>
+    </message>
+    <message>
+        <source>Marker Change</source>
+        <translation>標記變化</translation>
+    </message>
+    <message>
+        <source>Order Change</source>
+        <translation>順序變化</translation>
     </message>
 </context>
 </TS>

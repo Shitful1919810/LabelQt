@@ -8,6 +8,7 @@ qt_add_executable(LabelQtTests
     ../src/core/LabelPlusDocument.cpp
     ../src/core/Label.cpp
     ../src/core/Project.cpp
+    ../src/core/ProjectMetadataService.cpp
     ../src/core/RuntimePaths.cpp
     ../src/core/UndoStack.cpp
     ../src/services/AutomationManifestParser.cpp
@@ -16,16 +17,22 @@ qt_add_executable(LabelQtTests
     ../src/services/AutomationService.cpp
     ../src/services/LabelClipboardService.cpp
     ../src/services/LabelEditController.cpp
+    ../src/services/LabelSequenceDiffService.cpp
     ../src/services/LabelPastePlanner.cpp
     ../src/services/LabelNavigator.cpp
     ../src/services/PageSourceInfoService.cpp
+    ../src/services/ProjectComparisonService.cpp
     ../src/services/ProjectImageValidator.cpp
     ../src/services/ProjectController.cpp
     ../src/services/ProjectMergeService.cpp
     ../src/services/ProjectPageOrderService.cpp
+    ../src/services/ProofreadReportService.cpp
+    ../src/services/ReviewMetadataService.cpp
     ../src/services/SaveChangesDecision.cpp
     ../src/services/SessionStateStore.cpp
     ../src/services/SecretStore.cpp
+    ../src/services/TextDiffHtmlRenderer.cpp
+    ../src/services/TextDiffService.cpp
     ../src/ui/CanvasLabelItems.cpp
     ../src/ui/ImageCanvas.cpp
     ../src/ui/LabelSelectionController.cpp
@@ -40,6 +47,7 @@ target_include_directories(LabelQtTests
 
 target_link_libraries(LabelQtTests
     PRIVATE
+        DiffMatchPatch
         Qt6::Core
         Qt6::Gui
         Qt6::Test
