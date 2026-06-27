@@ -13,12 +13,12 @@ constexpr QLatin1StringView metadataStartMarker{"# LabelQtMetadata"};
 constexpr QLatin1StringView metadataEndMarker{"# EndLabelQtMetadata"};
 constexpr qsizetype encodedPayloadLineLength = 120;
 
-constexpr std::array legacyStartMarkers{
+constexpr std::array obsoleteStandaloneStartMarkers{
     QLatin1StringView{"# LabelQtMergeSources"},
     QLatin1StringView{"# LabelQtReview"},
 };
 
-constexpr std::array legacyEndMarkers{
+constexpr std::array obsoleteStandaloneEndMarkers{
     QLatin1StringView{"# EndLabelQtMergeSources"},
     QLatin1StringView{"# EndLabelQtReview"},
 };
@@ -32,10 +32,10 @@ QString uncommentLine(QString line)
     return line.trimmed();
 }
 
-std::optional<std::size_t> legacyBlockIndex(const QString& trimmedLine)
+std::optional<std::size_t> obsoleteStandaloneBlockIndex(const QString& trimmedLine)
 {
-    for (std::size_t i = 0; i < legacyStartMarkers.size(); ++i) {
-        if (trimmedLine.startsWith(legacyStartMarkers.at(i))) {
+    for (std::size_t i = 0; i < obsoleteStandaloneStartMarkers.size(); ++i) {
+        if (trimmedLine.startsWith(obsoleteStandaloneStartMarkers.at(i))) {
             return i;
         }
     }
@@ -46,7 +46,7 @@ QStringList withoutMetadataBlocks(const QStringList& commentLines)
 {
     QStringList filteredLines;
     bool isInMetadataBlock = false;
-    std::optional<std::size_t> legacyBlock;
+    std::optional<std::size_t> obsoleteStandaloneBlock;
 
     for (const QString& line : commentLines) {
         const QString trimmedLine = line.trimmed();
@@ -61,14 +61,14 @@ QStringList withoutMetadataBlocks(const QStringList& commentLines)
             continue;
         }
 
-        if (!legacyBlock.has_value()) {
-            legacyBlock = legacyBlockIndex(trimmedLine);
-            if (legacyBlock.has_value()) {
+        if (!obsoleteStandaloneBlock.has_value()) {
+            obsoleteStandaloneBlock = obsoleteStandaloneBlockIndex(trimmedLine);
+            if (obsoleteStandaloneBlock.has_value()) {
                 continue;
             }
         } else {
-            if (trimmedLine.startsWith(legacyEndMarkers.at(*legacyBlock))) {
-                legacyBlock.reset();
+            if (trimmedLine.startsWith(obsoleteStandaloneEndMarkers.at(*obsoleteStandaloneBlock))) {
+                obsoleteStandaloneBlock.reset();
             }
             continue;
         }

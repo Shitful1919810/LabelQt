@@ -94,9 +94,9 @@ const QHash<QString, ReviewLabelSnapshot>& ReviewMetadata::baselineLabels() cons
 
 ReviewLabelSnapshot ReviewMetadata::baselineFor(const QString& imageName, int labelIndex) const
 {
-    const QString legacyKey = ReviewMetadataService::keyForLabel(imageName, labelIndex);
-    if (m_baselineLabels.contains(legacyKey)) {
-        return m_baselineLabels.value(legacyKey);
+    const QString key = ReviewMetadataService::keyForLabel(imageName, labelIndex);
+    if (m_baselineLabels.contains(key)) {
+        return m_baselineLabels.value(key);
     }
     for (const ReviewLabelSnapshot& snapshot : m_baselineLabels) {
         if (snapshot.imageName == imageName && snapshot.labelIndex == labelIndex) {

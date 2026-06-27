@@ -91,11 +91,17 @@ QString applicationScriptsDirectory()
 
 QString installedScriptsDirectory(const QString& dataDirectory)
 {
+    if (dataDirectory.trimmed().isEmpty()) {
+        return {};
+    }
     return QDir(dataDirectory).filePath(QStringLiteral("scripts"));
 }
 
 QString installedOfficialScriptsDirectory(const QString& dataDirectory)
 {
+    if (dataDirectory.trimmed().isEmpty()) {
+        return {};
+    }
     return QDir(installedScriptsDirectory(dataDirectory)).filePath(QStringLiteral("official"));
 }
 

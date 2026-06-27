@@ -148,6 +148,9 @@ ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& bef
 
 ProofreadChangesDialog::~ProofreadChangesDialog()
 {
+    if (m_tableColumns != nullptr) {
+        m_tableColumns->setColumnsChangedCallback({});
+    }
     if (m_table != nullptr) {
         disconnect(m_table, nullptr, this, nullptr);
     }

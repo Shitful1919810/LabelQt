@@ -77,6 +77,7 @@ python scripts/check_all.py windows-vs-debug
   - 工程合并的无冲突页、冲突页和最终页序应用。
   - 合并来源 comment 的区间解析。
   - 页面顺序服务的重排，以及重排后来源信息仍按图片名跟随页面。
+  - 校对基线、外部工程对比、页内 label 序列 diff、文本 diff 和 HTML 报告导出。
 
 - 图像画布交互：
   - `Ctrl+点击 marker` 触发多选点击。
