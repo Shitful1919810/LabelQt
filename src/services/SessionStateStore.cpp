@@ -34,6 +34,27 @@ constexpr QLatin1StringView fileDialogsGroup{"fileDialogs"};
 constexpr QLatin1StringView lastDirectoryKey{"lastDirectory"};
 constexpr QLatin1StringView mergeGroup{"merge"};
 constexpr QLatin1StringView openMergedProjectAfterSaveKey{"openMergedProjectAfterSave"};
+
+QLatin1StringView fileDialogScopeKey(FileDialogScope scope)
+{
+    switch (scope) {
+    case FileDialogScope::NewProjectImages:
+        return QLatin1StringView{"newProjectImages"};
+    case FileDialogScope::OpenProject:
+        return QLatin1StringView{"openProject"};
+    case FileDialogScope::SaveProject:
+        return QLatin1StringView{"saveProject"};
+    case FileDialogScope::MergeOpenProjects:
+        return QLatin1StringView{"mergeOpenProjects"};
+    case FileDialogScope::MergeSaveProject:
+        return QLatin1StringView{"mergeSaveProject"};
+    case FileDialogScope::CompareProject:
+        return QLatin1StringView{"compareProject"};
+    case FileDialogScope::ExportProofreadingReport:
+        return QLatin1StringView{"exportProofreadingReport"};
+    }
+    return QLatin1StringView{"default"};
+}
 } // namespace
 
 WindowLayoutState SessionStateStore::loadWindowLayout() const
@@ -173,10 +194,11 @@ void SessionStateStore::removeRecentProjectPath(const QString& projectPath) cons
     settings.setValue(recentProjectPathsKey, paths);
 }
 
-QString SessionStateStore::lastFileDialogDirectory() const
+QString SessionStateStore::lastFileDialogDirectory(FileDialogScope scope) const
 {
     QSettings settings;
     settings.beginGroup(fileDialogsGroup);
+    settings.beginGroup(fileDialogScopeKey(scope));
     const QString path = settings.value(lastDirectoryKey).toString();
     if (path.isEmpty()) {
         return {};
@@ -186,7 +208,7 @@ QString SessionStateStore::lastFileDialogDirectory() const
     return fileInfo.isDir() ? fileInfo.absoluteFilePath() : fileInfo.absolutePath();
 }
 
-void SessionStateStore::saveLastFileDialogPath(const QString& path) const
+void SessionStateStore::saveLastFileDialogPath(FileDialogScope scope, const QString& path) const
 {
     if (path.isEmpty()) {
         return;
@@ -200,6 +222,7 @@ void SessionStateStore::saveLastFileDialogPath(const QString& path) const
 
     QSettings settings;
     settings.beginGroup(fileDialogsGroup);
+    settings.beginGroup(fileDialogScopeKey(scope));
     settings.setValue(lastDirectoryKey, directory);
 }
 

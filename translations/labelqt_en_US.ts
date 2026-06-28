@@ -1154,6 +1154,10 @@ Last error: %2</translation>
         <translation>Export proofreading report</translation>
     </message>
     <message>
+        <source>Exporting proofreading report...</source>
+        <translation>Exporting proofreading report...</translation>
+    </message>
+    <message>
         <source>HTML files (*.html);;All files (*)</source>
         <translation>HTML files (*.html);;All files (*)</translation>
     </message>
@@ -2068,6 +2072,14 @@ Last error: %2</translation>
     <message>
         <source>Export proofreading report</source>
         <translation>Export proofreading report</translation>
+    </message>
+    <message>
+        <source>Exporting proofreading report...</source>
+        <translation>Exporting proofreading report...</translation>
+    </message>
+    <message>
+        <source>Abort</source>
+        <translation>Abort</translation>
     </message>
     <message>
         <source>HTML files (*.html);;All files (*)</source>

@@ -14,4 +14,14 @@ void configureLargeDialogWindow(QDialog& dialog, QSize defaultSize, bool openMax
     }
 }
 
+void configureBusyDialogWindow(QDialog& dialog, bool allowCloseButton)
+{
+    Qt::WindowFlags flags = Qt::Dialog | Qt::CustomizeWindowHint | Qt::WindowTitleHint |
+                            Qt::MSWindowsFixedSizeDialogHint;
+    if (allowCloseButton) {
+        flags |= Qt::WindowCloseButtonHint;
+    }
+    dialog.setWindowFlags(flags);
+}
+
 } // namespace labelqt::ui

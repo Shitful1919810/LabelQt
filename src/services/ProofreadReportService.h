@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Project.h"
 #include "services/ReviewMetadataService.h"
 
 #include <QString>
@@ -33,13 +34,22 @@ struct ProofreadReportTexts {
     QString noTextChange;
 };
 
+struct ProofreadReportOptions {
+    int maxImageWidth{960};
+    int jpegQuality{62};
+};
+
 class ProofreadReportService final {
 public:
-    static QString htmlReport(const QVector<ReviewChange>& changes, const ProofreadReportTexts& texts,
-                              const QString& sourceDescription = {});
+    static QString htmlReport(const QVector<ReviewChange>& changes, const labelqt::core::Project& beforeProject,
+                              const labelqt::core::Project& currentProject, const ProofreadReportTexts& texts,
+                              const QString& sourceDescription = {}, ProofreadReportOptions options = {});
     static std::expected<void, QString> saveHtmlReport(const QString& filePath, const QVector<ReviewChange>& changes,
+                                                       const labelqt::core::Project& beforeProject,
+                                                       const labelqt::core::Project& currentProject,
                                                        const ProofreadReportTexts& texts,
-                                                       const QString& sourceDescription = {});
+                                                       const QString& sourceDescription = {},
+                                                       ProofreadReportOptions options = {});
 };
 
 } // namespace labelqt::services

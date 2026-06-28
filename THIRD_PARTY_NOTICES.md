@@ -9,7 +9,7 @@ LabelQt's own source code is licensed under the MIT License. See `LICENSE.txt`.
 ## Qt
 
 - Source: <https://www.qt.io/>
-- Usage: LabelQt is a Qt 6 Widgets application and links to Qt modules such as Core, Gui and Widgets. Qt Svg is used when available for SVG icon/theme support. Qt LinguistTools is used at build time when available.
+- Usage: LabelQt is a Qt 6 Widgets application and links to Qt modules such as Core, Gui, Widgets and Concurrent. Qt Svg is used when available for SVG icon/theme support. Qt LinguistTools is used at build time when available.
 - License: Qt is available under LGPL/GPL/commercial terms depending on module and distribution model.
 
 Qt source code, Qt SDK files and Qt runtime binaries are not committed to this repository. Binary releases that bundle Qt runtime files must include the required Qt license texts, module/version information and any notices required by the selected Qt license.

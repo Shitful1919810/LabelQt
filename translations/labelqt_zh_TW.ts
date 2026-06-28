@@ -1146,6 +1146,10 @@ Last error: %2</source>
         <translation>匯出校對報告</translation>
     </message>
     <message>
+        <source>Exporting proofreading report...</source>
+        <translation>正在匯出校對報告...</translation>
+    </message>
+    <message>
         <source>HTML files (*.html);;All files (*)</source>
         <translation>HTML 檔案 (*.html);;所有檔案 (*)</translation>
     </message>
@@ -2057,6 +2061,14 @@ Last error: %2</source>
     <message>
         <source>Export proofreading report</source>
         <translation>匯出校對報告</translation>
+    </message>
+    <message>
+        <source>Exporting proofreading report...</source>
+        <translation>正在匯出校對報告...</translation>
+    </message>
+    <message>
+        <source>Abort</source>
+        <translation>中止</translation>
     </message>
     <message>
         <source>HTML files (*.html);;All files (*)</source>

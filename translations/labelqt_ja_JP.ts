@@ -1146,6 +1146,10 @@ Last error: %2</source>
         <translation>校正レポートを書き出し</translation>
     </message>
     <message>
+        <source>Exporting proofreading report...</source>
+        <translation>校正レポートを書き出しています...</translation>
+    </message>
+    <message>
         <source>HTML files (*.html);;All files (*)</source>
         <translation>HTML ファイル (*.html);;すべてのファイル (*)</translation>
     </message>
@@ -2057,6 +2061,14 @@ Last error: %2</source>
     <message>
         <source>Export proofreading report</source>
         <translation>校正レポートを書き出し</translation>
+    </message>
+    <message>
+        <source>Exporting proofreading report...</source>
+        <translation>校正レポートを書き出しています...</translation>
+    </message>
+    <message>
+        <source>Abort</source>
+        <translation>中止</translation>
     </message>
     <message>
         <source>HTML files (*.html);;All files (*)</source>

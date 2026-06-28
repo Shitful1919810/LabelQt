@@ -25,6 +25,16 @@ struct ProjectSessionState {
     QVector<int> selectedLabelIndexes;
 };
 
+enum class FileDialogScope {
+    NewProjectImages,
+    OpenProject,
+    SaveProject,
+    MergeOpenProjects,
+    MergeSaveProject,
+    CompareProject,
+    ExportProofreadingReport,
+};
+
 class SessionStateStore {
 public:
     WindowLayoutState loadWindowLayout() const;
@@ -36,8 +46,8 @@ public:
     QString mostRecentProjectPath() const;
     void addRecentProjectPath(const QString& projectPath, int maximumCount = 10) const;
     void removeRecentProjectPath(const QString& projectPath) const;
-    QString lastFileDialogDirectory() const;
-    void saveLastFileDialogPath(const QString& path) const;
+    QString lastFileDialogDirectory(FileDialogScope scope) const;
+    void saveLastFileDialogPath(FileDialogScope scope, const QString& path) const;
     int labelTableNumberColumnWidth(int defaultWidth) const;
     int labelTableGroupColumnWidth(int defaultWidth) const;
     void saveLabelTableColumnWidths(int numberWidth, int groupWidth) const;

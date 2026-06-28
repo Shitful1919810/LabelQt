@@ -13,6 +13,7 @@
 #include "ui/AutomationController.h"
 #include "ui/AutomationShortcutController.h"
 #include "ui/CanvasLabelTextEditController.h"
+#include "ui/DialogWindowUtils.h"
 #include "ui/EditorStateController.h"
 #include "ui/ImagePageViewController.h"
 #include "ui/LabelEditDelegates.h"
@@ -54,7 +55,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
-#include <QProgressDialog>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QSet>
 #include <QSignalBlocker>
@@ -150,15 +151,30 @@ std::optional<ProjectComparisonTaskResult> runProjectComparisonTask(QWidget* par
                                                                     const labelqt::core::Project& currentProject,
                                                                     labelqt::services::ProjectPageMatchMode matchMode)
 {
-    QProgressDialog progress(labelText, cancelText, 0, 0, parent);
+    QDialog progress(parent);
     progress.setWindowTitle(title);
     progress.setWindowModality(Qt::ApplicationModal);
-    progress.setMinimumDuration(0);
-    progress.setWindowFlag(Qt::WindowCloseButtonHint, false);
+    progress.setMinimumWidth(360);
+    labelqt::ui::configureBusyDialogWindow(progress);
+
+    auto* layout = new QVBoxLayout(&progress);
+    auto* label = new QLabel(labelText, &progress);
+    auto* progressBar = new QProgressBar(&progress);
+    progressBar->setRange(0, 0);
+    auto* buttonLayout = new QHBoxLayout;
+    auto* cancelButton = new QPushButton(cancelText, &progress);
+    buttonLayout->addStretch(1);
+    buttonLayout->addWidget(cancelButton);
+    layout->addWidget(label);
+    layout->addWidget(progressBar);
+    layout->addLayout(buttonLayout);
+    progress.adjustSize();
+    progress.setFixedSize(progress.sizeHint());
 
     auto* watcher = new QFutureWatcher<ProjectComparisonTaskResult>(QApplication::instance());
     QObject::connect(watcher, &QFutureWatcher<ProjectComparisonTaskResult>::finished, &progress,
-                     &QProgressDialog::accept);
+                     &QDialog::accept);
+    QObject::connect(cancelButton, &QPushButton::clicked, &progress, &QDialog::reject);
     watcher->setFuture(QtConcurrent::run(buildProjectComparisonResult, baselineProject, currentProject, matchMode));
 
     progress.exec();
@@ -818,11 +834,13 @@ void MainWindow::newProject()
     saveProjectSessionState();
 
     const QString directoryPath = QFileDialog::getExistingDirectory(
-        this, tr("Select image folder"), m_sessionStateStore.lastFileDialogDirectory(), QFileDialog::ShowDirsOnly);
+        this, tr("Select image folder"),
+        m_sessionStateStore.lastFileDialogDirectory(labelqt::services::FileDialogScope::NewProjectImages),
+        QFileDialog::ShowDirsOnly);
     if (directoryPath.isEmpty()) {
         return;
     }
-    m_sessionStateStore.saveLastFileDialogPath(directoryPath);
+    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::NewProjectImages, directoryPath);
 
     const QString projectBaseName = tr("New Translation");
     const QStringList defaultGroups = defaultProjectGroups();
@@ -871,14 +889,16 @@ void MainWindow::openProject()
     saveProjectSessionState();
 
     const QString path =
-        QFileDialog::getOpenFileName(this, tr("Open LabelPlus text"), m_sessionStateStore.lastFileDialogDirectory(),
+        QFileDialog::getOpenFileName(this, tr("Open LabelPlus text"),
+                                     m_sessionStateStore.lastFileDialogDirectory(
+                                         labelqt::services::FileDialogScope::OpenProject),
                                      tr("LabelPlus text (*.txt);;All files (*)"));
 
     if (path.isEmpty()) {
         return;
     }
 
-    m_sessionStateStore.saveLastFileDialogPath(path);
+    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::OpenProject, path);
     openProjectFile(path);
 }
 
@@ -889,12 +909,13 @@ void MainWindow::mergeProjects()
     }
 
     const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select LabelPlus projects to merge"),
-                                                            m_sessionStateStore.lastFileDialogDirectory(),
+                                                            m_sessionStateStore.lastFileDialogDirectory(
+                                                                labelqt::services::FileDialogScope::MergeOpenProjects),
                                                             tr("LabelPlus text (*.txt);;All files (*)"));
     if (paths.isEmpty()) {
         return;
     }
-    m_sessionStateStore.saveLastFileDialogPath(paths.first());
+    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::MergeOpenProjects, paths.first());
 
     labelqt::services::ProjectMergePlan mergePlan;
     try {
@@ -935,12 +956,13 @@ void MainWindow::mergeProjects()
     }
 
     const QString savePath = QFileDialog::getSaveFileName(this, tr("Save merged LabelPlus text"),
-                                                          m_sessionStateStore.lastFileDialogDirectory(),
+                                                          m_sessionStateStore.lastFileDialogDirectory(
+                                                              labelqt::services::FileDialogScope::MergeSaveProject),
                                                           tr("LabelPlus text (*.txt);;All files (*)"));
     if (savePath.isEmpty()) {
         return;
     }
-    m_sessionStateStore.saveLastFileDialogPath(savePath);
+    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::MergeSaveProject, savePath);
 
     if (!promptToSaveIfDirty()) {
         return;
@@ -1128,12 +1150,13 @@ void MainWindow::compareWithProject()
 
     const QString path =
         QFileDialog::getOpenFileName(this, tr("Select project to compare"),
-                                     m_sessionStateStore.lastFileDialogDirectory(),
+                                     m_sessionStateStore.lastFileDialogDirectory(
+                                         labelqt::services::FileDialogScope::CompareProject),
                                      tr("LabelPlus Text (*.txt);;All Files (*)"));
     if (path.isEmpty()) {
         return;
     }
-    m_sessionStateStore.saveLastFileDialogPath(path);
+    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::CompareProject, path);
 
     labelqt::core::Project baselineProject;
     try {
@@ -1146,8 +1169,8 @@ void MainWindow::compareWithProject()
 
     const labelqt::core::Project currentProjectSnapshot = project();
     std::optional<ProjectComparisonTaskResult> comparisonResult =
-        runProjectComparisonTask(this, tr("Compare Projects"), tr("Comparing projects..."), tr("Abort"),
-                                 baselineProject, currentProjectSnapshot,
+        runProjectComparisonTask(this, QString(), tr("Comparing projects..."), tr("Abort"), baselineProject,
+                                 currentProjectSnapshot,
                                  labelqt::services::ProjectPageMatchMode::ByName);
     if (!comparisonResult.has_value()) {
         return;
@@ -1168,8 +1191,8 @@ void MainWindow::compareWithProject()
                                      tr("The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?"),
                                      QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
         if (result == QMessageBox::Yes) {
-            comparisonResult = runProjectComparisonTask(this, tr("Compare Projects"), tr("Comparing projects..."),
-                                                        tr("Abort"), baselineProject, currentProjectSnapshot,
+            comparisonResult = runProjectComparisonTask(this, QString(), tr("Comparing projects..."), tr("Abort"),
+                                                        baselineProject, currentProjectSnapshot,
                                                         labelqt::services::ProjectPageMatchMode::ByOrder);
             if (!comparisonResult.has_value()) {
                 return;
@@ -1389,7 +1412,8 @@ bool MainWindow::saveProjectAs()
     commitActiveTextInput();
 
     QString defaultSavePath = project().filePath();
-    const QString lastDialogDirectory = m_sessionStateStore.lastFileDialogDirectory();
+    const QString lastDialogDirectory =
+        m_sessionStateStore.lastFileDialogDirectory(labelqt::services::FileDialogScope::SaveProject);
     if (!lastDialogDirectory.isEmpty()) {
         const QString fileName = QFileInfo(project().filePath()).fileName();
         defaultSavePath = fileName.isEmpty() ? lastDialogDirectory : QDir(lastDialogDirectory).filePath(fileName);
@@ -1400,7 +1424,7 @@ bool MainWindow::saveProjectAs()
     if (path.isEmpty()) {
         return false;
     }
-    m_sessionStateStore.saveLastFileDialogPath(path);
+    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::SaveProject, path);
 
     const QString oldPath = project().filePath();
     try {

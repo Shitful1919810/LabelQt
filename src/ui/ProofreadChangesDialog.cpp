@@ -8,17 +8,22 @@
 #include "ui/ViewportFittedTableColumns.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
+#include <QFutureWatcher>
 #include <QGroupBox>
 #include <QHeaderView>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QProgressBar>
 #include <QPushButton>
+#include <QSaveFile>
 #include <QSplitter>
 #include <QStyle>
 #include <QTableWidget>
@@ -26,11 +31,14 @@
 #include <QTextDocument>
 #include <QTextOption>
 #include <QTimer>
+#include <QUuid>
 #include <QVBoxLayout>
+#include <QtConcurrent/QtConcurrent>
 
 #include <expected>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace {
@@ -49,7 +57,7 @@ enum Column {
 
 QString labelNumber(int labelIndex)
 {
-    return QString::number(labelIndex + 1).rightJustified(3, QLatin1Char('0'));
+    return labelIndex < 0 ? QStringLiteral("-") : QString::number(labelIndex + 1);
 }
 
 QVector<int> defaultColumnWidths()
@@ -99,6 +107,119 @@ QPlainTextEdit* readOnlyCellTextEdit(const QString& text, QWidget* parent)
     editor->viewport()->setCursor(Qt::ArrowCursor);
     editor->setToolTip(text);
     return editor;
+}
+
+QString temporaryExportPathFor(const QString& filePath)
+{
+    const QFileInfo fileInfo(filePath);
+    const QString temporaryName = QStringLiteral(".%1.%2.tmp")
+                                      .arg(fileInfo.fileName(), QUuid::createUuid().toString(QUuid::WithoutBraces));
+    return fileInfo.dir().filePath(temporaryName);
+}
+
+std::expected<void, QString> commitTemporaryExportFile(const QString& temporaryPath, const QString& targetPath)
+{
+    auto fail = [&temporaryPath](const QString& error) -> std::expected<void, QString> {
+        QFile::remove(temporaryPath);
+        return std::unexpected(error);
+    };
+
+    QFile temporaryFile(temporaryPath);
+    if (!temporaryFile.open(QIODevice::ReadOnly)) {
+        return fail(temporaryFile.errorString());
+    }
+
+    QSaveFile targetFile(targetPath);
+    if (!targetFile.open(QIODevice::WriteOnly)) {
+        return fail(targetFile.errorString());
+    }
+
+    QByteArray buffer;
+    buffer.resize(64 * 1024);
+    while (!temporaryFile.atEnd()) {
+        const qint64 bytesRead = temporaryFile.read(buffer.data(), buffer.size());
+        if (bytesRead < 0) {
+            return fail(temporaryFile.errorString());
+        }
+        if (targetFile.write(buffer.constData(), bytesRead) != bytesRead) {
+            return fail(targetFile.errorString());
+        }
+    }
+    if (!targetFile.commit()) {
+        return fail(targetFile.errorString());
+    }
+    QFile::remove(temporaryPath);
+    return {};
+}
+
+std::optional<std::expected<void, QString>>
+runProofreadReportExportTask(QWidget* parent, const QString& title, const QString& labelText, const QString& cancelText,
+                             QString filePath, QVector<labelqt::services::ReviewChange> changes,
+                             labelqt::core::Project beforeProject, labelqt::core::Project currentProject,
+                             labelqt::services::ProofreadReportTexts texts, QString sourceDescription,
+                             labelqt::services::ProofreadReportOptions options)
+{
+    QDialog progress(parent);
+    progress.setWindowTitle(title);
+    progress.setWindowModality(Qt::ApplicationModal);
+    progress.setMinimumWidth(360);
+    labelqt::ui::configureBusyDialogWindow(progress);
+
+    auto* layout = new QVBoxLayout(&progress);
+    auto* label = new QLabel(labelText, &progress);
+    auto* progressBar = new QProgressBar(&progress);
+    progressBar->setRange(0, 0);
+    auto* buttonLayout = new QHBoxLayout;
+    auto* cancelButton = new QPushButton(cancelText, &progress);
+    buttonLayout->addStretch(1);
+    buttonLayout->addWidget(cancelButton);
+    layout->addWidget(label);
+    layout->addWidget(progressBar);
+    layout->addLayout(buttonLayout);
+    progress.adjustSize();
+    progress.setFixedSize(progress.sizeHint());
+
+    const QString temporaryPath = temporaryExportPathFor(filePath);
+    auto* watcher = new QFutureWatcher<std::expected<void, QString>>(&progress);
+    QObject::connect(watcher, &QFutureWatcher<std::expected<void, QString>>::finished, &progress,
+                     &QDialog::accept);
+    QObject::connect(cancelButton, &QPushButton::clicked, &progress, &QDialog::reject);
+    watcher->setFuture(QtConcurrent::run([temporaryPath, changes = std::move(changes),
+                                          beforeProject = std::move(beforeProject),
+                                          currentProject = std::move(currentProject), texts = std::move(texts),
+                                          sourceDescription = std::move(sourceDescription), options]() {
+        return labelqt::services::ProofreadReportService::saveHtmlReport(
+            temporaryPath, changes, beforeProject, currentProject, texts, sourceDescription, options);
+    }));
+
+    if (watcher->isFinished()) {
+        const std::expected<void, QString> temporaryResult = watcher->result();
+        watcher->deleteLater();
+        if (!temporaryResult.has_value()) {
+            QFile::remove(temporaryPath);
+            return temporaryResult;
+        }
+        return commitTemporaryExportFile(temporaryPath, filePath);
+    }
+
+    if (progress.exec() == QDialog::Rejected && !watcher->isFinished()) {
+        QObject::disconnect(watcher, nullptr, &progress, nullptr);
+        watcher->setParent(QApplication::instance());
+        QObject::connect(watcher, &QFutureWatcher<std::expected<void, QString>>::finished, watcher,
+                         [watcher, temporaryPath]() {
+                             QFile::remove(temporaryPath);
+                             watcher->deleteLater();
+                         });
+        return std::nullopt;
+    }
+
+    const std::expected<void, QString> temporaryResult = watcher->result();
+    watcher->deleteLater();
+    if (!temporaryResult.has_value()) {
+        QFile::remove(temporaryPath);
+        return temporaryResult;
+    }
+    return commitTemporaryExportFile(temporaryPath, filePath);
 }
 
 const labelqt::core::ImageEntry* imageByName(const labelqt::core::Project& project, const QString& imageName)
@@ -373,7 +494,8 @@ void ProofreadChangesDialog::exportReport()
         return;
     }
 
-    QString defaultPath = m_sessionStateStore.lastFileDialogDirectory();
+    QString defaultPath =
+        m_sessionStateStore.lastFileDialogDirectory(labelqt::services::FileDialogScope::ExportProofreadingReport);
     const QString baseName = QFileInfo(m_currentProject.filePath()).completeBaseName();
     const QString fileName = baseName.isEmpty() ? QStringLiteral("proofreading-report.html")
                                                 : QStringLiteral("%1-proofreading-report.html").arg(baseName);
@@ -384,16 +506,21 @@ void ProofreadChangesDialog::exportReport()
     if (path.isEmpty()) {
         return;
     }
-    m_sessionStateStore.saveLastFileDialogPath(path);
+    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::ExportProofreadingReport, path);
 
     const QString sourceDescription = m_currentProject.filePath().isEmpty()
         ? QString()
         : tr("Project: %1").arg(QDir::toNativeSeparators(m_currentProject.filePath()));
-    const std::expected<void, QString> result =
-        labelqt::services::ProofreadReportService::saveHtmlReport(path, m_changes, reportTexts(), sourceDescription);
+    labelqt::services::ProofreadReportOptions options;
+    const std::optional<std::expected<void, QString>> result = runProofreadReportExportTask(
+        this, QString(), tr("Exporting proofreading report..."), tr("Abort"), path, m_changes, m_beforeProject,
+        m_currentProject, reportTexts(), sourceDescription, options);
     if (!result.has_value()) {
+        return;
+    }
+    if (!result->has_value()) {
         QMessageBox::warning(this, tr("Proofreading"),
-                             tr("Failed to export proofreading report: %1").arg(result.error()));
+                             tr("Failed to export proofreading report: %1").arg(result->error()));
         return;
     }
 

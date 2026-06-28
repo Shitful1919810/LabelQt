@@ -813,6 +813,27 @@ private slots:
         QCOMPARE(loaded.selectedLabelIndexes, QVector<int>({1, 5, 8}));
     }
 
+    void sessionStateStoreKeepsFileDialogScopesSeparate()
+    {
+        const QString openPath =
+            QDir::temp().filePath(QStringLiteral("labelqt_open_scope_%1/project.txt")
+                                      .arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+        const QString exportPath =
+            QDir::temp().filePath(QStringLiteral("labelqt_export_scope_%1/report.html")
+                                      .arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+        QVERIFY(QDir().mkpath(QFileInfo(openPath).absolutePath()));
+        QVERIFY(QDir().mkpath(QFileInfo(exportPath).absolutePath()));
+
+        labelqt::services::SessionStateStore store;
+        store.saveLastFileDialogPath(labelqt::services::FileDialogScope::OpenProject, openPath);
+        store.saveLastFileDialogPath(labelqt::services::FileDialogScope::ExportProofreadingReport, exportPath);
+
+        QCOMPARE(store.lastFileDialogDirectory(labelqt::services::FileDialogScope::OpenProject),
+                 QFileInfo(openPath).absolutePath());
+        QCOMPARE(store.lastFileDialogDirectory(labelqt::services::FileDialogScope::ExportProofreadingReport),
+                 QFileInfo(exportPath).absolutePath());
+    }
+
     void projectImageValidatorFindsMissingImages()
     {
         const QString dirPath = QDir::temp().filePath(QStringLiteral("labelqt_missing_images_test"));
@@ -1895,6 +1916,21 @@ private slots:
         }));
     }
 
+    void textDiffServiceAppliesSemanticCleanup()
+    {
+        const QVector<labelqt::services::TextDiffChunk> chunks =
+            labelqt::services::TextDiffService::diff(QStringLiteral("这么一说"),
+                                                     QStringLiteral("这么说来确实"));
+
+        QVERIFY(!chunks.isEmpty());
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Delete;
+        }));
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Insert;
+        }));
+    }
+
     void textDiffServiceHandlesUnrelatedParagraphs()
     {
         const QString beforeText =
@@ -1925,16 +1961,16 @@ private slots:
         QVERIFY(html.contains(QStringLiteral("text-decoration:none")));
     }
 
-    void textDiffHtmlRendererUsesReplacementForReorderedPhrase()
+    void textDiffHtmlRendererRendersReorderedPhraseInline()
     {
         const QString html = labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(
             QStringLiteral("独自一人去还不够熟练"), QStringLiteral("还没熟练到能独自一人去"),
             QStringLiteral("No text change."));
 
-        QVERIFY(html.contains(QStringLiteral("独自一人去还不够熟练")));
-        QVERIFY(html.contains(QStringLiteral("还没熟练到能独自一人去")));
+        QVERIFY(html.contains(QStringLiteral("独自一人去")));
+        QVERIFY(html.contains(QStringLiteral("还没")));
         QVERIFY(html.contains(QStringLiteral("text-decoration:line-through")));
-        QVERIFY(html.contains(QStringLiteral("margin-bottom")));
+        QVERIFY(!html.contains(QStringLiteral("margin-bottom")));
     }
 
     void textDiffHtmlRendererKeepsLongLocalEditsInline()
@@ -1979,6 +2015,23 @@ private slots:
         change.groupChanged = true;
         change.positionChanged = true;
 
+        QTemporaryDir temporaryDir;
+        QVERIFY(temporaryDir.isValid());
+        const QString imagePath = temporaryDir.filePath(QStringLiteral("001.png"));
+        QImage image(24, 12, QImage::Format_RGB32);
+        image.fill(Qt::white);
+        QVERIFY(image.save(imagePath));
+
+        labelqt::core::ImageEntry beforeImage;
+        beforeImage.name = QStringLiteral("001.png");
+        beforeImage.path = imagePath;
+        labelqt::core::Project beforeProject;
+        beforeProject.images().append(beforeImage);
+
+        labelqt::core::ImageEntry currentImage = beforeImage;
+        labelqt::core::Project currentProject;
+        currentProject.images().append(currentImage);
+
         const labelqt::services::ProofreadReportTexts texts{
             .title = QStringLiteral("校对报告"),
             .generatedAt = QStringLiteral("生成时间"),
@@ -2003,27 +2056,35 @@ private slots:
             .noTextChange = QStringLiteral("文本未变化"),
         };
 
-        const QString html =
-            labelqt::services::ProofreadReportService::htmlReport({change}, texts, QStringLiteral("工程：demo.txt"));
+        const QString html = labelqt::services::ProofreadReportService::htmlReport(
+            {change}, beforeProject, currentProject, texts, QStringLiteral("工程：demo.txt"));
         QVERIFY(html.contains(QStringLiteral("<!doctype html>")));
         QVERIFY(html.contains(QStringLiteral("<table>")));
-        QVERIFY(html.contains(QStringLiteral("<tr><td>1</td>")));
+        QVERIFY(html.contains(QStringLiteral("page-section")));
+        QVERIFY(html.contains(QStringLiteral("image-overlay")));
+        QVERIFY(html.contains(QStringLiteral("marker marker-modified")));
+        QVERIFY(!html.contains(QStringLiteral("<th class=\"column-page\">")));
         QVERIFY(html.contains(QStringLiteral("欢迎光临")));
         QVERIFY(html.contains(QStringLiteral("啊")));
-        QVERIFY(html.contains(QStringLiteral("类别变化")));
+        QVERIFY(html.contains(QStringLiteral("类别")));
         QVERIFY(html.contains(QStringLiteral("工程：demo.txt")));
+        QVERIFY(html.contains(QStringLiteral("<td>2</td>")));
+        QVERIFY(!html.contains(QStringLiteral("002")));
 
-        QTemporaryDir temporaryDir;
-        QVERIFY(temporaryDir.isValid());
         const QString reportPath = temporaryDir.filePath(QStringLiteral("report.html"));
-        const std::expected<void, QString> result =
-            labelqt::services::ProofreadReportService::saveHtmlReport(reportPath, {change}, texts);
+        labelqt::services::ProofreadReportOptions options;
+        const std::expected<void, QString> result = labelqt::services::ProofreadReportService::saveHtmlReport(
+            reportPath, {change}, beforeProject, currentProject, texts, {}, options);
         QVERIFY(result.has_value());
 
         QFile reportFile(reportPath);
         QVERIFY(reportFile.open(QIODevice::ReadOnly | QIODevice::Text));
         const QString savedHtml = QString::fromUtf8(reportFile.readAll());
         QVERIFY(savedHtml.contains(QStringLiteral("校对报告")));
+        QVERIFY(savedHtml.contains(QStringLiteral("data:image/jpeg;base64,")));
+        QCOMPARE(savedHtml.count(QStringLiteral("data:image/jpeg;base64,")), 1);
+        QVERIFY(!savedHtml.contains(QStringLiteral("file://")));
+        QVERIFY(savedHtml.contains(QStringLiteral("image-pair")));
     }
 };
 
