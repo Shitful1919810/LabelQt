@@ -35,6 +35,7 @@
 #include <QJsonObject>
 #include <QKeySequence>
 #include <QMimeData>
+#include <QPainter>
 #include <QSettings>
 #include <QSet>
 #include <QSignalSpy>
@@ -84,6 +85,16 @@ QJsonArray mergeSourcesMetadata(const labelqt::core::Project& project)
 void setMergeSources(labelqt::core::Project& project, const QHash<QString, labelqt::services::PageSourceInfo>& sources)
 {
     labelqt::services::PageSourceInfoService::rewriteCommentLinesForCurrentImageOrder(project, sources);
+}
+
+void saveFingerprintTestImage(const QString& path, QRect blackArea)
+{
+    QImage image(QSize(96, 96), QImage::Format_RGB32);
+    image.fill(Qt::white);
+    QPainter painter(&image);
+    painter.fillRect(blackArea, Qt::black);
+    painter.end();
+    QVERIFY(image.save(path));
 }
 
 } // namespace
@@ -1661,7 +1672,125 @@ private slots:
         QVERIFY(!changes.first().positionChanged);
     }
 
-    void labelSequenceDiffOnlyTreatsUpToThreeCharsAsShortSimilarText()
+    void projectComparisonMatchesPagesByNormalizedImageName()
+    {
+        labelqt::core::Project baselineProject;
+        labelqt::core::ImageEntry baselineImage;
+        baselineImage.name = QStringLiteral("draft/001.png");
+        baselineImage.labels.append(
+            labelqt::core::Label(QStringLiteral("旧译文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        baselineProject.images().append(baselineImage);
+
+        labelqt::core::Project currentProject;
+        labelqt::core::ImageEntry currentImage;
+        currentImage.name = QStringLiteral("proofread/001.png");
+        currentImage.labels.append(
+            labelqt::core::Label(QStringLiteral("新译文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        currentProject.images().append(currentImage);
+
+        QVERIFY(!labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(baselineProject,
+                                                                                           currentProject));
+        const QVector<labelqt::services::ReviewChange> changes =
+            labelqt::services::ProjectComparisonService::changesBetweenProjects(baselineProject, currentProject);
+
+        QCOMPARE(changes.size(), 1);
+        QCOMPARE(changes.first().imageName, QStringLiteral("proofread/001.png"));
+        QCOMPARE(changes.first().baselineImageName, QStringLiteral("draft/001.png"));
+        QCOMPARE(changes.first().kind, labelqt::services::ReviewChangeKind::Modified);
+        QVERIFY(changes.first().textChanged);
+    }
+
+    void projectComparisonCanMatchPagesByOrder()
+    {
+        labelqt::core::Project baselineProject;
+        labelqt::core::ImageEntry baselineImage;
+        baselineImage.name = QStringLiteral("draft-a.png");
+        baselineImage.labels.append(
+            labelqt::core::Label(QStringLiteral("旧译文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        baselineProject.images().append(baselineImage);
+
+        labelqt::core::Project currentProject;
+        labelqt::core::ImageEntry currentImage;
+        currentImage.name = QStringLiteral("proofread-b.png");
+        currentImage.labels.append(
+            labelqt::core::Label(QStringLiteral("新译文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        currentProject.images().append(currentImage);
+
+        QVERIFY(labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(baselineProject,
+                                                                                          currentProject));
+        const QVector<labelqt::services::ReviewChange> nameChanges =
+            labelqt::services::ProjectComparisonService::changesBetweenProjects(
+                baselineProject, currentProject, labelqt::services::ProjectPageMatchMode::ByName);
+        QCOMPARE(nameChanges.size(), 2);
+
+        const QVector<labelqt::services::ReviewChange> orderChanges =
+            labelqt::services::ProjectComparisonService::changesBetweenProjects(
+                baselineProject, currentProject, labelqt::services::ProjectPageMatchMode::ByOrder);
+        QCOMPARE(orderChanges.size(), 1);
+        QCOMPARE(orderChanges.first().imageName, QStringLiteral("proofread-b.png"));
+        QCOMPARE(orderChanges.first().baselineImageName, QStringLiteral("draft-a.png"));
+        QCOMPARE(orderChanges.first().kind, labelqt::services::ReviewChangeKind::Modified);
+        QVERIFY(orderChanges.first().textChanged);
+    }
+
+    void projectComparisonMatchesRemainingPagesByImageFingerprint()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString baselineFirstPath = QDir(dir.path()).filePath(QStringLiteral("draft-a.png"));
+        const QString baselineSecondPath = QDir(dir.path()).filePath(QStringLiteral("draft-b.png"));
+        const QString currentFirstPath = QDir(dir.path()).filePath(QStringLiteral("proofread-x.png"));
+        const QString currentSecondPath = QDir(dir.path()).filePath(QStringLiteral("proofread-y.png"));
+        saveFingerprintTestImage(baselineFirstPath, QRect(8, 8, 24, 24));
+        saveFingerprintTestImage(currentSecondPath, QRect(8, 8, 24, 24));
+        saveFingerprintTestImage(baselineSecondPath, QRect(56, 56, 24, 24));
+        saveFingerprintTestImage(currentFirstPath, QRect(56, 56, 24, 24));
+
+        labelqt::core::Project baselineProject;
+        labelqt::core::ImageEntry baselineFirst;
+        baselineFirst.name = QStringLiteral("draft-a.png");
+        baselineFirst.path = baselineFirstPath;
+        baselineFirst.labels.append(
+            labelqt::core::Label(QStringLiteral("第一页旧文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        baselineProject.images().append(baselineFirst);
+        labelqt::core::ImageEntry baselineSecond;
+        baselineSecond.name = QStringLiteral("draft-b.png");
+        baselineSecond.path = baselineSecondPath;
+        baselineSecond.labels.append(
+            labelqt::core::Label(QStringLiteral("第二页旧文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        baselineProject.images().append(baselineSecond);
+
+        labelqt::core::Project currentProject;
+        labelqt::core::ImageEntry currentFirst;
+        currentFirst.name = QStringLiteral("proofread-x.png");
+        currentFirst.path = currentFirstPath;
+        currentFirst.labels.append(
+            labelqt::core::Label(QStringLiteral("第二页新文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        currentProject.images().append(currentFirst);
+        labelqt::core::ImageEntry currentSecond;
+        currentSecond.name = QStringLiteral("proofread-y.png");
+        currentSecond.path = currentSecondPath;
+        currentSecond.labels.append(
+            labelqt::core::Label(QStringLiteral("第一页新文"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        currentProject.images().append(currentSecond);
+
+        QVERIFY(!labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(baselineProject,
+                                                                                           currentProject));
+        const QVector<labelqt::services::ReviewChange> changes =
+            labelqt::services::ProjectComparisonService::changesBetweenProjects(baselineProject, currentProject);
+
+        QCOMPARE(changes.size(), 2);
+        QVERIFY(std::ranges::any_of(changes, [](const labelqt::services::ReviewChange& change) {
+            return change.baselineImageName == QStringLiteral("draft-a.png") &&
+                   change.imageName == QStringLiteral("proofread-y.png") && change.textChanged;
+        }));
+        QVERIFY(std::ranges::any_of(changes, [](const labelqt::services::ReviewChange& change) {
+            return change.baselineImageName == QStringLiteral("draft-b.png") &&
+                   change.imageName == QStringLiteral("proofread-x.png") && change.textChanged;
+        }));
+    }
+
+    void labelSequenceDiffRaisesMovedShortChangedTextThreshold()
     {
         labelqt::services::ReviewLabelSnapshot baseline;
         baseline.imageName = QStringLiteral("001.png");

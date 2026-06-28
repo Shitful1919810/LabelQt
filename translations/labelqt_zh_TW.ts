@@ -1218,6 +1218,10 @@ Last error: %2</source>
         <translation>無法開啟比較工程：%1</translation>
     </message>
     <message>
+        <source>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</source>
+        <translation>所選工程與目前工程幾乎沒有相同的頁面名稱，但兩個工程的頁數相同。是否改為依目前頁序逐頁比較？</translation>
+    </message>
+    <message>
         <source>No differences from the selected project.</source>
         <translation>與所選工程沒有差異。</translation>
     </message>

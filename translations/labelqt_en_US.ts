@@ -1226,6 +1226,10 @@ Last error: %2</translation>
         <translation>Failed to open comparison project: %1</translation>
     </message>
     <message>
+        <source>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</source>
+        <translation>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</translation>
+    </message>
+    <message>
         <source>No differences from the selected project.</source>
         <translation>No differences from the selected project.</translation>
     </message>

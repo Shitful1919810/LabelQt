@@ -1083,10 +1083,21 @@ void MainWindow::compareWithProject()
         return;
     }
 
+    labelqt::services::ProjectPageMatchMode matchMode = labelqt::services::ProjectPageMatchMode::ByName;
+    if (labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(baselineProject, project())) {
+        const QMessageBox::StandardButton result =
+            showMainWindowMessageBox(this, QMessageBox::Question, tr("Compare Projects"),
+                                     tr("The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?"),
+                                     QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+        if (result == QMessageBox::Yes) {
+            matchMode = labelqt::services::ProjectPageMatchMode::ByOrder;
+        }
+    }
+
     labelqt::services::ReviewMetadata metadata =
         labelqt::services::ProjectComparisonService::captureSnapshot(baselineProject);
     QVector<labelqt::services::ReviewChange> changes =
-        labelqt::services::ProjectComparisonService::changesForProject(project(), metadata);
+        labelqt::services::ProjectComparisonService::changesBetweenProjects(baselineProject, project(), matchMode);
     if (changes.isEmpty()) {
         showMainWindowInformation(this, tr("Compare Projects"), tr("No differences from the selected project."));
         return;

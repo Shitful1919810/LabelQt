@@ -4,13 +4,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace labelqt::services {
 namespace {
 
 constexpr int gapPenalty = -24;
 constexpr int minimumPairScore = 42;
-constexpr int shortSimilarTextMaxLength = 3;
+constexpr int shortChangedTextMaxLength = 3;
+constexpr int shortChangedTextMovedMinimumPairScore = 58;
 
 QString normalizedText(QString text)
 {
@@ -52,8 +54,10 @@ int textSimilarityScore(const QString& baselineText, const QString& currentText)
 
     const int commonLength = lcsLength(baseline, current);
     const int maxLength = static_cast<int>(std::max(baseline.size(), current.size()));
-    const int score =
-        static_cast<int>(std::round(100.0 * static_cast<double>(commonLength) / static_cast<double>(maxLength)));
+    const int minLength = static_cast<int>(std::min(baseline.size(), current.size()));
+    const double lengthConfidence = std::clamp(static_cast<double>(minLength) / 6.0, 0.35, 1.0);
+    const int score = static_cast<int>(std::round(100.0 * static_cast<double>(commonLength) /
+                                                  static_cast<double>(maxLength) * lengthConfidence));
     return score;
 }
 
@@ -64,7 +68,15 @@ bool isShortChangedTextPair(const ReviewLabelSnapshot& baseline, const ReviewLab
     if (baselineText == currentText) {
         return false;
     }
-    return std::max(baselineText.size(), currentText.size()) <= shortSimilarTextMaxLength;
+    return std::max(baselineText.size(), currentText.size()) <= shortChangedTextMaxLength;
+}
+
+int minimumScoreForPair(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
+{
+    if (baseline.labelIndex == current.labelIndex) {
+        return minimumPairScore;
+    }
+    return isShortChangedTextPair(baseline, current) ? shortChangedTextMovedMinimumPairScore : minimumPairScore;
 }
 
 int positionTieBreakScore(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
@@ -84,9 +96,6 @@ int positionTieBreakScore(const ReviewLabelSnapshot& baseline, const ReviewLabel
 int pairScore(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
 {
     int score = textSimilarityScore(baseline.text, current.text);
-    if (baseline.labelIndex != current.labelIndex && isShortChangedTextPair(baseline, current)) {
-        return -1000;
-    }
     if (baseline.group == current.group) {
         score += 3;
     }
@@ -145,7 +154,8 @@ QVector<LabelSequenceDiffEntry> orderedAlignment(const QVector<ReviewLabelSnapsh
     while (i > 0 || j > 0) {
         if (i > 0 && j > 0) {
             const int score = orderedPairScore(baselineLabels.at(i - 1), currentLabels.at(j - 1));
-            if (score >= minimumPairScore && scores.at(i).at(j) == scores.at(i - 1).at(j - 1) + score) {
+            if (score >= minimumScoreForPair(baselineLabels.at(i - 1), currentLabels.at(j - 1)) &&
+                scores.at(i).at(j) == scores.at(i - 1).at(j - 1) + score) {
                 const ReviewLabelSnapshot& baseline = baselineLabels.at(i - 1);
                 const ReviewLabelSnapshot& current = currentLabels.at(j - 1);
                 entries.append({baseline.labelIndex, current.labelIndex, baseline, current, false});
@@ -176,7 +186,7 @@ void pairMovedLabels(QVector<LabelSequenceDiffEntry>& entries, const QVector<Rev
     while (true) {
         int bestBaselineIndex = -1;
         int bestCurrentIndex = -1;
-        int bestScore = minimumPairScore;
+        int bestScore = std::numeric_limits<int>::min();
         for (int baselineIndex = 0; baselineIndex < baselineLabels.size(); ++baselineIndex) {
             if (matchedBaselineIndexes.contains(baselineIndex)) {
                 continue;
@@ -186,7 +196,8 @@ void pairMovedLabels(QVector<LabelSequenceDiffEntry>& entries, const QVector<Rev
                     continue;
                 }
                 const int score = pairScore(baselineLabels.at(baselineIndex), currentLabels.at(currentIndex));
-                if (score > bestScore) {
+                if (score >= minimumScoreForPair(baselineLabels.at(baselineIndex), currentLabels.at(currentIndex)) &&
+                    score > bestScore) {
                     bestScore = score;
                     bestBaselineIndex = baselineIndex;
                     bestCurrentIndex = currentIndex;

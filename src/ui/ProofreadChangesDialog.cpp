@@ -119,6 +119,11 @@ QPointF focusPositionForChange(const labelqt::services::ReviewChange& change)
     return change.baseline.position;
 }
 
+QString baselineImageNameForChange(const labelqt::services::ReviewChange& change)
+{
+    return change.baselineImageName.isEmpty() ? change.imageName : change.baselineImageName;
+}
+
 int wrappedPlainTextHeight(const QString& text, const QFont& font, int width)
 {
     QTextDocument document;
@@ -493,7 +498,8 @@ void ProofreadChangesDialog::updatePreviewCanvases(const labelqt::services::Revi
         return;
     }
 
-    const labelqt::core::ImageEntry* beforeImage = imageByName(m_beforeProject, change.imageName);
+    const QString baselineImageName = baselineImageNameForChange(change);
+    const labelqt::core::ImageEntry* beforeImage = imageByName(m_beforeProject, baselineImageName);
     const labelqt::core::ImageEntry* currentImage = imageByName(m_currentProject, change.imageName);
     const labelqt::core::ImageEntry* displayImage = currentImage != nullptr ? currentImage : beforeImage;
     if (displayImage == nullptr) {
@@ -505,7 +511,8 @@ void ProofreadChangesDialog::updatePreviewCanvases(const labelqt::services::Revi
     const int zoomPercent = m_afterCanvas->zoomPercent();
     const QPointF normalizedCenter = focusPositionForChange(change);
     const QVector<labelqt::core::Label> baselineLabels =
-        labelqt::services::ProjectComparisonService::baselineImageLabels(m_currentProject, m_metadata, change.imageName);
+        labelqt::services::ProjectComparisonService::baselineImageLabels(m_currentProject, m_metadata, change.imageName,
+                                                                         baselineImageName);
 
     m_isSyncingCanvasViews = true;
     m_beforeCanvas->setImage(beforeImage == nullptr ? displayImage->path : beforeImage->path, baselineLabels);

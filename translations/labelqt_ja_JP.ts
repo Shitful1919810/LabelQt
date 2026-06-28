@@ -1218,6 +1218,10 @@ Last error: %2</source>
         <translation>比較対象のプロジェクトを開けませんでした：%1</translation>
     </message>
     <message>
+        <source>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</source>
+        <translation>選択したプロジェクトと現在のプロジェクトで共通するページ名がほとんどありませんが、ページ数は同じです。現在のページ順で比較しますか？</translation>
+    </message>
+    <message>
         <source>No differences from the selected project.</source>
         <translation>選択したプロジェクトとの差異はありません。</translation>
     </message>

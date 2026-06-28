@@ -42,6 +42,7 @@ enum class ReviewChangeKind {
 
 struct ReviewChange {
     QString imageName;
+    QString baselineImageName;
     int imageIndex{-1};
     int labelIndex{-1};
     int baselineLabelIndex{-1};
