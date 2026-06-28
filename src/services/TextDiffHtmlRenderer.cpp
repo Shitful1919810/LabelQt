@@ -74,6 +74,9 @@ bool shouldRenderAsReplacement(const QVector<TextDiffChunk>& chunks)
     if (changedLength >= 8 && changedLength >= equalLength * 2) {
         return true;
     }
+    if (changedLength < equalLength * 2) {
+        return false;
+    }
     if (chunks.at(firstChangeIndex).operation == chunks.at(lastChangeIndex).operation) {
         return false;
     }

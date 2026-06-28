@@ -1937,6 +1937,29 @@ private slots:
         QVERIFY(html.contains(QStringLiteral("margin-bottom")));
     }
 
+    void textDiffHtmlRendererKeepsLongLocalEditsInline()
+    {
+        const QString beforeText = QStringLiteral(
+            "我一直觉得自己绝对不可能去海外旅行\n"
+            "（主要是觉得语言方面肯定不行）\n"
+            "所以真的非常感谢愿意陪我一起去的朋友们。\n"
+            "下次也请多多关照！");
+        const QString afterText = QStringLiteral(
+            "我一直觉得自己是\n"
+            "绝对不可能去国外旅行的\n"
+            "（主要是觉得语言方面肯定不行）\n"
+            "所以真的非常感谢愿意陪我一起去的朋友们。\n"
+            "下次也请多多关照！");
+
+        const QString html = labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(beforeText, afterText,
+                                                                                       QStringLiteral("No text change."));
+
+        QVERIFY(!html.contains(QStringLiteral("margin-bottom")));
+        QVERIFY(html.contains(QStringLiteral("↵")));
+        QVERIFY(html.contains(QStringLiteral("background:#14532d")));
+        QVERIFY(html.contains(QStringLiteral("background:#7f1d1d")));
+    }
+
     void proofreadReportServiceWritesHtml()
     {
         labelqt::services::ReviewChange change;
