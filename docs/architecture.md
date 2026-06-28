@@ -310,7 +310,7 @@ GUI 项目不应只依赖人工点击。当前测试集中在 `tests/LabelTests.
 
 主程序当前硬依赖：
 
-- Qt 6 `Core`、`Gui`、`Widgets`
+- Qt 6 `Core`、`Gui`、`Widgets`、`Concurrent`
 - QtKeychain
 
 增强或可选依赖：
