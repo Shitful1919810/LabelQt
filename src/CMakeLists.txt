@@ -205,7 +205,7 @@ if(LABELQT_ENABLE_STATIC_QT_EXPERIMENT)
 
     target_include_directories(LabelQtStatic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_definitions(LabelQtStatic PRIVATE LABELQT_INSTALL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/labelqt")
-    target_link_libraries(LabelQtStatic PRIVATE DiffMatchPatch Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6Keychain::Qt6Keychain)
+    target_link_libraries(LabelQtStatic PRIVATE DiffMatchPatchStatic Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6Keychain::Qt6Keychain)
 
     if(TARGET Qt6::Svg)
         target_link_libraries(LabelQtStatic PRIVATE Qt6::Svg)

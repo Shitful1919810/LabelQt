@@ -27,6 +27,15 @@ include(GNUInstallDirs)
 
 labelqt_add_diff_match_patch(DiffMatchPatch)
 
+if(LABELQT_ENABLE_STATIC_QT_EXPERIMENT AND WIN32)
+    labelqt_add_diff_match_patch(DiffMatchPatchStatic)
+    if(MSVC)
+        set_target_properties(DiffMatchPatchStatic PROPERTIES
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        )
+    endif()
+endif()
+
 add_subdirectory(src)
 
 if(LABELQT_ENABLE_TESTS)

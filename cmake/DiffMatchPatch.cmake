@@ -114,6 +114,7 @@ function(labelqt_add_diff_match_patch target_name)
     )
     target_link_libraries(${target_name} PUBLIC Qt6::Core)
     set_target_properties(${target_name} PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib/$<CONFIG>"
         POSITION_INDEPENDENT_CODE ON
     )
 endfunction()
