@@ -12,6 +12,7 @@
   - `Core`
   - `Gui`
   - `Widgets`
+  - `Concurrent`
 - QtKeychain。
 
 常见平台工具链：
@@ -37,7 +38,7 @@ ctest --preset linux-debug
 - LibArchive：可用时启用压缩包读取能力，支持 zip、7z、rar 等多种格式；不可用时相关能力受限。
 - Qt Test：测试目标使用，普通运行不需要。
 
-当前没有引入 Qt Concurrent。图片加载缓存使用项目自己的 `ImagePageCache`。
+Qt Concurrent 目前用于把外部工程对比中的页面匹配和 diff 计算放到后台线程，避免大图工程比较时主界面无响应。图片加载缓存仍使用项目自己的 `ImagePageCache`。
 
 ## 自动化脚本运行时
 

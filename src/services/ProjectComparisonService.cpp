@@ -5,6 +5,8 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QImageReader>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QSet>
 #include <QSize>
 
@@ -17,20 +19,14 @@
 namespace labelqt::services {
 namespace {
 constexpr double positionEpsilon = 0.000001;
-constexpr int imageHashWidth = 16;
-constexpr int imageHashHeight = 8;
-constexpr int maximumImageHashDistance = 4;
-
-struct PagePair {
-    QString baselineImageName;
-    QString currentImageName;
-};
+constexpr int imageHashWidth = 32;
+constexpr int imageHashHeight = 16;
+constexpr int maximumImageHashDistance = 16;
 
 struct PageFingerprint {
     QString imageName;
     QSize imageSize;
-    quint64 hashHigh{0};
-    quint64 hashLow{0};
+    QVector<quint64> hashWords;
     bool valid{false};
 };
 
@@ -81,11 +77,6 @@ QString normalizedPageName(const QString& imageName)
     return fileName.isEmpty() ? imageName : fileName;
 }
 
-std::uint64_t bitForIndex(int index)
-{
-    return std::uint64_t{1} << (index % 64);
-}
-
 int bitCount(quint64 value)
 {
     return static_cast<int>(std::popcount(static_cast<std::uint64_t>(value)));
@@ -93,26 +84,68 @@ int bitCount(quint64 value)
 
 int imageHashDistance(const PageFingerprint& lhs, const PageFingerprint& rhs)
 {
-    return bitCount(lhs.hashHigh ^ rhs.hashHigh) + bitCount(lhs.hashLow ^ rhs.hashLow);
+    if (lhs.hashWords.size() != rhs.hashWords.size()) {
+        return maximumImageHashDistance + 1;
+    }
+
+    int distance = 0;
+    for (int i = 0; i < lhs.hashWords.size(); ++i) {
+        distance += bitCount(lhs.hashWords.at(i) ^ rhs.hashWords.at(i));
+        if (distance > maximumImageHashDistance) {
+            return distance;
+        }
+    }
+    return distance;
+}
+
+QString fingerprintCacheKey(const labelqt::core::ImageEntry& image)
+{
+    const QFileInfo fileInfo(image.path);
+    return QStringLiteral("%1|%2|%3")
+        .arg(fileInfo.absoluteFilePath())
+        .arg(fileInfo.size())
+        .arg(fileInfo.lastModified().toMSecsSinceEpoch());
+}
+
+QHash<QString, PageFingerprint>& fingerprintCache()
+{
+    static QHash<QString, PageFingerprint> cache;
+    return cache;
+}
+
+QMutex& fingerprintCacheMutex()
+{
+    static QMutex mutex;
+    return mutex;
 }
 
 PageFingerprint fingerprintForImage(const labelqt::core::ImageEntry& image)
 {
+    const QString cacheKey = fingerprintCacheKey(image);
+    {
+        QMutexLocker locker(&fingerprintCacheMutex());
+        if (fingerprintCache().contains(cacheKey)) {
+            return fingerprintCache().value(cacheKey);
+        }
+    }
+
     PageFingerprint fingerprint;
     fingerprint.imageName = image.name;
 
     QImageReader reader(image.path);
     reader.setAutoTransform(true);
-    QImage sourceImage = reader.read();
-    if (sourceImage.isNull()) {
+    fingerprint.imageSize = reader.size();
+    if (!fingerprint.imageSize.isValid()) {
+        QMutexLocker locker(&fingerprintCacheMutex());
+        fingerprintCache().insert(cacheKey, fingerprint);
         return fingerprint;
     }
 
-    fingerprint.imageSize = sourceImage.size();
-    const QImage thumbnail =
-        sourceImage.convertToFormat(QImage::Format_Grayscale8)
-            .scaled(imageHashWidth, imageHashHeight, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    reader.setScaledSize(QSize(imageHashWidth, imageHashHeight));
+    const QImage thumbnail = reader.read().convertToFormat(QImage::Format_Grayscale8);
     if (thumbnail.isNull()) {
+        QMutexLocker locker(&fingerprintCacheMutex());
+        fingerprintCache().insert(cacheKey, fingerprint);
         return fingerprint;
     }
 
@@ -129,17 +162,18 @@ PageFingerprint fingerprintForImage(const labelqt::core::ImageEntry& image)
     }
 
     const double average = static_cast<double>(total) / static_cast<double>(std::max<qsizetype>(1, values.size()));
+    fingerprint.hashWords.resize((values.size() + 63) / 64);
     for (int i = 0; i < values.size(); ++i) {
         if (values.at(i) < average) {
             continue;
         }
-        if (i < 64) {
-            fingerprint.hashHigh |= bitForIndex(i);
-        } else if (i < 128) {
-            fingerprint.hashLow |= bitForIndex(i);
-        }
+        fingerprint.hashWords[i / 64] |= quint64{1} << (i % 64);
     }
     fingerprint.valid = true;
+    {
+        QMutexLocker locker(&fingerprintCacheMutex());
+        fingerprintCache().insert(cacheKey, fingerprint);
+    }
     return fingerprint;
 }
 
@@ -178,18 +212,19 @@ QSet<QString> baselineImageNames(const ReviewMetadata& metadata)
     return imageNames;
 }
 
-QVector<PagePair> identicalPagePairs(const labelqt::core::Project& currentProject, const ReviewMetadata& metadata)
+QVector<ProjectComparisonPagePair> identicalPagePairs(const labelqt::core::Project& currentProject,
+                                                      const ReviewMetadata& metadata)
 {
-    QVector<PagePair> pairs;
+    QVector<ProjectComparisonPagePair> pairs;
     const QSet<QString> baselineNames = baselineImageNames(metadata);
     QSet<QString> pairedNames;
     for (const labelqt::core::ImageEntry& image : currentProject.images()) {
-        pairs.append({image.name, image.name});
+        pairs.append({image.name, image.name, ProjectPageMatchKind::Name});
         pairedNames.insert(image.name);
     }
     for (const QString& baselineName : baselineNames) {
         if (!pairedNames.contains(baselineName)) {
-            pairs.append({baselineName, baselineName});
+            pairs.append({baselineName, baselineName, ProjectPageMatchKind::Unmatched});
         }
     }
     return pairs;
@@ -216,11 +251,11 @@ QHash<QString, QString> uniqueBaselineNamesByNormalizedName(const ReviewMetadata
     return names;
 }
 
-QVector<PagePair> normalizedNamePagePairs(const labelqt::core::Project& baselineProject,
-                                          const labelqt::core::Project& currentProject,
-                                          const ReviewMetadata& metadata)
+QVector<ProjectComparisonPagePair> normalizedNamePagePairs(const labelqt::core::Project& baselineProject,
+                                                           const labelqt::core::Project& currentProject,
+                                                           const ReviewMetadata& metadata)
 {
-    QVector<PagePair> pairs;
+    QVector<ProjectComparisonPagePair> pairs;
     QSet<QString> pairedBaselineNames;
     QSet<QString> pairedCurrentNames;
     const QHash<QString, QString> baselineByName = uniqueBaselineNamesByNormalizedName(metadata);
@@ -232,7 +267,7 @@ QVector<PagePair> normalizedNamePagePairs(const labelqt::core::Project& baseline
             continue;
         }
         const QString baselineName = baselineByName.value(key);
-        pairs.append({baselineName, currentName});
+        pairs.append({baselineName, currentName, ProjectPageMatchKind::Name});
         pairedBaselineNames.insert(baselineName);
         pairedCurrentNames.insert(currentName);
     }
@@ -269,7 +304,7 @@ QVector<PagePair> normalizedNamePagePairs(const labelqt::core::Project& baseline
         }
 
         if (!bestBaselineName.isEmpty() && bestDistance <= maximumImageHashDistance) {
-            pairs.append({bestBaselineName, currentImage.name});
+            pairs.append({bestBaselineName, currentImage.name, ProjectPageMatchKind::ImageFingerprint});
             pairedBaselineNames.insert(bestBaselineName);
             pairedCurrentNames.insert(currentImage.name);
             baselineFingerprints.remove(bestBaselineName);
@@ -278,44 +313,47 @@ QVector<PagePair> normalizedNamePagePairs(const labelqt::core::Project& baseline
 
     for (const labelqt::core::ImageEntry& currentImage : currentProject.images()) {
         if (!pairedCurrentNames.contains(currentImage.name)) {
-            pairs.append({currentImage.name, currentImage.name});
+            pairs.append({currentImage.name, currentImage.name, ProjectPageMatchKind::Unmatched});
             pairedCurrentNames.insert(currentImage.name);
         }
     }
 
     for (const QString& baselineName : baselineImageNames(metadata)) {
         if (!pairedBaselineNames.contains(baselineName)) {
-            pairs.append({baselineName, baselineName});
+            pairs.append({baselineName, baselineName, ProjectPageMatchKind::Unmatched});
         }
     }
     return pairs;
 }
 
-QVector<PagePair> orderPagePairs(const labelqt::core::Project& baselineProject,
-                                 const labelqt::core::Project& currentProject)
+QVector<ProjectComparisonPagePair> orderPagePairs(const labelqt::core::Project& baselineProject,
+                                                  const labelqt::core::Project& currentProject)
 {
-    QVector<PagePair> pairs;
+    QVector<ProjectComparisonPagePair> pairs;
     const qsizetype pairCount = std::min(baselineProject.images().size(), currentProject.images().size());
     pairs.reserve(std::max(baselineProject.images().size(), currentProject.images().size()));
     for (qsizetype i = 0; i < pairCount; ++i) {
-        pairs.append({baselineProject.images().at(i).name, currentProject.images().at(i).name});
+        pairs.append(
+            {baselineProject.images().at(i).name, currentProject.images().at(i).name, ProjectPageMatchKind::Order});
     }
     for (qsizetype i = pairCount; i < baselineProject.images().size(); ++i) {
-        pairs.append({baselineProject.images().at(i).name, baselineProject.images().at(i).name});
+        pairs.append({baselineProject.images().at(i).name, baselineProject.images().at(i).name,
+                      ProjectPageMatchKind::Unmatched});
     }
     for (qsizetype i = pairCount; i < currentProject.images().size(); ++i) {
-        pairs.append({currentProject.images().at(i).name, currentProject.images().at(i).name});
+        pairs.append({currentProject.images().at(i).name, currentProject.images().at(i).name,
+                      ProjectPageMatchKind::Unmatched});
     }
     return pairs;
 }
 
-int automaticPageMatchCount(const labelqt::core::Project& baselineProject, const labelqt::core::Project& currentProject)
+int matchedPageCount(const QVector<ProjectComparisonPagePair>& pagePairs)
 {
-    const ReviewMetadata metadata = ProjectComparisonService::captureSnapshot(baselineProject);
     int count = 0;
-    for (const PagePair& pair : normalizedNamePagePairs(baselineProject, currentProject, metadata)) {
-        if (imageByName(baselineProject, pair.baselineImageName) != nullptr &&
-            imageByName(currentProject, pair.currentImageName) != nullptr) {
+    for (const ProjectComparisonPagePair& pair : pagePairs) {
+        if (pair.matchKind == ProjectPageMatchKind::Name ||
+            pair.matchKind == ProjectPageMatchKind::ImageFingerprint ||
+            pair.matchKind == ProjectPageMatchKind::Order) {
             ++count;
         }
     }
@@ -356,10 +394,10 @@ ReviewChange changeFromEntry(const labelqt::core::Project& currentProject, const
 }
 
 QVector<ReviewChange> changesForPagePairs(const labelqt::core::Project& currentProject, const ReviewMetadata& metadata,
-                                          const QVector<PagePair>& pagePairs)
+                                          const QVector<ProjectComparisonPagePair>& pagePairs)
 {
     QVector<ReviewChange> changes;
-    for (const PagePair& pagePair : pagePairs) {
+    for (const ProjectComparisonPagePair& pagePair : pagePairs) {
         const QVector<ReviewLabelSnapshot> baselineLabels =
             baselineSnapshotsForImage(metadata, pagePair.baselineImageName);
         QVector<ReviewLabelSnapshot> currentLabels;
@@ -416,31 +454,56 @@ QVector<ReviewChange> ProjectComparisonService::changesForProject(const labelqt:
     return changesForPagePairs(currentProject, baselineMetadata, identicalPagePairs(currentProject, baselineMetadata));
 }
 
-bool ProjectComparisonService::shouldOfferOrderPageMatching(const labelqt::core::Project& baselineProject,
-                                                            const labelqt::core::Project& currentProject)
+ProjectComparisonPlan ProjectComparisonService::planComparison(const labelqt::core::Project& baselineProject,
+                                                               const labelqt::core::Project& currentProject,
+                                                               ProjectPageMatchMode matchMode)
 {
-    const qsizetype pageCount = currentProject.images().size();
-    if (pageCount <= 0 || baselineProject.images().size() != pageCount) {
+    ProjectComparisonPlan plan;
+    plan.baselineMetadata = captureSnapshot(baselineProject);
+    if (!plan.baselineMetadata.hasBaseline()) {
+        return plan;
+    }
+
+    plan.canCompareByOrder = baselineProject.images().size() == currentProject.images().size() &&
+                             !currentProject.images().isEmpty();
+    plan.comparablePageCount = static_cast<int>(currentProject.images().size());
+    plan.pagePairs = matchMode == ProjectPageMatchMode::ByOrder
+        ? orderPagePairs(baselineProject, currentProject)
+        : normalizedNamePagePairs(baselineProject, currentProject, plan.baselineMetadata);
+    plan.matchedPageCount = matchedPageCount(plan.pagePairs);
+    return plan;
+}
+
+bool ProjectComparisonService::shouldOfferOrderPageMatching(const ProjectComparisonPlan& plan)
+{
+    if (!plan.canCompareByOrder || plan.comparablePageCount <= 0) {
         return false;
     }
 
-    const int matchedCount = automaticPageMatchCount(baselineProject, currentProject);
-    return static_cast<qsizetype>(matchedCount) < std::max<qsizetype>(1, pageCount / 2);
+    return plan.matchedPageCount < std::max(1, plan.comparablePageCount / 2);
+}
+
+bool ProjectComparisonService::shouldOfferOrderPageMatching(const labelqt::core::Project& baselineProject,
+                                                            const labelqt::core::Project& currentProject)
+{
+    return shouldOfferOrderPageMatching(planComparison(baselineProject, currentProject));
+}
+
+QVector<ReviewChange> ProjectComparisonService::changesBetweenProjects(const labelqt::core::Project& currentProject,
+                                                                       const ProjectComparisonPlan& plan)
+{
+    if (!plan.baselineMetadata.hasBaseline()) {
+        return {};
+    }
+
+    return changesForPagePairs(currentProject, plan.baselineMetadata, plan.pagePairs);
 }
 
 QVector<ReviewChange> ProjectComparisonService::changesBetweenProjects(const labelqt::core::Project& baselineProject,
                                                                        const labelqt::core::Project& currentProject,
                                                                        ProjectPageMatchMode matchMode)
 {
-    const ReviewMetadata baseline = captureSnapshot(baselineProject);
-    if (!baseline.hasBaseline()) {
-        return {};
-    }
-
-    const QVector<PagePair> pagePairs = matchMode == ProjectPageMatchMode::ByOrder
-        ? orderPagePairs(baselineProject, currentProject)
-        : normalizedNamePagePairs(baselineProject, currentProject, baseline);
-    return changesForPagePairs(currentProject, baseline, pagePairs);
+    return changesBetweenProjects(currentProject, planComparison(baselineProject, currentProject, matchMode));
 }
 
 QVector<labelqt::core::Label> ProjectComparisonService::baselineImageLabels(const labelqt::core::Project& currentProject,

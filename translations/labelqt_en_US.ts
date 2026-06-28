@@ -1226,6 +1226,22 @@ Last error: %2</translation>
         <translation>Failed to open comparison project: %1</translation>
     </message>
     <message>
+        <source>Comparing projects...</source>
+        <translation>Comparing projects...</translation>
+    </message>
+    <message>
+        <source>Abort</source>
+        <translation>Abort</translation>
+    </message>
+    <message>
+        <source>Failed to compare projects: %1</source>
+        <translation>Failed to compare projects: %1</translation>
+    </message>
+    <message>
+        <source>Unknown error</source>
+        <translation>Unknown error</translation>
+    </message>
+    <message>
         <source>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</source>
         <translation>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</translation>
     </message>

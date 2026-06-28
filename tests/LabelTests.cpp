@@ -22,6 +22,7 @@
 #include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
 #include "services/TextDiffService.h"
+#include "services/TextDiffHtmlRenderer.h"
 #include "ui/ImageCanvas.h"
 #include "ui/LabelSelectionController.h"
 #include "ui/LabelTableModel.h"
@@ -1809,6 +1810,7 @@ private slots:
         QCOMPARE(sameIndexShortEntries.first().currentLabelIndex, 0);
 
         current.labelIndex = 1;
+        current.position = QPointF(0.58, 0.5);
         QVector<labelqt::services::LabelSequenceDiffEntry> shortEntries =
             labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
         QCOMPARE(shortEntries.size(), 2);
@@ -1819,9 +1821,17 @@ private slots:
             return entry.baselineLabelIndex < 0 && entry.currentLabelIndex == 1;
         }));
 
+        current.position = QPointF(0.512, 0.512);
+        QVector<labelqt::services::LabelSequenceDiffEntry> slightlyMovedShortEntries =
+            labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
+        QCOMPARE(slightlyMovedShortEntries.size(), 1);
+        QCOMPARE(slightlyMovedShortEntries.first().baselineLabelIndex, 0);
+        QCOMPARE(slightlyMovedShortEntries.first().currentLabelIndex, 1);
+
         baseline.text = QStringLiteral("魔理沙说");
         current.text = QStringLiteral("魔理沙呀");
         current.labelIndex = 1;
+        current.position = QPointF(0.58, 0.5);
         QVector<labelqt::services::LabelSequenceDiffEntry> normalEntries =
             labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
         QCOMPARE(normalEntries.size(), 1);
@@ -1902,6 +1912,29 @@ private slots:
         QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
             return chunk.operation == labelqt::services::TextDiffOperation::Insert;
         }));
+    }
+
+    void textDiffHtmlRendererShowsLineBreakMarkers()
+    {
+        const QString html = labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(
+            QStringLiteral("第一行\n第二行"), QStringLiteral("第一行第二行"), QStringLiteral("No text change."));
+
+        QVERIFY(html.contains(QStringLiteral("↵")));
+        QVERIFY(html.contains(QStringLiteral("<br/>")));
+        QVERIFY(html.contains(QStringLiteral("background:#7f1d1d")));
+        QVERIFY(html.contains(QStringLiteral("text-decoration:none")));
+    }
+
+    void textDiffHtmlRendererUsesReplacementForReorderedPhrase()
+    {
+        const QString html = labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(
+            QStringLiteral("独自一人去还不够熟练"), QStringLiteral("还没熟练到能独自一人去"),
+            QStringLiteral("No text change."));
+
+        QVERIFY(html.contains(QStringLiteral("独自一人去还不够熟练")));
+        QVERIFY(html.contains(QStringLiteral("还没熟练到能独自一人去")));
+        QVERIFY(html.contains(QStringLiteral("text-decoration:line-through")));
+        QVERIFY(html.contains(QStringLiteral("margin-bottom")));
     }
 
     void proofreadReportServiceWritesHtml()

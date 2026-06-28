@@ -53,7 +53,7 @@ tests          Qt Test 测试
 - `ProjectImageValidator`：扫描工程中缺失的图片文件，返回数据型诊断，由 UI 非阻塞展示。
 - `PageSourceInfoService`：解析和重写统一项目元数据里的合并来源 section。UI 不能自己解析 comment 行。
 - `ProjectComparisonService`：把校对基线或另一个工程与当前工程比较为结构化差异。UI 只展示结果，不直接实现
-  页面匹配、label 匹配或 diff 规则。外部工程对比优先按规范化文件名匹配页面，再尝试轻量图片指纹匹配，必要时可按页序匹配。
+  页面匹配、label 匹配或 diff 规则。外部工程对比先生成 `ProjectComparisonPlan`，优先按规范化文件名匹配页面，再尝试轻量图片指纹匹配，必要时可按页序匹配。图片指纹读取和缓存也属于这个服务，不应散落到 UI。
 - `LabelSequenceDiffService`：负责单页内的新旧 label 序列对齐。它不读取工程文件，也不生成 UI 文案。
 - `TextDiffService` / `TextDiffHtmlRenderer`：前者使用 `diff-match-patch` 生成单个 label 文本差异，后者把差异渲染成 HTML。
 - `ProofreadReportService`：生成校对 HTML 报告并保存到文件。文件选择和成功/失败提示仍属于 UI。

@@ -13,6 +13,8 @@ constexpr int gapPenalty = -24;
 constexpr int minimumPairScore = 42;
 constexpr int shortChangedTextMaxLength = 3;
 constexpr int shortChangedTextMovedMinimumPairScore = 58;
+constexpr double positionMatchScoreMaximum = 62.0;
+constexpr double positionMatchScoreSigma = 0.03;
 
 QString normalizedText(QString text)
 {
@@ -84,13 +86,9 @@ int positionTieBreakScore(const ReviewLabelSnapshot& baseline, const ReviewLabel
     const double dx = baseline.position.x() - current.position.x();
     const double dy = baseline.position.y() - current.position.y();
     const double distance = std::hypot(dx, dy);
-    if (distance <= 0.03) {
-        return 4;
-    }
-    if (distance <= 0.10) {
-        return 2;
-    }
-    return 0;
+    const double normalizedDistance = distance / positionMatchScoreSigma;
+    return static_cast<int>(
+        std::round(positionMatchScoreMaximum * std::exp(-(normalizedDistance * normalizedDistance))));
 }
 
 int pairScore(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)

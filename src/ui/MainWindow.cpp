@@ -41,6 +41,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontMetrics>
+#include <QFutureWatcher>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QIcon>
@@ -53,6 +54,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QProgressDialog>
 #include <QPushButton>
 #include <QSet>
 #include <QSignalBlocker>
@@ -69,8 +71,10 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidgetAction>
+#include <QtConcurrent/QtConcurrent>
 
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -81,6 +85,13 @@ constexpr int defaultLabelGroupColumnWidth = 120;
 constexpr int minimumLabelNumberColumnWidth = 40;
 constexpr int minimumLabelTextColumnWidth = 120;
 constexpr int minimumLabelGroupColumnWidth = 60;
+
+struct ProjectComparisonTaskResult {
+    labelqt::services::ProjectComparisonPlan plan;
+    QVector<labelqt::services::ReviewChange> changes;
+    QString error;
+    bool unknownError{false};
+};
 
 QMessageBox::StandardButton showMainWindowMessageBox(QWidget* parent, QMessageBox::Icon icon, const QString& title,
                                                      const QString& text,
@@ -112,6 +123,56 @@ void showMainWindowWarning(QWidget* parent, const QString& title, const QString&
 void showMainWindowCritical(QWidget* parent, const QString& title, const QString& text)
 {
     showMainWindowMessageBox(parent, QMessageBox::Critical, title, text);
+}
+
+ProjectComparisonTaskResult buildProjectComparisonResult(labelqt::core::Project baselineProject,
+                                                         labelqt::core::Project currentProject,
+                                                         labelqt::services::ProjectPageMatchMode matchMode)
+{
+    ProjectComparisonTaskResult result;
+    try {
+        result.plan =
+            labelqt::services::ProjectComparisonService::planComparison(baselineProject, currentProject, matchMode);
+        result.changes = labelqt::services::ProjectComparisonService::changesBetweenProjects(currentProject,
+                                                                                            result.plan);
+    } catch (const std::exception& error) {
+        result.error = QString::fromLocal8Bit(error.what());
+    } catch (...) {
+        result.unknownError = true;
+    }
+    return result;
+}
+
+std::optional<ProjectComparisonTaskResult> runProjectComparisonTask(QWidget* parent, const QString& title,
+                                                                    const QString& labelText,
+                                                                    const QString& cancelText,
+                                                                    const labelqt::core::Project& baselineProject,
+                                                                    const labelqt::core::Project& currentProject,
+                                                                    labelqt::services::ProjectPageMatchMode matchMode)
+{
+    QProgressDialog progress(labelText, cancelText, 0, 0, parent);
+    progress.setWindowTitle(title);
+    progress.setWindowModality(Qt::ApplicationModal);
+    progress.setMinimumDuration(0);
+    progress.setWindowFlag(Qt::WindowCloseButtonHint, false);
+
+    auto* watcher = new QFutureWatcher<ProjectComparisonTaskResult>(QApplication::instance());
+    QObject::connect(watcher, &QFutureWatcher<ProjectComparisonTaskResult>::finished, &progress,
+                     &QProgressDialog::accept);
+    watcher->setFuture(QtConcurrent::run(buildProjectComparisonResult, baselineProject, currentProject, matchMode));
+
+    progress.exec();
+
+    if (!watcher->isFinished()) {
+        QObject::disconnect(watcher, nullptr, &progress, nullptr);
+        QObject::connect(watcher, &QFutureWatcher<ProjectComparisonTaskResult>::finished, watcher,
+                         &QObject::deleteLater);
+        return std::nullopt;
+    }
+
+    const ProjectComparisonTaskResult result = watcher->result();
+    watcher->deleteLater();
+    return result;
 }
 
 } // namespace
@@ -1083,28 +1144,51 @@ void MainWindow::compareWithProject()
         return;
     }
 
-    labelqt::services::ProjectPageMatchMode matchMode = labelqt::services::ProjectPageMatchMode::ByName;
-    if (labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(baselineProject, project())) {
+    const labelqt::core::Project currentProjectSnapshot = project();
+    std::optional<ProjectComparisonTaskResult> comparisonResult =
+        runProjectComparisonTask(this, tr("Compare Projects"), tr("Comparing projects..."), tr("Abort"),
+                                 baselineProject, currentProjectSnapshot,
+                                 labelqt::services::ProjectPageMatchMode::ByName);
+    if (!comparisonResult.has_value()) {
+        return;
+    }
+    auto showComparisonFailure = [this](const ProjectComparisonTaskResult& result) {
+        const QString errorText = result.unknownError ? tr("Unknown error") : result.error;
+        showMainWindowWarning(this, tr("Compare Projects"),
+                              tr("Failed to compare projects: %1").arg(errorText));
+    };
+    if (!comparisonResult->error.isEmpty() || comparisonResult->unknownError) {
+        showComparisonFailure(*comparisonResult);
+        return;
+    }
+
+    if (labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(comparisonResult->plan)) {
         const QMessageBox::StandardButton result =
             showMainWindowMessageBox(this, QMessageBox::Question, tr("Compare Projects"),
                                      tr("The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?"),
                                      QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
         if (result == QMessageBox::Yes) {
-            matchMode = labelqt::services::ProjectPageMatchMode::ByOrder;
+            comparisonResult = runProjectComparisonTask(this, tr("Compare Projects"), tr("Comparing projects..."),
+                                                        tr("Abort"), baselineProject, currentProjectSnapshot,
+                                                        labelqt::services::ProjectPageMatchMode::ByOrder);
+            if (!comparisonResult.has_value()) {
+                return;
+            }
+            if (!comparisonResult->error.isEmpty() || comparisonResult->unknownError) {
+                showComparisonFailure(*comparisonResult);
+                return;
+            }
         }
     }
 
-    labelqt::services::ReviewMetadata metadata =
-        labelqt::services::ProjectComparisonService::captureSnapshot(baselineProject);
-    QVector<labelqt::services::ReviewChange> changes =
-        labelqt::services::ProjectComparisonService::changesBetweenProjects(baselineProject, project(), matchMode);
-    if (changes.isEmpty()) {
+    if (comparisonResult->changes.isEmpty()) {
         showMainWindowInformation(this, tr("Compare Projects"), tr("No differences from the selected project."));
         return;
     }
 
-    ProofreadChangesDialog dialog(baselineProject, project(), m_preferences, std::move(metadata), std::move(changes),
-                                  this);
+    ProofreadChangesDialog dialog(baselineProject, currentProjectSnapshot, m_preferences,
+                                  std::move(comparisonResult->plan.baselineMetadata),
+                                  std::move(comparisonResult->changes), this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
