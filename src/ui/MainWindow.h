@@ -97,6 +97,7 @@ private:
     void selectLabelFromCanvas(int index, Qt::KeyboardModifiers modifiers);
     void addLabel(QPointF normalizedPosition);
     labelqt::services::ClipboardLabels selectedVisibleClipboardLabels() const;
+    void copyToClipboard();
     void copySelectedLabelsToClipboard();
     void cutSelectedLabelsToClipboard();
     void pasteLabelsFromClipboard();

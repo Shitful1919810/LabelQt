@@ -215,7 +215,7 @@ MainWindow::MainWindow(QWidget* parent)
             selectNextPage();
         },
         [this]() { editCurrentLabelText(); },
-        [this]() { copySelectedLabelsToClipboard(); },
+        [this]() { copyToClipboard(); },
         [this]() { cutSelectedLabelsToClipboard(); },
         [this]() { pasteLabelsFromClipboard(); },
     });
@@ -1671,6 +1671,18 @@ void MainWindow::copySelectedLabelsToClipboard()
 
     QApplication::clipboard()->setMimeData(labelqt::services::LabelClipboardService::createMimeData(copiedLabels));
     statusBar()->showMessage(tr("Copied %n label(s).", nullptr, static_cast<int>(copiedLabels.labels.size())), 3000);
+}
+
+void MainWindow::copyToClipboard()
+{
+    if (m_canvas != nullptr && m_canvas->interactionMode() == ImageCanvas::InteractionMode::Selection) {
+        if (m_canvas->copyImageToClipboard()) {
+            statusBar()->showMessage(tr("Image copied to clipboard."), 3000);
+        }
+        return;
+    }
+
+    copySelectedLabelsToClipboard();
 }
 
 void MainWindow::cutSelectedLabelsToClipboard()

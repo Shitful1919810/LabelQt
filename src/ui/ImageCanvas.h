@@ -64,6 +64,7 @@ public:
     QPoint globalPositionForLabel(int index) const;
     bool hasSelection() const noexcept;
     QRectF normalizedSelectionRect() const noexcept;
+    bool copyImageToClipboard();
     std::optional<QPointF> normalizedCursorImagePosition() const;
     void setZoomPercent(int percent);
     int zoomPercent() const noexcept;
@@ -116,7 +117,6 @@ private:
     void updateSelection(QPoint viewportPosition);
     void finishSelection(QPoint viewportPosition);
     void clearSelection();
-    bool copyImageToClipboard();
     void updateCursorForInteractionMode();
     void resetPointerInteraction();
     QVector<QPointF> movingLabelPositionsForViewportPosition(QPoint viewportPosition) const;
