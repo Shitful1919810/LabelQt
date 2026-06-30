@@ -1206,6 +1206,14 @@ Last error: %2</source>
         <translation>プロジェクト比較</translation>
     </message>
     <message>
+        <source>Current Project</source>
+        <translation>現在のプロジェクト</translation>
+    </message>
+    <message>
+        <source>Target Project</source>
+        <translation>対象プロジェクト</translation>
+    </message>
+    <message>
         <source>Open a project before comparing.</source>
         <translation>比較する前にプロジェクトを開いてください。</translation>
     </message>

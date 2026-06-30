@@ -640,6 +640,7 @@ private slots:
         QCOMPARE(model.sourceIndexForRow(0), 1);
         QCOMPARE(model.rowForSourceIndex(0), -1);
         QCOMPARE(model.rowForSourceIndex(1), 0);
+        QCOMPARE(model.labelContext().sourceIndexesInVisibleRowRange(0, 0), QVector<int>({1}));
     }
 
     void groupFilterSelectionDropsHiddenLabels()
@@ -675,13 +676,13 @@ private slots:
             },
             []() {}, {}, {});
 
-        QVERIFY(controller.selectIndexes(image, {0, 1}, 1));
+        QVERIFY(controller.selectIndexes({0, 1}, 1));
         QCOMPARE(controller.selectedLabelIndexes(), QVector<int>({0, 1}));
 
         const QVector<int> previousSelectedIndexes = controller.selectedLabelIndexes();
         model.setGroupFilter({QStringLiteral("框内")});
         canvas.setVisibleGroups({QStringLiteral("框内")});
-        QVERIFY(controller.selectIndexes(image, previousSelectedIndexes, 1));
+        QVERIFY(controller.selectIndexes(previousSelectedIndexes, 1));
         QCOMPARE(controller.selectedLabelIndexes(), QVector<int>({0}));
         QCOMPARE(detailsUpdates.last(), 0);
     }
@@ -708,6 +709,27 @@ private slots:
 
         QVERIFY(!model.setData(model.index(0, LabelTableModel::GroupColumn), QStringLiteral("不存在"), Qt::EditRole));
         QCOMPARE(editSpy.count(), 1);
+    }
+
+    void labelTableModelIgnoresStaleVisibleRowsAfterBackingStoreShrinks()
+    {
+        QVector<Label> labels{
+            Label(QStringLiteral("inside"), QStringLiteral("框内"), {0.2, 0.3}),
+            Label(QStringLiteral("outside"), QStringLiteral("框外"), {0.4, 0.5}),
+        };
+
+        LabelTableModel model;
+        const QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::Fatal);
+        model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
+        model.setLabels(&labels);
+        model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
+        QCOMPARE(model.rowCount(), 2);
+
+        labels.removeLast();
+        QCOMPARE(model.sourceIndexForRow(1), -1);
+        QCOMPARE(model.rowForSourceIndex(1), -1);
+        QVERIFY(!model.data(model.index(1, LabelTableModel::TextColumn)).isValid());
+        QVERIFY(!model.setData(model.index(1, LabelTableModel::TextColumn), QStringLiteral("changed"), Qt::EditRole));
     }
 
     void labelTableModelDropRequestsSourceIndexesInVisibleOrder()
@@ -1692,6 +1714,27 @@ private slots:
         QVERIFY(!changes.first().textChanged);
         QVERIFY(!changes.first().groupChanged);
         QVERIFY(!changes.first().positionChanged);
+    }
+
+    void projectComparisonTreatsSecondProjectAsTarget()
+    {
+        labelqt::core::Project currentProject;
+        labelqt::core::ImageEntry currentImage;
+        currentImage.name = QStringLiteral("001.png");
+        currentImage.labels.append(
+            labelqt::core::Label(QStringLiteral("既有文本"), QStringLiteral("框内"), QPointF(0.25, 0.5)));
+        currentProject.images().append(currentImage);
+
+        labelqt::core::Project targetProject = currentProject;
+        targetProject.images().first().labels.append(
+            labelqt::core::Label(QStringLiteral("目标新增"), QStringLiteral("框内"), QPointF(0.45, 0.5)));
+
+        const QVector<labelqt::services::ReviewChange> changes =
+            labelqt::services::ProjectComparisonService::changesBetweenProjects(currentProject, targetProject);
+
+        QCOMPARE(changes.size(), 1);
+        QCOMPARE(changes.first().kind, labelqt::services::ReviewChangeKind::Added);
+        QCOMPARE(changes.first().current.text, QStringLiteral("目标新增"));
     }
 
     void projectComparisonMatchesPagesByNormalizedImageName()

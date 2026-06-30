@@ -66,6 +66,8 @@ set(LABELQT_UI_SOURCES
     ui/CanvasLabelItems.cpp
     ui/CanvasLabelTextEditController.cpp
     ui/CanvasLabelTextEditor.cpp
+    ui/CurrentPageLabelContext.cpp
+    ui/CurrentPageLabelContext.h
     ui/DialogWindowUtils.cpp
     ui/DialogWindowUtils.h
     ui/EditorStateController.cpp

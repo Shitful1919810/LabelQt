@@ -17,16 +17,14 @@ LabelTableModel::LabelTableModel(QObject* parent) : QAbstractTableModel(parent) 
 void LabelTableModel::setLabels(QVector<labelqt::core::Label>* labels)
 {
     beginResetModel();
-    m_labels = labels;
-    rebuildVisibleRows();
+    m_labelContext.setLabels(labels);
     endResetModel();
 }
 
 void LabelTableModel::setGroupFilter(QStringList groupFilter)
 {
     beginResetModel();
-    m_groupFilter = QSet<QString>(groupFilter.cbegin(), groupFilter.cend());
-    rebuildVisibleRows();
+    m_labelContext.setGroupFilter(std::move(groupFilter));
     endResetModel();
 }
 
@@ -42,7 +40,7 @@ void LabelTableModel::setGroups(QStringList groups, QVector<labelqt::core::Label
 void LabelTableModel::refresh()
 {
     beginResetModel();
-    rebuildVisibleRows();
+    m_labelContext.refresh();
     endResetModel();
 }
 
@@ -58,28 +56,25 @@ void LabelTableModel::labelChanged(int row)
 
 int LabelTableModel::sourceIndexForRow(int row) const
 {
-    if (row < 0 || row >= static_cast<int>(m_visibleRows.size())) {
-        return -1;
-    }
-    return m_visibleRows.at(row);
+    return m_labelContext.sourceIndexForRow(row);
 }
 
 int LabelTableModel::rowForSourceIndex(int sourceIndex) const
 {
-    for (int row = 0; row < static_cast<int>(m_visibleRows.size()); ++row) {
-        if (m_visibleRows.at(row) == sourceIndex) {
-            return row;
-        }
-    }
-    return -1;
+    return m_labelContext.rowForSourceIndex(sourceIndex);
+}
+
+const CurrentPageLabelContext& LabelTableModel::labelContext() const noexcept
+{
+    return m_labelContext;
 }
 
 int LabelTableModel::rowCount(const QModelIndex& parent) const
 {
-    if (parent.isValid() || m_labels == nullptr) {
+    if (parent.isValid()) {
         return 0;
     }
-    return static_cast<int>(m_visibleRows.size());
+    return m_labelContext.visibleRowCount();
 }
 
 int LabelTableModel::columnCount(const QModelIndex& parent) const
@@ -89,20 +84,23 @@ int LabelTableModel::columnCount(const QModelIndex& parent) const
 
 QVariant LabelTableModel::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid() || m_labels == nullptr || index.row() < 0 || index.row() >= m_visibleRows.size()) {
+    if (!index.isValid()) {
         return {};
     }
 
-    const int sourceIndex = m_visibleRows.at(index.row());
-    const labelqt::core::Label& label = m_labels->at(sourceIndex);
+    const labelqt::core::Label* label = m_labelContext.labelForVisibleRow(index.row());
+    if (label == nullptr) {
+        return {};
+    }
+
     if (role == Qt::DisplayRole || role == Qt::EditRole) {
         switch (index.column()) {
         case NumberColumn:
             return index.row() + 1;
         case TextColumn:
-            return label.text();
+            return label->text();
         case GroupColumn:
-            return label.group();
+            return label->group();
         default:
             return {};
         }
@@ -113,7 +111,7 @@ QVariant LabelTableModel::data(const QModelIndex& index, int role) const
     }
 
     if (role == Qt::ForegroundRole && index.column() == GroupColumn) {
-        const QColor color = colorForGroup(label.group());
+        const QColor color = colorForGroup(label->group());
         if (color.isValid()) {
             return QBrush(color);
         }
@@ -124,19 +122,22 @@ QVariant LabelTableModel::data(const QModelIndex& index, int role) const
 
 bool LabelTableModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-    if (role != Qt::EditRole || !index.isValid() || m_labels == nullptr || index.row() < 0 ||
-        index.row() >= m_visibleRows.size()) {
+    if (role != Qt::EditRole || !index.isValid()) {
         return false;
     }
 
-    const int sourceIndex = m_visibleRows.at(index.row());
-    const labelqt::core::Label& label = m_labels->at(sourceIndex);
+    const int sourceIndex = sourceIndexForRow(index.row());
+    const labelqt::core::Label* label = m_labelContext.labelForVisibleRow(index.row());
+    if (sourceIndex < 0 || label == nullptr) {
+        return false;
+    }
+
     QVariant newValue;
 
     switch (index.column()) {
     case TextColumn: {
         const QString text = value.toString();
-        if (label.text() == text) {
+        if (label->text() == text) {
             return false;
         }
         newValue = text;
@@ -144,7 +145,7 @@ bool LabelTableModel::setData(const QModelIndex& index, const QVariant& value, i
     }
     case GroupColumn: {
         const QString group = value.toString();
-        if (!m_groups.contains(group) || label.group() == group) {
+        if (!m_groups.contains(group) || label->group() == group) {
             return false;
         }
         newValue = group;
@@ -259,21 +260,6 @@ bool LabelTableModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
 
     emit labelsReorderRequested(sourceIndexes, visibleDropRow);
     return true;
-}
-
-void LabelTableModel::rebuildVisibleRows()
-{
-    m_visibleRows.clear();
-    if (m_labels == nullptr) {
-        return;
-    }
-
-    for (int i = 0; i < static_cast<int>(m_labels->size()); ++i) {
-        const labelqt::core::Label& label = m_labels->at(i);
-        if (!label.isDeleted() && m_groupFilter.contains(label.group())) {
-            m_visibleRows.append(i);
-        }
-    }
 }
 
 QColor LabelTableModel::colorForGroup(const QString& group) const

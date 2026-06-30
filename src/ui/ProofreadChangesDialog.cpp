@@ -232,6 +232,16 @@ const labelqt::core::ImageEntry* imageByName(const labelqt::core::Project& proje
     return nullptr;
 }
 
+int imageIndexByName(const labelqt::core::Project& project, const QString& imageName)
+{
+    for (int i = 0; i < project.images().size(); ++i) {
+        if (project.images().at(i).name == imageName) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 QPointF focusPositionForChange(const labelqt::services::ReviewChange& change)
 {
     if (change.kind != labelqt::services::ReviewChangeKind::Deleted) {
@@ -265,10 +275,18 @@ ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& bef
                                                const labelqt::core::Project& currentProject,
                                                labelqt::core::AppPreferences preferences,
                                                labelqt::services::ReviewMetadata metadata,
-                                               QVector<labelqt::services::ReviewChange> changes, QWidget* parent)
+                                               QVector<labelqt::services::ReviewChange> changes,
+                                               ProofreadChangesDialogLabels labels, QWidget* parent)
     : QDialog(parent), m_beforeProject(beforeProject), m_currentProject(currentProject),
-      m_preferences(std::move(preferences)), m_metadata(std::move(metadata)), m_changes(std::move(changes))
+      m_preferences(std::move(preferences)), m_metadata(std::move(metadata)), m_labels(std::move(labels)),
+      m_changes(std::move(changes))
 {
+    if (m_labels.leftProjectTitle.isEmpty()) {
+        m_labels.leftProjectTitle = tr("Before");
+    }
+    if (m_labels.rightProjectTitle.isEmpty()) {
+        m_labels.rightProjectTitle = tr("After");
+    }
     buildUi();
 }
 
@@ -294,7 +312,11 @@ int ProofreadChangesDialog::selectedImageIndex() const noexcept
     if (changeIndex < 0) {
         return -1;
     }
-    return m_changes.at(changeIndex).imageIndex;
+    const labelqt::services::ReviewChange& change = m_changes.at(changeIndex);
+    if (m_labels.jumpToLeftProject) {
+        return imageIndexByName(m_beforeProject, baselineImageNameForChange(change));
+    }
+    return change.imageIndex;
 }
 
 int ProofreadChangesDialog::selectedLabelIndex() const noexcept
@@ -303,7 +325,8 @@ int ProofreadChangesDialog::selectedLabelIndex() const noexcept
     if (changeIndex < 0) {
         return -1;
     }
-    return m_changes.at(changeIndex).currentLabelIndex;
+    const labelqt::services::ReviewChange& change = m_changes.at(changeIndex);
+    return m_labels.jumpToLeftProject ? change.baselineLabelIndex : change.currentLabelIndex;
 }
 
 void ProofreadChangesDialog::done(int result)
@@ -371,16 +394,16 @@ void ProofreadChangesDialog::buildUi()
     detailLayout->addWidget(m_diffBrowser, 1);
 
     auto* previewSplitter = new QSplitter(Qt::Horizontal, detailPanel);
-    auto* beforeGroup = new QGroupBox(tr("Before"), previewSplitter);
+    auto* beforeGroup = new QGroupBox(m_labels.leftProjectTitle, previewSplitter);
     auto* beforeLayout = new QVBoxLayout(beforeGroup);
     m_beforeCanvas = new ImageCanvas(beforeGroup);
     m_beforeCanvas->setReadOnly(true);
     m_beforeCanvas->setPreferences(m_preferences);
-    m_beforeCanvas->setGroups(m_currentProject.groups());
-    m_beforeCanvas->setVisibleGroups(m_currentProject.groups());
+    m_beforeCanvas->setGroups(m_beforeProject.groups());
+    m_beforeCanvas->setVisibleGroups(m_beforeProject.groups());
     beforeLayout->addWidget(m_beforeCanvas);
 
-    auto* afterGroup = new QGroupBox(tr("After"), previewSplitter);
+    auto* afterGroup = new QGroupBox(m_labels.rightProjectTitle, previewSplitter);
     auto* afterLayout = new QVBoxLayout(afterGroup);
     m_afterCanvas = new ImageCanvas(afterGroup);
     m_afterCanvas->setReadOnly(true);
@@ -660,11 +683,12 @@ void ProofreadChangesDialog::updateJumpButton()
 
     const int imageIndex = selectedImageIndex();
     const int labelIndex = selectedLabelIndex();
+    const labelqt::core::Project& jumpProject = m_labels.jumpToLeftProject ? m_beforeProject : m_currentProject;
     const bool canJumpToLabel =
-        imageIndex >= 0 && imageIndex < m_currentProject.images().size() && labelIndex >= 0 &&
-        labelIndex < m_currentProject.images().at(imageIndex).labels.size() &&
-        !m_currentProject.images().at(imageIndex).labels.at(labelIndex).isDeleted();
-    const bool canJumpToPage = imageIndex >= 0 && imageIndex < m_currentProject.images().size();
+        imageIndex >= 0 && imageIndex < jumpProject.images().size() && labelIndex >= 0 &&
+        labelIndex < jumpProject.images().at(imageIndex).labels.size() &&
+        !jumpProject.images().at(imageIndex).labels.at(labelIndex).isDeleted();
+    const bool canJumpToPage = imageIndex >= 0 && imageIndex < jumpProject.images().size();
     m_jumpButton->setEnabled(canJumpToLabel || canJumpToPage);
 }
 
@@ -722,8 +746,8 @@ labelqt::services::ProofreadReportTexts ProofreadChangesDialog::reportTexts() co
         .groupChange = tr("Group Change"),
         .markerChange = tr("Marker Change"),
         .orderChange = tr("Order Change"),
-        .before = tr("Before"),
-        .after = tr("After"),
+        .before = m_labels.leftProjectTitle,
+        .after = m_labels.rightProjectTitle,
         .added = tr("Added"),
         .deleted = tr("Deleted"),
         .modified = tr("Modified"),

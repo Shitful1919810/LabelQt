@@ -19,6 +19,12 @@ namespace labelqt::services {
 struct ProofreadReportTexts;
 }
 
+struct ProofreadChangesDialogLabels {
+    QString leftProjectTitle;
+    QString rightProjectTitle;
+    bool jumpToLeftProject{false};
+};
+
 class ProofreadChangesDialog final : public QDialog {
     Q_OBJECT
 
@@ -26,7 +32,8 @@ public:
     ProofreadChangesDialog(const labelqt::core::Project& beforeProject, const labelqt::core::Project& currentProject,
                            labelqt::core::AppPreferences preferences,
                            labelqt::services::ReviewMetadata metadata,
-                           QVector<labelqt::services::ReviewChange> changes, QWidget* parent = nullptr);
+                           QVector<labelqt::services::ReviewChange> changes,
+                           ProofreadChangesDialogLabels labels = {}, QWidget* parent = nullptr);
     ~ProofreadChangesDialog() override;
 
     int selectedImageIndex() const noexcept;
@@ -59,6 +66,7 @@ private:
     labelqt::core::AppPreferences m_preferences;
     labelqt::services::ReviewMetadata m_metadata;
     labelqt::services::SessionStateStore m_sessionStateStore;
+    ProofreadChangesDialogLabels m_labels;
     QVector<labelqt::services::ReviewChange> m_changes;
     QTableWidget* m_table{nullptr};
     QLabel* m_summaryLabel{nullptr};

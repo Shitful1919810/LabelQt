@@ -2,10 +2,10 @@
 
 #include "core/AppPreferences.h"
 #include "core/Label.h"
+#include "ui/CurrentPageLabelContext.h"
 
 #include <QAbstractTableModel>
 #include <QColor>
-#include <QSet>
 #include <QStringList>
 #include <QVector>
 
@@ -31,6 +31,7 @@ public:
     void labelChanged(int row);
     int sourceIndexForRow(int row) const;
     int rowForSourceIndex(int sourceIndex) const;
+    const CurrentPageLabelContext& labelContext() const noexcept;
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     int columnCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -52,12 +53,9 @@ signals:
     void labelsReorderRequested(QVector<int> sourceIndexes, int visibleDropRow);
 
 private:
-    void rebuildVisibleRows();
     QColor colorForGroup(const QString& group) const;
 
-    QVector<labelqt::core::Label>* m_labels{nullptr};
-    QVector<int> m_visibleRows;
-    QSet<QString> m_groupFilter;
+    CurrentPageLabelContext m_labelContext;
     QStringList m_groups;
     QVector<labelqt::core::LabelGroupStyle> m_groupStyles;
 };

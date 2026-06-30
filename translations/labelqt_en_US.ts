@@ -1214,6 +1214,14 @@ Last error: %2</translation>
         <translation>Compare Projects</translation>
     </message>
     <message>
+        <source>Current Project</source>
+        <translation>Current Project</translation>
+    </message>
+    <message>
+        <source>Target Project</source>
+        <translation>Target Project</translation>
+    </message>
+    <message>
         <source>Open a project before comparing.</source>
         <translation>Open a project before comparing.</translation>
     </message>

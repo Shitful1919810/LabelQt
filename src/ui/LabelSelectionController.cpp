@@ -1,6 +1,5 @@
 #include "ui/LabelSelectionController.h"
 
-#include "core/Project.h"
 #include "ui/ImageCanvas.h"
 #include "ui/LabelTableModel.h"
 
@@ -82,23 +81,13 @@ bool LabelSelectionController::selectSingle(int sourceIndex)
     return true;
 }
 
-bool LabelSelectionController::selectIndexes(const labelqt::core::ImageEntry& image, QVector<int> sourceIndexes,
-                                             int primarySourceIndex)
+bool LabelSelectionController::selectIndexes(QVector<int> sourceIndexes, int primarySourceIndex)
 {
     if (m_model == nullptr || m_tableView == nullptr || m_tableView->selectionModel() == nullptr) {
         return false;
     }
 
-    QVector<int> visibleSourceIndexes;
-    visibleSourceIndexes.reserve(sourceIndexes.size());
-    for (int sourceIndex : std::as_const(sourceIndexes)) {
-        if (sourceIndex >= 0 && sourceIndex < image.labels.size() && m_model->rowForSourceIndex(sourceIndex) >= 0) {
-            visibleSourceIndexes.append(sourceIndex);
-        }
-    }
-    std::sort(visibleSourceIndexes.begin(), visibleSourceIndexes.end());
-    visibleSourceIndexes.erase(std::unique(visibleSourceIndexes.begin(), visibleSourceIndexes.end()),
-                               visibleSourceIndexes.end());
+    const QVector<int> visibleSourceIndexes = m_model->labelContext().visibleSourceIndexes(std::move(sourceIndexes));
 
     m_tableView->clearSelection();
     if (visibleSourceIndexes.isEmpty()) {

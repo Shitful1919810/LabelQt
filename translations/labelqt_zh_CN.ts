@@ -1206,6 +1206,14 @@ Last error: %2</source>
         <translation>对比工程</translation>
     </message>
     <message>
+        <source>Current Project</source>
+        <translation>当前工程</translation>
+    </message>
+    <message>
+        <source>Target Project</source>
+        <translation>目标工程</translation>
+    </message>
+    <message>
         <source>Open a project before comparing.</source>
         <translation>请先打开工程，再进行对比。</translation>
     </message>

@@ -4,10 +4,6 @@
 
 #include <functional>
 
-namespace labelqt::core {
-class ImageEntry;
-}
-
 class ImageCanvas;
 class LabelTableModel;
 class QTableView;
@@ -24,7 +20,7 @@ public:
 
     QVector<int> selectedLabelIndexes() const;
     bool selectSingle(int sourceIndex);
-    bool selectIndexes(const labelqt::core::ImageEntry& image, QVector<int> sourceIndexes, int primarySourceIndex);
+    bool selectIndexes(QVector<int> sourceIndexes, int primarySourceIndex);
     void clearSelection();
 
 private:

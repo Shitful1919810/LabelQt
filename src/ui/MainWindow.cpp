@@ -1122,7 +1122,7 @@ void MainWindow::showProofreadingChanges()
         return;
     }
 
-    ProofreadChangesDialog dialog(project(), project(), m_preferences, metadata, std::move(changes), this);
+    ProofreadChangesDialog dialog(project(), project(), m_preferences, metadata, std::move(changes), {}, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -1158,9 +1158,9 @@ void MainWindow::compareWithProject()
     }
     m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::CompareProject, path);
 
-    labelqt::core::Project baselineProject;
+    labelqt::core::Project targetProject;
     try {
-        baselineProject = labelqt::core::LabelPlusDocument::loadFromFile(path);
+        targetProject = labelqt::core::LabelPlusDocument::loadFromFile(path);
     } catch (const std::exception& error) {
         showMainWindowWarning(this, tr("Compare Projects"),
                               tr("Failed to open comparison project: %1").arg(QString::fromLocal8Bit(error.what())));
@@ -1169,8 +1169,8 @@ void MainWindow::compareWithProject()
 
     const labelqt::core::Project currentProjectSnapshot = project();
     std::optional<ProjectComparisonTaskResult> comparisonResult =
-        runProjectComparisonTask(this, QString(), tr("Comparing projects..."), tr("Abort"), baselineProject,
-                                 currentProjectSnapshot,
+        runProjectComparisonTask(this, QString(), tr("Comparing projects..."), tr("Abort"), currentProjectSnapshot,
+                                 targetProject,
                                  labelqt::services::ProjectPageMatchMode::ByName);
     if (!comparisonResult.has_value()) {
         return;
@@ -1192,7 +1192,7 @@ void MainWindow::compareWithProject()
                                      QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
         if (result == QMessageBox::Yes) {
             comparisonResult = runProjectComparisonTask(this, QString(), tr("Comparing projects..."), tr("Abort"),
-                                                        baselineProject, currentProjectSnapshot,
+                                                        currentProjectSnapshot, targetProject,
                                                         labelqt::services::ProjectPageMatchMode::ByOrder);
             if (!comparisonResult.has_value()) {
                 return;
@@ -1209,9 +1209,15 @@ void MainWindow::compareWithProject()
         return;
     }
 
-    ProofreadChangesDialog dialog(baselineProject, currentProjectSnapshot, m_preferences,
+    ProofreadChangesDialog dialog(currentProjectSnapshot, targetProject, m_preferences,
                                   std::move(comparisonResult->plan.baselineMetadata),
-                                  std::move(comparisonResult->changes), this);
+                                  std::move(comparisonResult->changes),
+                                  {
+                                      .leftProjectTitle = tr("Current Project"),
+                                      .rightProjectTitle = tr("Target Project"),
+                                      .jumpToLeftProject = true,
+                                  },
+                                  this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -1605,16 +1611,9 @@ void MainWindow::selectLabelFromCanvas(int index, Qt::KeyboardModifiers modifier
         return;
     }
 
-    QVector<int> sourceIndexes;
     const int firstRow = std::min(anchorRow, targetRow);
     const int lastRow = std::max(anchorRow, targetRow);
-    sourceIndexes.reserve(lastRow - firstRow + 1);
-    for (int row = firstRow; row <= lastRow; ++row) {
-        const int sourceIndex = m_labelModel->sourceIndexForRow(row);
-        if (sourceIndex >= 0) {
-            sourceIndexes.append(sourceIndex);
-        }
-    }
+    const QVector<int> sourceIndexes = m_labelModel->labelContext().sourceIndexesInVisibleRowRange(firstRow, lastRow);
     selectLabelIndexes(sourceIndexes, index);
 }
 
@@ -2538,14 +2537,13 @@ QVector<int> MainWindow::selectedLabelIndexes() const
 
 void MainWindow::selectLabelIndexes(const QVector<int>& sourceIndexes, int primarySourceIndex)
 {
-    labelqt::core::ImageEntry* image = currentImage();
-    if (image == nullptr || m_labelSelectionController == nullptr) {
+    if (currentImage() == nullptr || m_labelSelectionController == nullptr) {
         return;
     }
 
     const bool wasUpdatingUi = m_isUpdatingUi;
     m_isUpdatingUi = true;
-    m_labelSelectionController->selectIndexes(*image, sourceIndexes, primarySourceIndex);
+    m_labelSelectionController->selectIndexes(sourceIndexes, primarySourceIndex);
     m_isUpdatingUi = wasUpdatingUi;
 }
 
