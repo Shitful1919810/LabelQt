@@ -1428,6 +1428,9 @@ private slots:
                << "  \"canvasLabelTextEditor\": {\n"
                << "    \"opacity\": 0.6\n"
                << "  },\n"
+               << "  \"proofreading\": {\n"
+               << "    \"textDiffCleanup\": \"semantic\"\n"
+               << "  },\n"
                << "  \"input\": {\n"
                << "    \"moveLabelModifier\": \"ctrl+shift\",\n"
                << "    \"previousLabelModifier\": \"ctrl\",\n"
@@ -1481,6 +1484,7 @@ private slots:
                  QStringLiteral("Ctrl+Down"));
         QCOMPARE(result.preferences.applicationStyle(), QStringLiteral("Fusion"));
         QCOMPARE(result.preferences.applicationTheme(), QStringLiteral("breezeDark"));
+        QVERIFY(result.preferences.textDiffCleanupMode() == labelqt::core::TextDiffCleanupMode::Semantic);
         QCOMPARE(result.preferences.moveLabelModifiers(), Qt::ControlModifier | Qt::ShiftModifier);
         QCOMPARE(result.preferences.previousLabelModifiers(), Qt::ControlModifier);
         QCOMPARE(result.preferences.undoShortcut().toString(QKeySequence::PortableText), QStringLiteral("Ctrl+Z"));
@@ -1961,6 +1965,7 @@ private slots:
 
     void textDiffServiceAppliesSemanticCleanup()
     {
+        labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Semantic);
         const QVector<labelqt::services::TextDiffChunk> chunks =
             labelqt::services::TextDiffService::diff(QStringLiteral("这么一说"),
                                                      QStringLiteral("这么说来确实"));
@@ -1971,6 +1976,24 @@ private slots:
         }));
         QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
             return chunk.operation == labelqt::services::TextDiffOperation::Insert;
+        }));
+        labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Auto);
+    }
+
+    void textDiffServiceAutoModeKeepsCjkRawDiff()
+    {
+        labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Auto);
+        const QVector<labelqt::services::TextDiffChunk> chunks =
+            labelqt::services::TextDiffService::diff(QStringLiteral("结果不知怎的\n反而激发起我的好奇了…"),
+                                                     QStringLiteral("结果自那之后\n反而激起了\n我的好奇心…"));
+
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Equal &&
+                   chunk.text == QStringLiteral("结果");
+        }));
+        QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
+            return chunk.operation == labelqt::services::TextDiffOperation::Equal &&
+                   chunk.text.contains(QStringLiteral("我的好奇"));
         }));
     }
 

@@ -3,6 +3,7 @@
 
 #include "core/AppPreferences.h"
 #include "core/TranslationManager.h"
+#include "services/TextDiffService.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -42,6 +43,7 @@ int main(int argc, char* argv[])
     app.setProperty("labelqt.defaultStyle", app.style()->objectName());
     const labelqt::core::AppPreferencesLoadResult preferences =
         labelqt::core::AppPreferences::loadWithDiagnostics();
+    labelqt::services::TextDiffService::setCleanupMode(preferences.preferences.textDiffCleanupMode());
     applyApplicationStyle(preferences.preferences.applicationStyle());
     labelqt::ui::applyApplicationTheme(preferences.preferences.applicationTheme());
     installTranslator(app, preferences.preferences.applicationLanguage());

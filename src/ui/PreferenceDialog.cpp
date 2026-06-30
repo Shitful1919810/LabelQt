@@ -166,6 +166,10 @@ QWidget* PreferenceDialog::createGeneralPage(QTabWidget* tabWidget)
     for (const labelqt::core::ApplicationLanguage& language : labelqt::core::availableApplicationLanguages()) {
         m_applicationLanguageComboBox->addItem(language.displayName, language.localeName);
     }
+    m_textDiffCleanupComboBox = new QComboBox(generalPage);
+    m_textDiffCleanupComboBox->addItem(tr("Auto: CJK text uses raw diff"), QStringLiteral("auto"));
+    m_textDiffCleanupComboBox->addItem(tr("Always use semantic cleanup"), QStringLiteral("semantic"));
+    m_textDiffCleanupComboBox->addItem(tr("Never use semantic cleanup"), QStringLiteral("raw"));
 
     auto* labelTableFontWidget = makeFontSelectorWidget(generalPage, m_labelTableFontLabel,
                                                         m_chooseLabelTableFontButton, m_resetLabelTableFontButton);
@@ -191,6 +195,7 @@ QWidget* PreferenceDialog::createGeneralPage(QTabWidget* tabWidget)
     generalLayout->addRow(tr("Qt widget style"), m_applicationStyleComboBox);
     generalLayout->addRow(tr("Breeze stylesheet theme"), m_applicationThemeComboBox);
     generalLayout->addRow(tr("Language"), m_applicationLanguageComboBox);
+    generalLayout->addRow(tr("Text diff cleanup"), m_textDiffCleanupComboBox);
     generalLayout->addRow(tr("Maximum label table text rows"), m_tableMaxRowsSpinBox);
     generalLayout->addRow(tr("Label table font"), labelTableFontWidget);
     generalLayout->addRow(tr("Text editor font"), textEditorFontWidget);
@@ -317,6 +322,7 @@ void PreferenceDialog::connectPreferenceChangeSignals()
     connect(m_applicationStyleComboBox, &QComboBox::currentTextChanged, this, &PreferenceDialog::updateJsonPreview);
     connect(m_applicationThemeComboBox, &QComboBox::currentIndexChanged, this, &PreferenceDialog::updateJsonPreview);
     connect(m_applicationLanguageComboBox, &QComboBox::currentIndexChanged, this, &PreferenceDialog::updateJsonPreview);
+    connect(m_textDiffCleanupComboBox, &QComboBox::currentIndexChanged, this, &PreferenceDialog::updateJsonPreview);
     connect(m_automationPythonCommandEdit, &QLineEdit::textChanged, this, &PreferenceDialog::updateJsonPreview);
     connect(m_automationPythonArgumentsEdit, &QLineEdit::textChanged, this, &PreferenceDialog::updateJsonPreview);
     connect(m_automationAutoInstallRequirementsCheckBox, &QCheckBox::toggled, this,
@@ -413,6 +419,10 @@ void PreferenceDialog::loadDocument(const QJsonDocument& document)
     const QString applicationLanguage = appearance.value(QStringLiteral("language")).toString().trimmed();
     const int languageIndex = m_applicationLanguageComboBox->findData(applicationLanguage);
     m_applicationLanguageComboBox->setCurrentIndex(languageIndex >= 0 ? languageIndex : 0);
+    const QJsonObject proofreading = root.value(QStringLiteral("proofreading")).toObject();
+    const QString textDiffCleanup = proofreading.value(QStringLiteral("textDiffCleanup")).toString(QStringLiteral("auto"));
+    const int textDiffCleanupIndex = m_textDiffCleanupComboBox->findData(textDiffCleanup);
+    m_textDiffCleanupComboBox->setCurrentIndex(textDiffCleanupIndex >= 0 ? textDiffCleanupIndex : 0);
     m_showAutomationRunLogCheckBox->setChecked(
         automation.value(QStringLiteral("showRunLog")).toBool(defaultPreferences().showAutomationRunLog()));
     const QJsonObject automationPython = automation.value(QStringLiteral("python")).toObject();
@@ -612,6 +622,9 @@ QJsonDocument PreferenceDialog::documentFromUi() const
     canvasLabelTextEditor.insert(QStringLiteral("opacity"),
                                  static_cast<double>(m_canvasLabelTextEditorOpacityScrollBar->value()) / 100.0);
 
+    QJsonObject proofreading;
+    proofreading.insert(QStringLiteral("textDiffCleanup"), comboBoxDataOrText(m_textDiffCleanupComboBox));
+
     QJsonObject input;
     input.insert(QStringLiteral("moveLabelModifier"), m_moveModifierComboBox->currentText().trimmed());
     input.insert(QStringLiteral("previousLabelModifier"), m_previousLabelModifierComboBox->currentText().trimmed());
@@ -644,6 +657,7 @@ QJsonDocument PreferenceDialog::documentFromUi() const
     root.insert(QStringLiteral("labelTextEditor"), labelTextEditor);
     root.insert(QStringLiteral("markerTextBubble"), markerTextBubble);
     root.insert(QStringLiteral("canvasLabelTextEditor"), canvasLabelTextEditor);
+    root.insert(QStringLiteral("proofreading"), proofreading);
     root.insert(QStringLiteral("input"), input);
     root.insert(QStringLiteral("backupPath"), m_backupPathEdit->text().trimmed());
     root.insert(QStringLiteral("backupIntervalSeconds"), m_backupIntervalSpinBox->value());

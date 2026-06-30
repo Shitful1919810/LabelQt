@@ -10,6 +10,7 @@ set(LABELQT_CORE_SOURCES
     core/ProjectMetadataService.h
     core/RuntimePaths.cpp
     core/RuntimePaths.h
+    core/TextDiffCleanupMode.h
     core/TranslationManager.cpp
     core/UndoStack.cpp
 )

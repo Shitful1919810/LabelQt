@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/TextDiffCleanupMode.h"
+
 #include <QColor>
 #include <QKeySequence>
 #include <QMap>
@@ -73,6 +75,8 @@ enum class AppPreferenceWarningType {
     AutomationPythonPipIndexUrlWrongType,
     AutomationShortcutsNotObject,
     AutomationShortcutInvalid,
+    ProofreadingNotObject,
+    TextDiffCleanupModeInvalid,
 };
 
 struct AppPreferenceWarning {
@@ -120,6 +124,7 @@ public:
     QString applicationStyle() const;
     QString applicationTheme() const;
     QString applicationLanguage() const;
+    TextDiffCleanupMode textDiffCleanupMode() const noexcept;
     bool showAutomationRunLog() const noexcept;
     QString automationPythonCommand() const;
     QStringList automationPythonArguments() const;
@@ -159,6 +164,7 @@ private:
     QString m_applicationStyle;
     QString m_applicationTheme;
     QString m_applicationLanguage;
+    TextDiffCleanupMode m_textDiffCleanupMode{TextDiffCleanupMode::Auto};
     bool m_showAutomationRunLog{false};
     QString m_automationPythonCommand;
     QStringList m_automationPythonArguments;

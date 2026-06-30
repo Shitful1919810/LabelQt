@@ -1309,6 +1309,16 @@ Last error: %2</translation>
         <source>Proofreading baseline is active.</source>
         <translation>Proofreading baseline is active.</translation>
     </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="0"/>
+        <source>proofreading must be a JSON object; using default proofreading preferences.</source>
+        <translation>proofreading must be a JSON object; using default proofreading preferences.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="0"/>
+        <source>%1 must be auto, semantic, or raw; using automatic text diff cleanup.</source>
+        <translation>%1 must be auto, semantic, or raw; using automatic text diff cleanup.</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderDialog</name>
@@ -1810,6 +1820,26 @@ Last error: %2</translation>
     <message>
         <source>Python executable (python python3 python*);;All files (*)</source>
         <translation>Python executable (python python3 python*);;All files (*)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Auto: CJK text uses raw diff</source>
+        <translation>Auto: CJK text uses raw diff</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Always use semantic cleanup</source>
+        <translation>Always use semantic cleanup</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Never use semantic cleanup</source>
+        <translation>Never use semantic cleanup</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Text diff cleanup</source>
+        <translation>Text diff cleanup</translation>
     </message>
 </context>
 <context>

@@ -10,6 +10,7 @@
 #include "services/ReviewMetadataService.h"
 #include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
+#include "services/TextDiffService.h"
 #include "ui/AutomationController.h"
 #include "ui/AutomationShortcutController.h"
 #include "ui/CanvasLabelTextEditController.h"
@@ -2996,6 +2997,7 @@ void MainWindow::applyPreferences(labelqt::core::AppPreferencesLoadResult result
     const bool languageChanged = m_preferences.applicationLanguage() != result.preferences.applicationLanguage();
     m_preferences = result.preferences;
     m_preferenceWarnings = std::move(result.warnings);
+    labelqt::services::TextDiffService::setCleanupMode(m_preferences.textDiffCleanupMode());
     m_labelTableMaxTextRows = m_preferences.labelTableMaxTextRows();
     m_labelTextDelegate->setCommitShortcut(m_preferences.commitLabelTextShortcut());
     if (m_shortcutController != nullptr) {
@@ -3063,6 +3065,10 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
         return tr("%1 must name a built-in theme; using no application theme.").arg(warning.key);
     case AppPreferenceWarningType::AppearanceLanguageWrongType:
         return tr("%1 must be a string; using the system language.").arg(warning.key);
+    case AppPreferenceWarningType::ProofreadingNotObject:
+        return tr("proofreading must be a JSON object; using default proofreading preferences.");
+    case AppPreferenceWarningType::TextDiffCleanupModeInvalid:
+        return tr("%1 must be auto, semantic, or raw; using automatic text diff cleanup.").arg(warning.key);
     case AppPreferenceWarningType::AutomationNotObject:
         return tr("automation must be a JSON object; using default automation preferences.");
     case AppPreferenceWarningType::AutomationShowRunLogWrongType:

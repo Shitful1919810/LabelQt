@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/TextDiffCleanupMode.h"
+
 #include <QString>
 #include <QVector>
 
@@ -18,6 +20,7 @@ struct TextDiffChunk {
 
 class TextDiffService final {
 public:
+    static void setCleanupMode(labelqt::core::TextDiffCleanupMode mode) noexcept;
     static QVector<TextDiffChunk> diff(const QString& beforeText, const QString& afterText);
 };
 

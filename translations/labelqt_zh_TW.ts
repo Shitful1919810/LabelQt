@@ -1301,6 +1301,16 @@ Last error: %2</source>
         <source>Proofreading baseline is active.</source>
         <translation>校對基線已啟用。</translation>
     </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="0"/>
+        <source>proofreading must be a JSON object; using default proofreading preferences.</source>
+        <translation>proofreading 必須是 JSON 物件；將使用預設校對偏好。</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="0"/>
+        <source>%1 must be auto, semantic, or raw; using automatic text diff cleanup.</source>
+        <translation>%1 必須是 auto、semantic 或 raw；將使用自動文字差異清理。</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderDialog</name>
@@ -1802,6 +1812,26 @@ Last error: %2</source>
     <message>
         <source>Python executable (python python3 python*);;All files (*)</source>
         <translation>Python 可執行檔 (python python3 python*);;所有檔案 (*)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Auto: CJK text uses raw diff</source>
+        <translation>自動：中日韓文字使用原始差異</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Always use semantic cleanup</source>
+        <translation>一律使用語意清理</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Never use semantic cleanup</source>
+        <translation>不使用語意清理</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <source>Text diff cleanup</source>
+        <translation>文字差異清理</translation>
     </message>
 </context>
 <context>

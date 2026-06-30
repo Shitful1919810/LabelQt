@@ -238,6 +238,37 @@ QString markerShapeToString(MarkerShape markerShape)
     return markerShape == MarkerShape::Square ? QStringLiteral("square") : QStringLiteral("circle");
 }
 
+TextDiffCleanupMode textDiffCleanupModeFromString(const QString& text, TextDiffCleanupMode fallback,
+                                                  const QString& key, QVector<AppPreferenceWarning>& warnings)
+{
+    const QString normalized = text.trimmed().toLower();
+    if (normalized == QStringLiteral("auto")) {
+        return TextDiffCleanupMode::Auto;
+    }
+    if (normalized == QStringLiteral("semantic")) {
+        return TextDiffCleanupMode::Semantic;
+    }
+    if (normalized == QStringLiteral("raw")) {
+        return TextDiffCleanupMode::Raw;
+    }
+
+    warnings.append(makeWarning(AppPreferenceWarningType::TextDiffCleanupModeInvalid, key));
+    return fallback;
+}
+
+QString textDiffCleanupModeToString(TextDiffCleanupMode mode)
+{
+    switch (mode) {
+    case TextDiffCleanupMode::Semantic:
+        return QStringLiteral("semantic");
+    case TextDiffCleanupMode::Raw:
+        return QStringLiteral("raw");
+    case TextDiffCleanupMode::Auto:
+        break;
+    }
+    return QStringLiteral("auto");
+}
+
 std::optional<QVector<LabelGroupStyle>> groupStylesFromJsonValue(const QJsonValue& value, double defaultMarkerDiameter,
                                                                  double defaultFontPointSize,
                                                                  QVector<AppPreferenceWarning>& warnings)
@@ -506,6 +537,28 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::AppearanceLanguageWrongType,
                                                 QStringLiteral("appearance.language")));
+                }
+            }
+        }
+    }
+
+    const QJsonValue proofreadingValue = root.value(QStringLiteral("proofreading"));
+    if (!proofreadingValue.isUndefined()) {
+        if (!proofreadingValue.isObject()) {
+            warnings.append(makeWarning(AppPreferenceWarningType::ProofreadingNotObject));
+        }
+        else {
+            const QJsonValue textDiffCleanupValue =
+                proofreadingValue.toObject().value(QStringLiteral("textDiffCleanup"));
+            if (!textDiffCleanupValue.isUndefined()) {
+                if (textDiffCleanupValue.isString()) {
+                    preferences.m_textDiffCleanupMode = textDiffCleanupModeFromString(
+                        textDiffCleanupValue.toString(), preferences.m_textDiffCleanupMode,
+                        QStringLiteral("proofreading.textDiffCleanup"), warnings);
+                }
+                else {
+                    warnings.append(makeWarning(AppPreferenceWarningType::TextDiffCleanupModeInvalid,
+                                                QStringLiteral("proofreading.textDiffCleanup")));
                 }
             }
         }
@@ -820,6 +873,9 @@ QJsonDocument AppPreferences::toJsonDocument() const
     QJsonObject canvasLabelTextEditor;
     canvasLabelTextEditor.insert(QStringLiteral("opacity"), m_canvasLabelTextEditorOpacity);
 
+    QJsonObject proofreading;
+    proofreading.insert(QStringLiteral("textDiffCleanup"), textDiffCleanupModeToString(m_textDiffCleanupMode));
+
     QJsonObject input;
     input.insert(QStringLiteral("moveLabelModifier"), modifiersToString(m_moveLabelModifiers));
     input.insert(QStringLiteral("previousLabelModifier"), modifiersToString(m_previousLabelModifiers));
@@ -848,6 +904,7 @@ QJsonDocument AppPreferences::toJsonDocument() const
     root.insert(QStringLiteral("labelTable"), labelTable);
     root.insert(QStringLiteral("labelTextEditor"), labelTextEditor);
     root.insert(QStringLiteral("markerTextBubble"), markerTextBubble);
+    root.insert(QStringLiteral("proofreading"), proofreading);
     return QJsonDocument(root);
 }
 
@@ -919,6 +976,11 @@ QString AppPreferences::applicationTheme() const
 QString AppPreferences::applicationLanguage() const
 {
     return m_applicationLanguage;
+}
+
+TextDiffCleanupMode AppPreferences::textDiffCleanupMode() const noexcept
+{
+    return m_textDiffCleanupMode;
 }
 
 bool AppPreferences::showAutomationRunLog() const noexcept

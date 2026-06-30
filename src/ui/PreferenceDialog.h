@@ -72,6 +72,7 @@ private:
     QComboBox* m_applicationStyleComboBox{nullptr};
     QComboBox* m_applicationThemeComboBox{nullptr};
     QComboBox* m_applicationLanguageComboBox{nullptr};
+    QComboBox* m_textDiffCleanupComboBox{nullptr};
     QCheckBox* m_showAutomationRunLogCheckBox{nullptr};
     QLineEdit* m_automationPythonCommandEdit{nullptr};
     QLineEdit* m_automationPythonArgumentsEdit{nullptr};

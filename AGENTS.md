@@ -80,8 +80,9 @@ See `docs/devtools.md` for the current helper commands.
 - Do not destroy or rebuild a `QMenu`/`QAction` tree from inside a slot triggered by one of its own actions. During long-running or nested-event-loop workflows, update enabled/visible state in place; rebuild menus only after the triggering call stack has unwound.
 - New Qt modules and third-party dependencies must be checked for license compatibility and documented.
 - Text diff for proofreading must go through `TextDiffService`. The current `diff-match-patch` Qt/C++ port may corrupt
-  memory when `diff_cleanupSemanticLossless()` is called on some Chinese text pairs, so do not call that API unless the
-  port is replaced and regression tests prove the issue is gone.
+  memory when `diff_cleanupSemanticLossless()` is called on some Chinese text pairs, and
+  `diff_cleanupSemantic()` calls that API internally. Do not call either cleanup API outside the `TextDiffService`
+  strategy gate unless the port is replaced and regression tests prove the issue is gone.
 - Project-internal metadata stored in LabelPlus comment lines must go through the compressed `LabelQtMetadata` block
   handled by `ProjectMetadataService`. Do not add new standalone `LabelQt...` comment blocks.
 - User-configurable shortcuts should go through `AppPreferences`, `preference.json` and the preference dialog.

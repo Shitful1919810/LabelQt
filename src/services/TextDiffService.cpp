@@ -6,8 +6,12 @@
 
 #include "diff_match_patch.h"
 
+#include <atomic>
+
 namespace labelqt::services {
 namespace {
+
+std::atomic<labelqt::core::TextDiffCleanupMode> g_cleanupMode{labelqt::core::TextDiffCleanupMode::Auto};
 
 QVector<TextDiffChunk> fallbackDiff(const QString& beforeText, const QString& afterText)
 {
@@ -58,7 +62,55 @@ bool chunksPreserveInputs(const QVector<TextDiffChunk>& chunks, const QString& b
     return reconstructedBefore == beforeText && reconstructedAfter == afterText;
 }
 
+bool isCjkCharacter(QChar ch)
+{
+    switch (ch.script()) {
+    case QChar::Script_Han:
+    case QChar::Script_Hiragana:
+    case QChar::Script_Katakana:
+    case QChar::Script_Hangul:
+    case QChar::Script_Bopomofo:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool shouldUseSemanticCleanup(const QString& beforeText, const QString& afterText)
+{
+    const labelqt::core::TextDiffCleanupMode mode = g_cleanupMode.load(std::memory_order_relaxed);
+    if (mode == labelqt::core::TextDiffCleanupMode::Semantic) {
+        return true;
+    }
+    if (mode == labelqt::core::TextDiffCleanupMode::Raw) {
+        return false;
+    }
+
+    qsizetype cjkCount = 0;
+    qsizetype textCount = 0;
+    const QString combined = beforeText + afterText;
+    for (const QChar ch : combined) {
+        if (ch.isSpace()) {
+            continue;
+        }
+        ++textCount;
+        if (isCjkCharacter(ch)) {
+            ++cjkCount;
+        }
+    }
+
+    if (textCount == 0) {
+        return false;
+    }
+    return static_cast<double>(cjkCount) / static_cast<double>(textCount) < 0.3;
+}
+
 } // namespace
+
+void TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode mode) noexcept
+{
+    g_cleanupMode.store(mode, std::memory_order_relaxed);
+}
 
 QVector<TextDiffChunk> TextDiffService::diff(const QString& beforeText, const QString& afterText)
 {
@@ -69,11 +121,19 @@ QVector<TextDiffChunk> TextDiffService::diff(const QString& beforeText, const QS
     diff_match_patch differ;
     try {
         QList<Diff> diffs = differ.diff_main(beforeText, afterText);
-        differ.diff_cleanupSemantic(diffs);
-        const QVector<TextDiffChunk> chunks = chunksFromDiffs(diffs);
-        if (chunksPreserveInputs(chunks, beforeText, afterText)) {
-            return chunks;
+        const QVector<TextDiffChunk> rawChunks = chunksFromDiffs(diffs);
+        if (!chunksPreserveInputs(rawChunks, beforeText, afterText)) {
+            return fallbackDiff(beforeText, afterText);
         }
+
+        if (shouldUseSemanticCleanup(beforeText, afterText)) {
+            differ.diff_cleanupSemantic(diffs);
+            const QVector<TextDiffChunk> semanticChunks = chunksFromDiffs(diffs);
+            if (chunksPreserveInputs(semanticChunks, beforeText, afterText)) {
+                return semanticChunks;
+            }
+        }
+        return rawChunks;
     } catch (...) {
     }
     return fallbackDiff(beforeText, afterText);
