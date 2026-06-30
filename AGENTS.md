@@ -24,6 +24,23 @@ cmake -E env CCACHE_DISABLE=1 cmake --build --preset linux-debug
 cmake -E env CCACHE_DISABLE=1 ctest --preset linux-debug
 ```
 
+For routine validation, prefer the unified helper entry:
+
+```bash
+python scripts/devtool.py check --mode fast
+python scripts/devtool.py check --mode all --preset linux-debug
+```
+
+When entering an unfamiliar area, use the module router before reading large files:
+
+```bash
+python scripts/devtool.py module-map proofread
+python scripts/devtool.py module-map automation
+python scripts/devtool.py module-map selection
+```
+
+See `docs/devtools.md` for the current helper commands.
+
 ## Porting Direction
 
 - Prefer Qt Widgets for the main desktop workflow.
@@ -36,6 +53,7 @@ cmake -E env CCACHE_DISABLE=1 ctest --preset linux-debug
 ## Required Conventions
 
 - Follow `CONTRIBUTING.md` and `docs/architecture.md`.
+- Use `scripts/devtool.py module-map <topic>` to locate the intended module boundary before adding logic to a large UI class.
 - Commit messages should be written in Chinese using the repository `.gitmessage.txt` structure: title, background,
   changes, verification, and risk notes. Do not leave empty template sections in the final commit message.
 - Never run `clang-format` on CMake files such as `CMakeLists.txt` or `CMakePresets.json`; format CMake changes manually to match the existing style.
@@ -61,6 +79,9 @@ cmake -E env CCACHE_DISABLE=1 ctest --preset linux-debug
 - If code caches raw pointers owned by Qt containers or parent objects, such as `QGraphicsScene` items or child widgets, clear or null those cached pointers before the owner clears/destructs. Use `QPointer` for cached `QObject`/`QWidget` references whose lifetime may end outside the current synchronous scope.
 - Do not destroy or rebuild a `QMenu`/`QAction` tree from inside a slot triggered by one of its own actions. During long-running or nested-event-loop workflows, update enabled/visible state in place; rebuild menus only after the triggering call stack has unwound.
 - New Qt modules and third-party dependencies must be checked for license compatibility and documented.
+- Text diff for proofreading must go through `TextDiffService`. The current `diff-match-patch` Qt/C++ port may corrupt
+  memory when `diff_cleanupSemanticLossless()` is called on some Chinese text pairs, so do not call that API unless the
+  port is replaced and regression tests prove the issue is gone.
 - Project-internal metadata stored in LabelPlus comment lines must go through the compressed `LabelQtMetadata` block
   handled by `ProjectMetadataService`. Do not add new standalone `LabelQt...` comment blocks.
 - User-configurable shortcuts should go through `AppPreferences`, `preference.json` and the preference dialog.

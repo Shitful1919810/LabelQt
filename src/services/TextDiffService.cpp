@@ -37,6 +37,27 @@ QVector<TextDiffChunk> chunksFromDiffs(const QList<Diff>& diffs)
     return chunks;
 }
 
+bool chunksPreserveInputs(const QVector<TextDiffChunk>& chunks, const QString& beforeText, const QString& afterText)
+{
+    QString reconstructedBefore;
+    QString reconstructedAfter;
+    for (const TextDiffChunk& chunk : chunks) {
+        switch (chunk.operation) {
+        case TextDiffOperation::Equal:
+            reconstructedBefore += chunk.text;
+            reconstructedAfter += chunk.text;
+            break;
+        case TextDiffOperation::Delete:
+            reconstructedBefore += chunk.text;
+            break;
+        case TextDiffOperation::Insert:
+            reconstructedAfter += chunk.text;
+            break;
+        }
+    }
+    return reconstructedBefore == beforeText && reconstructedAfter == afterText;
+}
+
 } // namespace
 
 QVector<TextDiffChunk> TextDiffService::diff(const QString& beforeText, const QString& afterText)
@@ -49,11 +70,13 @@ QVector<TextDiffChunk> TextDiffService::diff(const QString& beforeText, const QS
     try {
         QList<Diff> diffs = differ.diff_main(beforeText, afterText);
         differ.diff_cleanupSemantic(diffs);
-        differ.diff_cleanupSemanticLossless(diffs);
-        return chunksFromDiffs(diffs);
+        const QVector<TextDiffChunk> chunks = chunksFromDiffs(diffs);
+        if (chunksPreserveInputs(chunks, beforeText, afterText)) {
+            return chunks;
+        }
     } catch (...) {
-        return fallbackDiff(beforeText, afterText);
     }
+    return fallbackDiff(beforeText, afterText);
 }
 
 } // namespace labelqt::services

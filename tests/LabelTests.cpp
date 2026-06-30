@@ -1974,6 +1974,46 @@ private slots:
         }));
     }
 
+    void textDiffServicePreservesInputsAfterSemanticCleanup()
+    {
+        auto assertPreserved = [](const QString& beforeText, const QString& afterText) {
+            const QVector<labelqt::services::TextDiffChunk> chunks =
+                labelqt::services::TextDiffService::diff(beforeText, afterText);
+
+            QString reconstructedBefore;
+            QString reconstructedAfter;
+            for (const labelqt::services::TextDiffChunk& chunk : chunks) {
+                switch (chunk.operation) {
+                case labelqt::services::TextDiffOperation::Equal:
+                    reconstructedBefore += chunk.text;
+                    reconstructedAfter += chunk.text;
+                    break;
+                case labelqt::services::TextDiffOperation::Delete:
+                    reconstructedBefore += chunk.text;
+                    break;
+                case labelqt::services::TextDiffOperation::Insert:
+                    reconstructedAfter += chunk.text;
+                    break;
+                }
+            }
+
+            QCOMPARE(reconstructedBefore, beforeText);
+            QCOMPARE(reconstructedAfter, afterText);
+        };
+
+        assertPreserved(QStringLiteral("登顶所见绝美风景的代价是"),
+                        QStringLiteral("登顶见到绝美风景的代价是"));
+        assertPreserved(QStringLiteral("请酒店帮忙安排了出租车\n"
+                                       "往返大约两小时。\n"
+                                       "每人约1200日元。\n"
+                                       "(2019年当时)"),
+                        QStringLiteral("请酒店帮忙\n"
+                                       "安排了出租车\n"
+                                       "往返大约两小时。\n"
+                                       "每人约2000日元\n"
+                                       "(当时是2019年)"));
+    }
+
     void textDiffServiceHandlesUnrelatedParagraphs()
     {
         const QString beforeText =
