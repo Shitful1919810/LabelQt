@@ -1080,13 +1080,13 @@ Last error: %2</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="2486"/>
-        <source>Inside frame</source>
-        <translation>Inside frame</translation>
+        <source>Dialogue</source>
+        <translation>Dialogue</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="2486"/>
-        <source>Outside frame</source>
-        <translation>Outside frame</translation>
+        <source>Outside text</source>
+        <translation>Outside text</translation>
     </message>
     <message>
         <source>Selection copied to clipboard.</source>

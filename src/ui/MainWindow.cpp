@@ -3169,7 +3169,7 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
 
 QStringList MainWindow::defaultProjectGroups() const
 {
-    return {tr("Inside frame"), tr("Outside frame")};
+    return {tr("Dialogue"), tr("Outside text")};
 }
 
 void MainWindow::markDirty()

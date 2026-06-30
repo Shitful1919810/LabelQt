@@ -1072,12 +1072,12 @@ Last error: %2</source>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="2486"/>
-        <source>Inside frame</source>
-        <translation>枠内</translation>
+        <source>Dialogue</source>
+        <translation>セリフ</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="2486"/>
-        <source>Outside frame</source>
+        <source>Outside text</source>
         <translation>枠外</translation>
     </message>
     <message>
