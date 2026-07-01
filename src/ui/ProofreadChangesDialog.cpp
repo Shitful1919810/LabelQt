@@ -22,7 +22,6 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
-#include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSaveFile>
@@ -97,21 +96,6 @@ QTableWidgetItem* changeItem(QString text, int changeIndex, QString sortText, in
     auto* item = new ProofreadChangeTableItem(std::move(text), changeIndex, std::move(sortText), sortNumber);
     item->setToolTip(item->text());
     return item;
-}
-
-QPlainTextEdit* readOnlyCellTextEdit(const QString& text, QWidget* parent)
-{
-    auto* editor = new QPlainTextEdit(parent);
-    editor->setPlainText(text);
-    editor->setReadOnly(true);
-    editor->setFrameShape(QFrame::NoFrame);
-    editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    editor->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    editor->setWordWrapMode(QTextOption::WordWrap);
-    editor->setFocusPolicy(Qt::WheelFocus);
-    editor->viewport()->setCursor(Qt::ArrowCursor);
-    editor->setToolTip(text);
-    return editor;
 }
 
 QString temporaryExportPathFor(const QString& filePath)
@@ -506,7 +490,6 @@ void ProofreadChangesDialog::populateRows()
         m_table->setItem(row, NumberColumn, changeItem(number, changeIndex, QString(), sortNumber));
         m_table->setItem(row, KindColumn, changeItem(kind, changeIndex, kind, sortNumber));
         m_table->setItem(row, SummaryColumn, changeItem(summary, changeIndex, summary, sortNumber));
-        m_table->setCellWidget(row, SummaryColumn, readOnlyCellTextEdit(summary, m_table));
     }
 }
 
