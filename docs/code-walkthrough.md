@@ -377,7 +377,9 @@ Python 脚本不应该直接写 `.txt` 工程文件。要修改工程时输出 `
 - 点击“保存”写入 `preference.json` 并立即应用。
 - 点击 `Reload` 才从磁盘重新读取。
 
-复杂表格子页已经拆成独立 widget。新增偏好页时，不要把大量表格构造和 JSON 转换逻辑直接写进 `PreferenceDialog`。
+窗口采用左侧分类导航和右侧页面栈的配置窗口风格。`PreferenceDialog` 负责导航、页面组装和 JSON
+读写协调；复杂表格子页已经拆成独立 widget。新增偏好页时，优先新增独立页面或子控件，不要把大量表格构造和
+JSON 转换逻辑直接写进 `PreferenceDialog`。
 
 ## 国际化
 

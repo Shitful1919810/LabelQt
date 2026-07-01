@@ -28,10 +28,12 @@ struct ProofreadReportTexts {
     QString deleted;
     QString modified;
     QString text;
+    QString format;
     QString group;
     QString marker;
     QString order;
     QString noTextChange;
+    QString filter;
 };
 
 struct ProofreadReportOptions {
@@ -43,12 +45,12 @@ class ProofreadReportService final {
 public:
     static QString htmlReport(const QVector<ReviewChange>& changes, const labelqt::core::Project& beforeProject,
                               const labelqt::core::Project& currentProject, const ProofreadReportTexts& texts,
-                              const QString& sourceDescription = {}, ProofreadReportOptions options = {});
+                              const QString& filterDescription = {}, ProofreadReportOptions options = {});
     static std::expected<void, QString> saveHtmlReport(const QString& filePath, const QVector<ReviewChange>& changes,
                                                        const labelqt::core::Project& beforeProject,
                                                        const labelqt::core::Project& currentProject,
                                                        const ProofreadReportTexts& texts,
-                                                       const QString& sourceDescription = {},
+                                                       const QString& filterDescription = {},
                                                        ProofreadReportOptions options = {});
 };
 

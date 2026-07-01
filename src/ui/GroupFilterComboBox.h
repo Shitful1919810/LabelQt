@@ -24,6 +24,7 @@ signals:
 
 private:
     void rebuildMenu();
+    void refreshMenuChecks();
     void selectAll();
     void clearSelection();
     void emitSelectionChanged();

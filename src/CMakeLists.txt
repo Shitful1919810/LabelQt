@@ -41,6 +41,8 @@ set(LABELQT_SERVICE_SOURCES
     services/ProjectWorkflowController.cpp
     services/ProofreadReportService.cpp
     services/ProofreadReportService.h
+    services/ReviewChangeClassifier.cpp
+    services/ReviewChangeClassifier.h
     services/ReviewMetadataService.cpp
     services/ReviewMetadataService.h
     services/SaveChangesDecision.cpp
@@ -67,6 +69,7 @@ set(LABELQT_UI_SOURCES
     ui/CanvasLabelItems.cpp
     ui/CanvasLabelTextEditController.cpp
     ui/CanvasLabelTextEditor.cpp
+    ui/CheckableFilterButton.cpp
     ui/CurrentPageLabelContext.cpp
     ui/CurrentPageLabelContext.h
     ui/DialogWindowUtils.cpp

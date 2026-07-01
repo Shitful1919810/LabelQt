@@ -353,74 +353,6 @@ Last error: %2</source>
         </translation>
     </message>
     <message>
-        <source>No automation scripts found</source>
-        <translation type="vanished">自動化スクリプトが見つかりません</translation>
-    </message>
-    <message>
-        <source>Cancel Running Script</source>
-        <translation type="vanished">実行中のスクリプトをキャンセル</translation>
-    </message>
-    <message>
-        <source>Refresh Scripts</source>
-        <translation type="vanished">スクリプトを再読み込み</translation>
-    </message>
-    <message>
-        <source>Automation</source>
-        <translation type="vanished">自動化</translation>
-    </message>
-    <message>
-        <source>Open a project before running automation scripts.</source>
-        <translation type="vanished">自動化スクリプトを実行する前にプロジェクトを開いてください。</translation>
-    </message>
-    <message>
-        <source>Running automation script: %1</source>
-        <translation type="vanished">自動化スクリプトを実行中: %1</translation>
-    </message>
-    <message>
-        <source>Automation failed</source>
-        <translation type="vanished">自動化に失敗</translation>
-    </message>
-    <message>
-        <source>The automation script failed.</source>
-        <translation type="vanished">自動化スクリプトが失敗しました。</translation>
-    </message>
-    <message>
-        <source>Automation script failed: %1</source>
-        <translation type="vanished">自動化スクリプトに失敗: %1</translation>
-    </message>
-    <message>
-        <source>Automation script finished: %1</source>
-        <translation type="vanished">自動化スクリプトが完了: %1</translation>
-    </message>
-    <message>
-        <source>Canceling automation script...</source>
-        <translation type="vanished">自動化スクリプトをキャンセルしています...</translation>
-    </message>
-    <message>
-        <source>Automation script was canceled.</source>
-        <translation type="vanished">自動化スクリプトをキャンセルしました。</translation>
-    </message>
-    <message>
-        <source>Automation script is no longer available: %1</source>
-        <translation type="vanished">自動化スクリプトは利用できなくなりました: %1</translation>
-    </message>
-    <message>
-        <source>Automation Parameters</source>
-        <translation type="vanished">自動化パラメータ</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation type="vanished">参照...</translation>
-    </message>
-    <message>
-        <source>Choose Directory</source>
-        <translation type="vanished">フォルダを選択</translation>
-    </message>
-    <message>
-        <source>Choose File</source>
-        <translation type="vanished">ファイルを選択</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="846"/>
         <source>Run automation script</source>
         <translation>自動化スクリプトを実行</translation>
@@ -430,14 +362,6 @@ Last error: %2</source>
         <location filename="../src/ui/MainWindow.cpp" line="847"/>
         <source>Automation script %1</source>
         <translation>自動化スクリプト %1</translation>
-    </message>
-    <message>
-        <source>Undo automation: %1</source>
-        <translation type="vanished">自動化を元に戻す: %1</translation>
-    </message>
-    <message>
-        <source>Redo automation: %1</source>
-        <translation type="vanished">自動化をやり直し: %1</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ui/MainWindow.cpp" line="849"/>
@@ -505,14 +429,6 @@ Last error: %2</source>
         <location filename="../src/ui/MainWindow.cpp" line="359"/>
         <source>Next page</source>
         <translation>次のページ</translation>
-    </message>
-    <message>
-        <source>+</source>
-        <translation type="vanished">+</translation>
-    </message>
-    <message>
-        <source>-</source>
-        <translation type="vanished">-</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="213"/>
@@ -966,18 +882,6 @@ Last error: %2</source>
         <translation>%1 は文字列である必要があります。デフォルト値を使用します。</translation>
     </message>
     <message>
-        <source>Failed to store automation secret %1: %2</source>
-        <translation type="vanished">自動化シークレット %1 を保存できませんでした: %2</translation>
-    </message>
-    <message>
-        <source>Failed to read automation secret %1: %2</source>
-        <translation type="vanished">自動化シークレット %1 を読み込めませんでした: %2</translation>
-    </message>
-    <message>
-        <source>Automation secret %1 is not configured. Run the script&apos;s configuration first.</source>
-        <translation type="vanished">自動化シークレット %1 が設定されていません。先にこのスクリプトの設定を実行してください。</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="2391"/>
         <source>%1 must name a built-in theme; using no application theme.</source>
         <translation>%1 は組み込みテーマ名である必要があります。アプリケーションテーマを適用しません。</translation>
@@ -1081,10 +985,6 @@ Last error: %2</source>
         <translation>枠外</translation>
     </message>
     <message>
-        <source>Selection copied to clipboard.</source>
-        <translation type="vanished">選択範囲の画像をクリップボードにコピーしました。</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="630"/>
         <source>Image copied to clipboard.</source>
         <translation>画像をクリップボードにコピーしました。</translation>
@@ -1152,10 +1052,6 @@ Last error: %2</source>
     <message>
         <source>HTML files (*.html);;All files (*)</source>
         <translation>HTML ファイル (*.html);;すべてのファイル (*)</translation>
-    </message>
-    <message>
-        <source>Project: %1</source>
-        <translation>プロジェクト：%1</translation>
     </message>
     <message>
         <source>Failed to export proofreading report: %1</source>
@@ -1381,10 +1277,6 @@ Last error: %2</source>
         <translation>システム既定値を使用</translation>
     </message>
     <message>
-        <source>Application style</source>
-        <translation type="vanished">アプリケーションのスタイル</translation>
-    </message>
-    <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="266"/>
         <source>Qt widget style</source>
         <translation>Qt ウィジェットスタイル</translation>
@@ -1403,10 +1295,6 @@ Last error: %2</source>
         <location filename="../src/ui/PreferenceDialog.cpp" line="138"/>
         <source>Breeze Light</source>
         <translation>Breeze ライト</translation>
-    </message>
-    <message>
-        <source>Application theme</source>
-        <translation type="vanished">アプリケーションのテーマ</translation>
     </message>
     <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="267"/>
@@ -1492,22 +1380,6 @@ Last error: %2</source>
         <location filename="../src/ui/PreferenceDialog.cpp" line="84"/>
         <source>Use Default</source>
         <translation>デフォルトを使用</translation>
-    </message>
-    <message>
-        <source>Default font</source>
-        <translation type="vanished">デフォルトフォント</translation>
-    </message>
-    <message>
-        <source>Default size</source>
-        <translation type="vanished">デフォルトサイズ</translation>
-    </message>
-    <message>
-        <source>Text editor font family</source>
-        <translation type="vanished">テキストエディタのフォントファミリー</translation>
-    </message>
-    <message>
-        <source>Text editor font size</source>
-        <translation type="vanished">テキストエディタのフォントサイズ</translation>
     </message>
     <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="272"/>
@@ -1833,6 +1705,22 @@ Last error: %2</source>
         <source>Text diff cleanup</source>
         <translation>テキスト差分のクリーンアップ</translation>
     </message>
+    <message>
+        <source>Search...</source>
+        <translation>検索...</translation>
+    </message>
+    <message>
+        <source>Appearance</source>
+        <translation>外観</translation>
+    </message>
+    <message>
+        <source>Label display</source>
+        <translation>ラベル表示</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校正</translation>
+    </message>
 </context>
 <context>
     <name>AutomationShortcutEditorWidget</name>
@@ -2113,10 +2001,6 @@ Last error: %2</source>
         <translation>HTML ファイル (*.html);;すべてのファイル (*)</translation>
     </message>
     <message>
-        <source>Project: %1</source>
-        <translation>プロジェクト：%1</translation>
-    </message>
-    <message>
         <source>Failed to export proofreading report: %1</source>
         <translation>校正レポートを書き出せませんでした：%1</translation>
     </message>
@@ -2155,6 +2039,65 @@ Last error: %2</source>
     <message>
         <source>Order Change</source>
         <translation>順序変更</translation>
+    </message>
+    <message>
+        <source>All pages</source>
+        <translation>すべてのページ</translation>
+    </message>
+    <message>
+        <source>No pages</source>
+        <translation>ページなし</translation>
+    </message>
+    <message>
+        <source>%1 page(s)</source>
+        <translation>%1 ページ</translation>
+    </message>
+    <message>
+        <source>All changes</source>
+        <translation>すべての変更</translation>
+    </message>
+    <message>
+        <source>No changes</source>
+        <translation>変更なし</translation>
+    </message>
+    <message>
+        <source>%1 change type(s)</source>
+        <translation>%1 種類の変更</translation>
+    </message>
+    <message>
+        <source>All summaries</source>
+        <translation>すべての概要</translation>
+    </message>
+    <message>
+        <source>No summaries</source>
+        <translation>概要なし</translation>
+    </message>
+    <message>
+        <source>%1 summary item(s)</source>
+        <translation>%1 個の概要項目</translation>
+    </message>
+    <message>
+        <source>format</source>
+        <translation>書式</translation>
+    </message>
+    <message>
+        <source>Filters</source>
+        <translation>フィルター</translation>
+    </message>
+    <message>
+        <source>Pages: %1; Changes: %2; Summaries: %3</source>
+        <translation>ページ：%1；変更：%2；概要：%3</translation>
+    </message>
+</context>
+<context>
+    <name>CheckableFilterButton</name>
+    <message>
+        <source>Select All</source>
+        <translation>すべて選択</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>クリア</translation>
     </message>
 </context>
 </TS>

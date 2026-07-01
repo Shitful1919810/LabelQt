@@ -134,6 +134,10 @@ void ImageCanvas::setPreferences(const labelqt::core::AppPreferences& preference
 
 void ImageCanvas::setImage(const QString& path, const QVector<labelqt::core::Label>& labels)
 {
+    if (path.isEmpty()) {
+        setImage(path, QImage(), labels);
+        return;
+    }
     setImage(path, QImage(path), labels);
 }
 
@@ -156,6 +160,11 @@ void ImageCanvas::setImage(const QString& path, const QImage& image, const QVect
     resetPointerInteraction();
 
     clearSceneItems();
+    if (path.isEmpty()) {
+        m_scene.setSceneRect(QRectF(QPointF(0.0, 0.0), QSizeF(1.0, 1.0)));
+        resetTransform();
+        return;
+    }
     if (image.isNull()) {
         showSceneMessage(tr("Failed to load image"));
         return;

@@ -27,6 +27,7 @@ qt_add_executable(LabelQtTests
     ../src/services/ProjectMergeService.cpp
     ../src/services/ProjectPageOrderService.cpp
     ../src/services/ProofreadReportService.cpp
+    ../src/services/ReviewChangeClassifier.cpp
     ../src/services/ReviewMetadataService.cpp
     ../src/services/SaveChangesDecision.cpp
     ../src/services/SessionStateStore.cpp

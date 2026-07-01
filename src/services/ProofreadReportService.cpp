@@ -1,5 +1,6 @@
 #include "services/ProofreadReportService.h"
 
+#include "services/ReviewChangeClassifier.h"
 #include "services/TextDiffHtmlRenderer.h"
 
 #include <QBuffer>
@@ -46,17 +47,24 @@ QString changeSummary(const ReviewChange& change, const ProofreadReportTexts& te
     }
 
     QStringList parts;
-    if (change.textChanged) {
-        parts.append(texts.text);
-    }
-    if (change.groupChanged) {
-        parts.append(texts.group);
-    }
-    if (change.positionChanged) {
-        parts.append(texts.marker);
-    }
-    if (change.orderChanged) {
-        parts.append(texts.order);
+    for (const ReviewChangeFacet facet : ReviewChangeClassifier::facets(change)) {
+        switch (facet) {
+        case ReviewChangeFacet::Text:
+            parts.append(texts.text);
+            break;
+        case ReviewChangeFacet::Format:
+            parts.append(texts.format);
+            break;
+        case ReviewChangeFacet::Group:
+            parts.append(texts.group);
+            break;
+        case ReviewChangeFacet::Marker:
+            parts.append(texts.marker);
+            break;
+        case ReviewChangeFacet::Order:
+            parts.append(texts.order);
+            break;
+        }
     }
     return parts.isEmpty() ? texts.modified : parts.join(QStringLiteral(", "));
 }
@@ -327,7 +335,7 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
 QString ProofreadReportService::htmlReport(const QVector<ReviewChange>& changes,
                                            const labelqt::core::Project& beforeProject,
                                            const labelqt::core::Project& currentProject,
-                                           const ProofreadReportTexts& texts, const QString& sourceDescription,
+                                           const ProofreadReportTexts& texts, const QString& filterDescription,
                                            ProofreadReportOptions options)
 {
     QString html = QStringLiteral("<!doctype html><html><head><meta charset=\"utf-8\"/>"
@@ -339,8 +347,9 @@ QString ProofreadReportService::htmlReport(const QVector<ReviewChange>& changes,
                      escaped(QDateTime::currentDateTime().toString(Qt::ISODate)),
                      escaped(texts.totalChanges))
                 .arg(changes.size());
-    if (!sourceDescription.isEmpty()) {
-        html += QStringLiteral("<div class=\"meta\">%1</div>").arg(escaped(sourceDescription));
+    if (!filterDescription.isEmpty()) {
+        html += QStringLiteral("<div class=\"meta\">%1: %2</div>")
+                    .arg(escaped(texts.filter), escaped(filterDescription));
     }
 
     const QVector<QString> pageNames = pageOrderForChanges(changes);
@@ -363,7 +372,7 @@ std::expected<void, QString> ProofreadReportService::saveHtmlReport(const QStrin
                                                                     const labelqt::core::Project& beforeProject,
                                                                     const labelqt::core::Project& currentProject,
                                                                     const ProofreadReportTexts& texts,
-                                                                    const QString& sourceDescription,
+                                                                    const QString& filterDescription,
                                                                     ProofreadReportOptions options)
 {
     QFile file(filePath);
@@ -373,7 +382,7 @@ std::expected<void, QString> ProofreadReportService::saveHtmlReport(const QStrin
 
     QTextStream stream(&file);
     stream.setEncoding(QStringConverter::Utf8);
-    stream << htmlReport(changes, beforeProject, currentProject, texts, sourceDescription, options);
+    stream << htmlReport(changes, beforeProject, currentProject, texts, filterDescription, options);
     return {};
 }
 

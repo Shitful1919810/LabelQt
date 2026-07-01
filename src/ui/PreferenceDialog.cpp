@@ -25,13 +25,17 @@
 #include <QKeySequenceEdit>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QListWidgetItem>
 #include <QPlainTextEdit>
 #include <QProcess>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QScrollArea>
 #include <QSpinBox>
+#include <QStackedWidget>
+#include <QStyle>
 #include <QStyleFactory>
-#include <QTabWidget>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -86,6 +90,20 @@ const labelqt::core::AppPreferences& defaultPreferences()
     static const labelqt::core::AppPreferences preferences;
     return preferences;
 }
+
+QWidget* createScrolledFormPage(QWidget* parent, QFormLayout*& formLayout)
+{
+    auto* scrollArea = new QScrollArea(parent);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+
+    auto* content = new QWidget(scrollArea);
+    formLayout = new QFormLayout(content);
+    formLayout->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
+    formLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    scrollArea->setWidget(content);
+    return scrollArea;
+}
 } // namespace
 
 PreferenceDialog::PreferenceDialog(QString preferencePath, labelqt::core::AppPreferences currentPreferences,
@@ -101,7 +119,7 @@ PreferenceDialog::PreferenceDialog(QString preferencePath, labelqt::core::AppPre
 void PreferenceDialog::createUi()
 {
     setWindowTitle(tr("Preferences"));
-    resize(760, 620);
+    resize(980, 680);
 
     auto* rootLayout = new QVBoxLayout(this);
 
@@ -109,15 +127,68 @@ void PreferenceDialog::createUi()
     pathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     rootLayout->addWidget(pathLabel);
 
-    auto* tabWidget = new QTabWidget(this);
-    tabWidget->addTab(createGeneralPage(tabWidget), tr("General"));
-    tabWidget->addTab(createKeyMappingPage(tabWidget), tr("Key mappings"));
-    tabWidget->addTab(createAutomationPage(tabWidget), tr("Automation"));
-    tabWidget->addTab(createAutomationShortcutsPage(tabWidget), tr("Automation shortcuts"));
-    tabWidget->addTab(createGroupStylesPage(tabWidget), tr("Group styles"));
-    tabWidget->addTab(createJsonPage(tabWidget), tr("JSON preview"));
+    auto* contentLayout = new QHBoxLayout;
+    contentLayout->setSpacing(0);
 
-    rootLayout->addWidget(tabWidget, 1);
+    auto* sidebar = new QWidget(this);
+    sidebar->setMinimumWidth(150);
+    sidebar->setMaximumWidth(210);
+    auto* sidebarLayout = new QVBoxLayout(sidebar);
+    sidebarLayout->setContentsMargins(0, 0, 8, 0);
+    auto* searchEdit = new QLineEdit(sidebar);
+    searchEdit->setPlaceholderText(tr("Search..."));
+    m_categoryList = new QListWidget(sidebar);
+    m_categoryList->setIconSize(QSize(28, 28));
+    m_categoryList->setMovement(QListView::Static);
+    m_categoryList->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_categoryList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    sidebarLayout->addWidget(searchEdit);
+    sidebarLayout->addWidget(m_categoryList, 1);
+
+    auto* pageArea = new QWidget(this);
+    auto* pageAreaLayout = new QVBoxLayout(pageArea);
+    pageAreaLayout->setContentsMargins(12, 0, 0, 0);
+    m_pageTitleLabel = new QLabel(pageArea);
+    QFont titleFont = m_pageTitleLabel->font();
+    titleFont.setPointSizeF(titleFont.pointSizeF() + 4.0);
+    titleFont.setBold(true);
+    m_pageTitleLabel->setFont(titleFont);
+    m_pageStack = new QStackedWidget(pageArea);
+    pageAreaLayout->addWidget(m_pageTitleLabel);
+    pageAreaLayout->addWidget(m_pageStack, 1);
+
+    contentLayout->addWidget(sidebar);
+    contentLayout->addWidget(pageArea, 1);
+    rootLayout->addLayout(contentLayout, 1);
+
+    addPreferencePage(tr("General"), style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+                      createGeneralPage(m_pageStack));
+    addPreferencePage(tr("Appearance"), style()->standardIcon(QStyle::SP_DesktopIcon),
+                      createAppearancePage(m_pageStack));
+    addPreferencePage(tr("Label display"), style()->standardIcon(QStyle::SP_FileDialogContentsView),
+                      createLabelDisplayPage(m_pageStack));
+    addPreferencePage(tr("Key mappings"), style()->standardIcon(QStyle::SP_ArrowRight),
+                      createKeyMappingPage(m_pageStack));
+    addPreferencePage(tr("Automation"), style()->standardIcon(QStyle::SP_ComputerIcon),
+                      createAutomationPage(m_pageStack));
+    addPreferencePage(tr("Automation shortcuts"), style()->standardIcon(QStyle::SP_CommandLink),
+                      createAutomationShortcutsPage(m_pageStack));
+    addPreferencePage(tr("Group styles"), style()->standardIcon(QStyle::SP_DialogResetButton),
+                      createGroupStylesPage(m_pageStack));
+    addPreferencePage(tr("Proofreading"), style()->standardIcon(QStyle::SP_FileDialogInfoView),
+                      createProofreadingPage(m_pageStack));
+    addPreferencePage(tr("JSON preview"), style()->standardIcon(QStyle::SP_FileIcon), createJsonPage(m_pageStack));
+
+    connect(searchEdit, &QLineEdit::textChanged, this, &PreferenceDialog::filterPreferencePages);
+    connect(m_categoryList, &QListWidget::currentItemChanged, this, [this](QListWidgetItem* current) {
+        if (current == nullptr) {
+            return;
+        }
+        const int pageIndex = current->data(Qt::UserRole).toInt();
+        m_pageStack->setCurrentIndex(pageIndex);
+        updateCurrentPageTitle(current);
+    });
+    m_categoryList->setCurrentRow(0);
 
     m_messageLabel = new QLabel(this);
     m_messageLabel->setTextFormat(Qt::PlainText);
@@ -139,78 +210,139 @@ void PreferenceDialog::createUi()
     connectPreferenceChangeSignals();
 }
 
-QWidget* PreferenceDialog::createGeneralPage(QTabWidget* tabWidget)
+void PreferenceDialog::addPreferencePage(const QString& title, const QIcon& icon, QWidget* page)
 {
-    auto* generalPage = new QWidget(tabWidget);
-    auto* generalLayout = new QFormLayout(generalPage);
+    const int pageIndex = m_pageStack->addWidget(page);
+    auto* item = new QListWidgetItem(icon, title, m_categoryList);
+    item->setData(Qt::UserRole, pageIndex);
+    item->setSizeHint(QSize(item->sizeHint().width(), 46));
+}
 
-    m_markerDiameterSpinBox = makePositiveDoubleSpinBox(defaultPreferences().labelMarkerDiameterPixels(), 1.0, 256.0);
-    m_markerFontSpinBox = makePositiveDoubleSpinBox(defaultPreferences().labelMarkerFontPointSize(), 0.1, 256.0);
-    m_tableMaxRowsSpinBox = new QSpinBox(generalPage);
-    m_tableMaxRowsSpinBox->setRange(1, 50);
-    m_tableMaxRowsSpinBox->setValue(defaultPreferences().labelTableMaxTextRows());
-    m_applicationStyleComboBox = new QComboBox(generalPage);
-    m_applicationStyleComboBox->setEditable(true);
-    m_applicationStyleComboBox->addItem(tr("Use system default"), QString());
-    const QStringList availableStyles = QStyleFactory::keys();
-    for (const QString& styleName : availableStyles) {
-        m_applicationStyleComboBox->addItem(styleName, styleName);
+void PreferenceDialog::filterPreferencePages(const QString& filterText)
+{
+    const QString normalizedFilter = filterText.trimmed();
+    QListWidgetItem* firstVisibleItem = nullptr;
+    for (int row = 0; row < m_categoryList->count(); ++row) {
+        QListWidgetItem* item = m_categoryList->item(row);
+        const bool visible =
+            normalizedFilter.isEmpty() || item->text().contains(normalizedFilter, Qt::CaseInsensitive);
+        item->setHidden(!visible);
+        if (visible && firstVisibleItem == nullptr) {
+            firstVisibleItem = item;
+        }
     }
-    m_applicationThemeComboBox = new QComboBox(generalPage);
-    m_applicationThemeComboBox->addItem(tr("Use no application theme"), QString());
-    for (const QString& themeName : labelqt::ui::availableApplicationThemes()) {
-        m_applicationThemeComboBox->addItem(themeDisplayName(themeName), themeName);
+
+    if (m_categoryList->currentItem() == nullptr || m_categoryList->currentItem()->isHidden()) {
+        m_categoryList->setCurrentItem(firstVisibleItem);
     }
+}
+
+void PreferenceDialog::updateCurrentPageTitle(QListWidgetItem* currentItem)
+{
+    if (currentItem == nullptr || m_pageTitleLabel == nullptr) {
+        return;
+    }
+    m_pageTitleLabel->setText(currentItem->text());
+}
+
+QWidget* PreferenceDialog::createGeneralPage(QWidget* parent)
+{
+    QFormLayout* generalLayout = nullptr;
+    auto* generalPage = createScrolledFormPage(parent, generalLayout);
+
     m_applicationLanguageComboBox = new QComboBox(generalPage);
     m_applicationLanguageComboBox->addItem(tr("Follow system language"), QString());
     for (const labelqt::core::ApplicationLanguage& language : labelqt::core::availableApplicationLanguages()) {
         m_applicationLanguageComboBox->addItem(language.displayName, language.localeName);
     }
-    m_textDiffCleanupComboBox = new QComboBox(generalPage);
-    m_textDiffCleanupComboBox->addItem(tr("Auto: CJK text uses raw diff"), QStringLiteral("auto"));
-    m_textDiffCleanupComboBox->addItem(tr("Always use semantic cleanup"), QStringLiteral("semantic"));
-    m_textDiffCleanupComboBox->addItem(tr("Never use semantic cleanup"), QStringLiteral("raw"));
-
-    auto* labelTableFontWidget = makeFontSelectorWidget(generalPage, m_labelTableFontLabel,
-                                                        m_chooseLabelTableFontButton, m_resetLabelTableFontButton);
-    auto* textEditorFontWidget = makeFontSelectorWidget(generalPage, m_textEditorFontLabel,
-                                                        m_chooseTextEditorFontButton, m_resetTextEditorFontButton);
-    auto* markerTextBubbleFontWidget =
-        makeFontSelectorWidget(generalPage, m_markerTextBubbleFontLabel, m_chooseMarkerTextBubbleFontButton,
-                               m_resetMarkerTextBubbleFontButton);
-    auto* markerTextBubbleOpacityWidget = makePercentScrollBarWidget(
-        generalPage, m_markerTextBubbleOpacityScrollBar, m_markerTextBubbleOpacityLabel,
-        static_cast<int>(std::round(defaultPreferences().markerTextBubbleOpacity() * 100.0)));
-    auto* canvasLabelTextEditorOpacityWidget = makePercentScrollBarWidget(
-        generalPage, m_canvasLabelTextEditorOpacityScrollBar, m_canvasLabelTextEditorOpacityLabel,
-        static_cast<int>(std::round(defaultPreferences().canvasLabelTextEditorOpacity() * 100.0)));
     m_backupPathEdit = new QLineEdit(generalPage);
     m_backupPathEdit->setText(defaultPreferences().backupPath());
     m_backupIntervalSpinBox = new QSpinBox(generalPage);
     m_backupIntervalSpinBox->setRange(1, 86400);
     m_backupIntervalSpinBox->setValue(defaultPreferences().backupIntervalSeconds());
 
-    generalLayout->addRow(tr("Default marker diameter"), m_markerDiameterSpinBox);
-    generalLayout->addRow(tr("Default marker font size"), m_markerFontSpinBox);
-    generalLayout->addRow(tr("Qt widget style"), m_applicationStyleComboBox);
-    generalLayout->addRow(tr("Breeze stylesheet theme"), m_applicationThemeComboBox);
     generalLayout->addRow(tr("Language"), m_applicationLanguageComboBox);
-    generalLayout->addRow(tr("Text diff cleanup"), m_textDiffCleanupComboBox);
-    generalLayout->addRow(tr("Maximum label table text rows"), m_tableMaxRowsSpinBox);
-    generalLayout->addRow(tr("Label table font"), labelTableFontWidget);
-    generalLayout->addRow(tr("Text editor font"), textEditorFontWidget);
-    generalLayout->addRow(tr("Marker text bubble font"), markerTextBubbleFontWidget);
-    generalLayout->addRow(tr("Marker text bubble opacity"), markerTextBubbleOpacityWidget);
-    generalLayout->addRow(tr("Canvas label editor opacity"), canvasLabelTextEditorOpacityWidget);
     generalLayout->addRow(tr("Backup path"), m_backupPathEdit);
     generalLayout->addRow(tr("Backup interval seconds"), m_backupIntervalSpinBox);
     return generalPage;
 }
 
-QWidget* PreferenceDialog::createAutomationPage(QTabWidget* tabWidget)
+QWidget* PreferenceDialog::createAppearancePage(QWidget* parent)
 {
-    auto* automationPage = new QWidget(tabWidget);
-    auto* automationLayout = new QFormLayout(automationPage);
+    QFormLayout* appearanceLayout = nullptr;
+    auto* appearancePage = createScrolledFormPage(parent, appearanceLayout);
+
+    m_applicationStyleComboBox = new QComboBox(appearancePage);
+    m_applicationStyleComboBox->setEditable(true);
+    m_applicationStyleComboBox->addItem(tr("Use system default"), QString());
+    const QStringList availableStyles = QStyleFactory::keys();
+    for (const QString& styleName : availableStyles) {
+        m_applicationStyleComboBox->addItem(styleName, styleName);
+    }
+    m_applicationThemeComboBox = new QComboBox(appearancePage);
+    m_applicationThemeComboBox->addItem(tr("Use no application theme"), QString());
+    for (const QString& themeName : labelqt::ui::availableApplicationThemes()) {
+        m_applicationThemeComboBox->addItem(themeDisplayName(themeName), themeName);
+    }
+
+    appearanceLayout->addRow(tr("Qt widget style"), m_applicationStyleComboBox);
+    appearanceLayout->addRow(tr("Breeze stylesheet theme"), m_applicationThemeComboBox);
+    return appearancePage;
+}
+
+QWidget* PreferenceDialog::createLabelDisplayPage(QWidget* parent)
+{
+    QFormLayout* labelLayout = nullptr;
+    auto* labelPage = createScrolledFormPage(parent, labelLayout);
+
+    m_markerDiameterSpinBox = makePositiveDoubleSpinBox(defaultPreferences().labelMarkerDiameterPixels(), 1.0, 256.0);
+    m_markerFontSpinBox = makePositiveDoubleSpinBox(defaultPreferences().labelMarkerFontPointSize(), 0.1, 256.0);
+    m_tableMaxRowsSpinBox = new QSpinBox(labelPage);
+    m_tableMaxRowsSpinBox->setRange(1, 50);
+    m_tableMaxRowsSpinBox->setValue(defaultPreferences().labelTableMaxTextRows());
+
+    auto* labelTableFontWidget = makeFontSelectorWidget(labelPage, m_labelTableFontLabel,
+                                                        m_chooseLabelTableFontButton, m_resetLabelTableFontButton);
+    auto* textEditorFontWidget = makeFontSelectorWidget(labelPage, m_textEditorFontLabel,
+                                                        m_chooseTextEditorFontButton, m_resetTextEditorFontButton);
+    auto* markerTextBubbleFontWidget =
+        makeFontSelectorWidget(labelPage, m_markerTextBubbleFontLabel, m_chooseMarkerTextBubbleFontButton,
+                               m_resetMarkerTextBubbleFontButton);
+    auto* markerTextBubbleOpacityWidget = makePercentScrollBarWidget(
+        labelPage, m_markerTextBubbleOpacityScrollBar, m_markerTextBubbleOpacityLabel,
+        static_cast<int>(std::round(defaultPreferences().markerTextBubbleOpacity() * 100.0)));
+    auto* canvasLabelTextEditorOpacityWidget = makePercentScrollBarWidget(
+        labelPage, m_canvasLabelTextEditorOpacityScrollBar, m_canvasLabelTextEditorOpacityLabel,
+        static_cast<int>(std::round(defaultPreferences().canvasLabelTextEditorOpacity() * 100.0)));
+
+    labelLayout->addRow(tr("Default marker diameter"), m_markerDiameterSpinBox);
+    labelLayout->addRow(tr("Default marker font size"), m_markerFontSpinBox);
+    labelLayout->addRow(tr("Maximum label table text rows"), m_tableMaxRowsSpinBox);
+    labelLayout->addRow(tr("Label table font"), labelTableFontWidget);
+    labelLayout->addRow(tr("Text editor font"), textEditorFontWidget);
+    labelLayout->addRow(tr("Marker text bubble font"), markerTextBubbleFontWidget);
+    labelLayout->addRow(tr("Marker text bubble opacity"), markerTextBubbleOpacityWidget);
+    labelLayout->addRow(tr("Canvas label editor opacity"), canvasLabelTextEditorOpacityWidget);
+    return labelPage;
+}
+
+QWidget* PreferenceDialog::createProofreadingPage(QWidget* parent)
+{
+    QFormLayout* proofreadingLayout = nullptr;
+    auto* proofreadingPage = createScrolledFormPage(parent, proofreadingLayout);
+    m_textDiffCleanupComboBox = new QComboBox(proofreadingPage);
+    m_textDiffCleanupComboBox->addItem(tr("Auto: CJK text uses raw diff"), QStringLiteral("auto"));
+    m_textDiffCleanupComboBox->addItem(tr("Always use semantic cleanup"), QStringLiteral("semantic"));
+    m_textDiffCleanupComboBox->addItem(tr("Never use semantic cleanup"), QStringLiteral("raw"));
+
+    proofreadingLayout->addRow(tr("Text diff cleanup"), m_textDiffCleanupComboBox);
+    return proofreadingPage;
+}
+
+QWidget* PreferenceDialog::createAutomationPage(QWidget* parent)
+{
+    QFormLayout* automationLayout = nullptr;
+    auto* automationPage = createScrolledFormPage(parent, automationLayout);
 
     auto* pythonCommandWidget = new QWidget(automationPage);
     auto* pythonCommandLayout = new QHBoxLayout(pythonCommandWidget);
@@ -239,9 +371,9 @@ QWidget* PreferenceDialog::createAutomationPage(QTabWidget* tabWidget)
     return automationPage;
 }
 
-QWidget* PreferenceDialog::createKeyMappingPage(QTabWidget* tabWidget)
+QWidget* PreferenceDialog::createKeyMappingPage(QWidget* parent)
 {
-    auto* keyMappingPage = new QWidget(tabWidget);
+    auto* keyMappingPage = new QWidget(parent);
     auto* keyMappingLayout = new QHBoxLayout(keyMappingPage);
     auto* leftColumn = new QWidget(keyMappingPage);
     auto* leftLayout = new QFormLayout(leftColumn);
@@ -280,9 +412,9 @@ QWidget* PreferenceDialog::createKeyMappingPage(QTabWidget* tabWidget)
     return keyMappingPage;
 }
 
-QWidget* PreferenceDialog::createAutomationShortcutsPage(QTabWidget* tabWidget)
+QWidget* PreferenceDialog::createAutomationShortcutsPage(QWidget* parent)
 {
-    auto* page = new QWidget(tabWidget);
+    auto* page = new QWidget(parent);
     auto* layout = new QVBoxLayout(page);
 
     m_automationShortcutEditor = new AutomationShortcutEditorWidget(page);
@@ -294,9 +426,9 @@ QWidget* PreferenceDialog::createAutomationShortcutsPage(QTabWidget* tabWidget)
     return page;
 }
 
-QWidget* PreferenceDialog::createGroupStylesPage(QTabWidget* tabWidget)
+QWidget* PreferenceDialog::createGroupStylesPage(QWidget* parent)
 {
-    auto* groupPage = new QWidget(tabWidget);
+    auto* groupPage = new QWidget(parent);
     auto* groupLayout = new QVBoxLayout(groupPage);
 
     m_groupStyleEditor = new GroupStyleEditorWidget(groupPage);
@@ -305,9 +437,9 @@ QWidget* PreferenceDialog::createGroupStylesPage(QTabWidget* tabWidget)
     return groupPage;
 }
 
-QWidget* PreferenceDialog::createJsonPage(QTabWidget* tabWidget)
+QWidget* PreferenceDialog::createJsonPage(QWidget* parent)
 {
-    auto* jsonPage = new QWidget(tabWidget);
+    auto* jsonPage = new QWidget(parent);
     auto* jsonLayout = new QVBoxLayout(jsonPage);
     m_jsonPreview = new QPlainTextEdit(jsonPage);
     m_jsonPreview->setReadOnly(true);

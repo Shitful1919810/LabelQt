@@ -355,74 +355,6 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <source>No automation scripts found</source>
-        <translation type="vanished">No automation scripts found</translation>
-    </message>
-    <message>
-        <source>Cancel Running Script</source>
-        <translation type="vanished">Cancel Running Script</translation>
-    </message>
-    <message>
-        <source>Refresh Scripts</source>
-        <translation type="vanished">Refresh Scripts</translation>
-    </message>
-    <message>
-        <source>Automation</source>
-        <translation type="vanished">Automation</translation>
-    </message>
-    <message>
-        <source>Open a project before running automation scripts.</source>
-        <translation type="vanished">Open a project before running automation scripts.</translation>
-    </message>
-    <message>
-        <source>Running automation script: %1</source>
-        <translation type="vanished">Running automation script: %1</translation>
-    </message>
-    <message>
-        <source>Automation failed</source>
-        <translation type="vanished">Automation failed</translation>
-    </message>
-    <message>
-        <source>The automation script failed.</source>
-        <translation type="vanished">The automation script failed.</translation>
-    </message>
-    <message>
-        <source>Automation script failed: %1</source>
-        <translation type="vanished">Automation script failed: %1</translation>
-    </message>
-    <message>
-        <source>Automation script finished: %1</source>
-        <translation type="vanished">Automation script finished: %1</translation>
-    </message>
-    <message>
-        <source>Canceling automation script...</source>
-        <translation type="vanished">Canceling automation script...</translation>
-    </message>
-    <message>
-        <source>Automation script was canceled.</source>
-        <translation type="vanished">Automation script was canceled.</translation>
-    </message>
-    <message>
-        <source>Automation script is no longer available: %1</source>
-        <translation type="vanished">Automation script is no longer available: %1</translation>
-    </message>
-    <message>
-        <source>Automation Parameters</source>
-        <translation type="vanished">Automation Parameters</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation type="vanished">Browse...</translation>
-    </message>
-    <message>
-        <source>Choose Directory</source>
-        <translation type="vanished">Choose Directory</translation>
-    </message>
-    <message>
-        <source>Choose File</source>
-        <translation type="vanished">Choose File</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="846"/>
         <source>Run automation script</source>
         <translation>Run automation script</translation>
@@ -432,14 +364,6 @@ Last error: %2</translation>
         <location filename="../src/ui/MainWindow.cpp" line="847"/>
         <source>Automation script %1</source>
         <translation>Automation script %1</translation>
-    </message>
-    <message>
-        <source>Undo automation: %1</source>
-        <translation type="vanished">Undo automation: %1</translation>
-    </message>
-    <message>
-        <source>Redo automation: %1</source>
-        <translation type="vanished">Redo automation: %1</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ui/MainWindow.cpp" line="849"/>
@@ -508,14 +432,6 @@ Last error: %2</translation>
         <location filename="../src/ui/MainWindow.cpp" line="359"/>
         <source>Next page</source>
         <translation>Next page</translation>
-    </message>
-    <message>
-        <source>+</source>
-        <translation type="vanished">+</translation>
-    </message>
-    <message>
-        <source>-</source>
-        <translation type="vanished">-</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="213"/>
@@ -974,18 +890,6 @@ Last error: %2</translation>
         <translation>%1 must be a string; using the default value.</translation>
     </message>
     <message>
-        <source>Failed to store automation secret %1: %2</source>
-        <translation type="vanished">Failed to store automation secret %1: %2</translation>
-    </message>
-    <message>
-        <source>Failed to read automation secret %1: %2</source>
-        <translation type="vanished">Failed to read automation secret %1: %2</translation>
-    </message>
-    <message>
-        <source>Automation secret %1 is not configured. Run the script&apos;s configuration first.</source>
-        <translation type="vanished">Automation secret %1 is not configured. Run the script&apos;s configuration first.</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="2391"/>
         <source>%1 must name a built-in theme; using no application theme.</source>
         <translation>%1 must name a built-in theme; using no application theme.</translation>
@@ -1089,10 +993,6 @@ Last error: %2</translation>
         <translation>Outside text</translation>
     </message>
     <message>
-        <source>Selection copied to clipboard.</source>
-        <translation type="vanished">Selection copied to clipboard.</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="630"/>
         <source>Image copied to clipboard.</source>
         <translation>Image copied to clipboard.</translation>
@@ -1160,10 +1060,6 @@ Last error: %2</translation>
     <message>
         <source>HTML files (*.html);;All files (*)</source>
         <translation>HTML files (*.html);;All files (*)</translation>
-    </message>
-    <message>
-        <source>Project: %1</source>
-        <translation>Project: %1</translation>
     </message>
     <message>
         <source>Failed to export proofreading report: %1</source>
@@ -1389,10 +1285,6 @@ Last error: %2</translation>
         <translation>Use system default</translation>
     </message>
     <message>
-        <source>Application style</source>
-        <translation type="vanished">Application style</translation>
-    </message>
-    <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="266"/>
         <source>Qt widget style</source>
         <translation>Qt widget style</translation>
@@ -1411,10 +1303,6 @@ Last error: %2</translation>
         <location filename="../src/ui/PreferenceDialog.cpp" line="138"/>
         <source>Breeze Light</source>
         <translation>Breeze Light</translation>
-    </message>
-    <message>
-        <source>Application theme</source>
-        <translation type="vanished">Application theme</translation>
     </message>
     <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="267"/>
@@ -1500,22 +1388,6 @@ Last error: %2</translation>
         <location filename="../src/ui/PreferenceDialog.cpp" line="84"/>
         <source>Use Default</source>
         <translation>Use Default</translation>
-    </message>
-    <message>
-        <source>Default font</source>
-        <translation type="vanished">Default font</translation>
-    </message>
-    <message>
-        <source>Default size</source>
-        <translation type="vanished">Default size</translation>
-    </message>
-    <message>
-        <source>Text editor font family</source>
-        <translation type="vanished">Text editor font family</translation>
-    </message>
-    <message>
-        <source>Text editor font size</source>
-        <translation type="vanished">Text editor font size</translation>
     </message>
     <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="272"/>
@@ -1841,6 +1713,22 @@ Last error: %2</translation>
         <source>Text diff cleanup</source>
         <translation>Text diff cleanup</translation>
     </message>
+    <message>
+        <source>Search...</source>
+        <translation>Search...</translation>
+    </message>
+    <message>
+        <source>Appearance</source>
+        <translation>Appearance</translation>
+    </message>
+    <message>
+        <source>Label display</source>
+        <translation>Label display</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>Proofreading</translation>
+    </message>
 </context>
 <context>
     <name>AutomationShortcutEditorWidget</name>
@@ -2124,10 +2012,6 @@ Last error: %2</translation>
         <translation>HTML files (*.html);;All files (*)</translation>
     </message>
     <message>
-        <source>Project: %1</source>
-        <translation>Project: %1</translation>
-    </message>
-    <message>
         <source>Failed to export proofreading report: %1</source>
         <translation>Failed to export proofreading report: %1</translation>
     </message>
@@ -2166,6 +2050,65 @@ Last error: %2</translation>
     <message>
         <source>Order Change</source>
         <translation>Order Change</translation>
+    </message>
+    <message>
+        <source>All pages</source>
+        <translation>All pages</translation>
+    </message>
+    <message>
+        <source>No pages</source>
+        <translation>No pages</translation>
+    </message>
+    <message>
+        <source>%1 page(s)</source>
+        <translation>%1 page(s)</translation>
+    </message>
+    <message>
+        <source>All changes</source>
+        <translation>All changes</translation>
+    </message>
+    <message>
+        <source>No changes</source>
+        <translation>No changes</translation>
+    </message>
+    <message>
+        <source>%1 change type(s)</source>
+        <translation>%1 change type(s)</translation>
+    </message>
+    <message>
+        <source>All summaries</source>
+        <translation>All summaries</translation>
+    </message>
+    <message>
+        <source>No summaries</source>
+        <translation>No summaries</translation>
+    </message>
+    <message>
+        <source>%1 summary item(s)</source>
+        <translation>%1 summary item(s)</translation>
+    </message>
+    <message>
+        <source>format</source>
+        <translation>format</translation>
+    </message>
+    <message>
+        <source>Filters</source>
+        <translation>Filters</translation>
+    </message>
+    <message>
+        <source>Pages: %1; Changes: %2; Summaries: %3</source>
+        <translation>Pages: %1; Changes: %2; Summaries: %3</translation>
+    </message>
+</context>
+<context>
+    <name>CheckableFilterButton</name>
+    <message>
+        <source>Select All</source>
+        <translation>Select All</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Clear</translation>
     </message>
 </context>
 </TS>

@@ -2,6 +2,7 @@
 
 #include "core/AppPreferences.h"
 #include "core/Project.h"
+#include "services/ReviewChangeClassifier.h"
 #include "services/ReviewMetadataService.h"
 #include "services/SessionStateStore.h"
 
@@ -9,6 +10,7 @@
 #include <QVector>
 
 class ImageCanvas;
+class CheckableFilterButton;
 class QLabel;
 class QPushButton;
 class QTableWidget;
@@ -45,6 +47,8 @@ public slots:
 private:
     void buildUi();
     void populateRows();
+    void rebuildFilters();
+    void applyFilters();
     void restoreTableColumnWidths();
     void saveTableColumnWidths() const;
     void exportReport();
@@ -57,6 +61,9 @@ private:
     void resizeTableRowToContent(int row);
     QString changeKindText(labelqt::services::ReviewChangeKind kind) const;
     QString changeSummary(const labelqt::services::ReviewChange& change) const;
+    QString facetText(labelqt::services::ReviewChangeFacet facet) const;
+    QVector<labelqt::services::ReviewChange> filteredChanges() const;
+    QString reportFilterDescription() const;
     QString diffHtml(const QString& beforeText, const QString& afterText) const;
     labelqt::services::ProofreadReportTexts reportTexts() const;
     void syncPreviewCanvases(ImageCanvas* sourceCanvas, int zoomPercent, QPointF normalizedCenter);
@@ -68,8 +75,12 @@ private:
     labelqt::services::SessionStateStore m_sessionStateStore;
     ProofreadChangesDialogLabels m_labels;
     QVector<labelqt::services::ReviewChange> m_changes;
+    QVector<int> m_filteredChangeIndexes;
     QTableWidget* m_table{nullptr};
     QLabel* m_summaryLabel{nullptr};
+    CheckableFilterButton* m_pageFilterButton{nullptr};
+    CheckableFilterButton* m_kindFilterButton{nullptr};
+    CheckableFilterButton* m_summaryFilterButton{nullptr};
     QTextBrowser* m_diffBrowser{nullptr};
     ImageCanvas* m_beforeCanvas{nullptr};
     ImageCanvas* m_afterCanvas{nullptr};

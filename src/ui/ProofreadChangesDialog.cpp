@@ -3,6 +3,7 @@
 #include "services/ProjectComparisonService.h"
 #include "services/ProofreadReportService.h"
 #include "services/TextDiffHtmlRenderer.h"
+#include "ui/CheckableFilterButton.h"
 #include "ui/DialogWindowUtils.h"
 #include "ui/ImageCanvas.h"
 #include "ui/ViewportFittedTableColumns.h"
@@ -18,6 +19,7 @@
 #include <QFutureWatcher>
 #include <QGroupBox>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPlainTextEdit>
@@ -46,6 +48,9 @@ constexpr int changeIndexRole = Qt::UserRole + 1;
 constexpr int sortTextRole = Qt::UserRole + 2;
 constexpr int sortNumberRole = Qt::UserRole + 3;
 constexpr int textCellVerticalMargin = 10;
+constexpr QLatin1StringView addedKindKey{"added"};
+constexpr QLatin1StringView deletedKindKey{"deleted"};
+constexpr QLatin1StringView modifiedKindKey{"modified"};
 
 enum Column {
     PageColumn,
@@ -156,7 +161,7 @@ std::optional<std::expected<void, QString>>
 runProofreadReportExportTask(QWidget* parent, const QString& title, const QString& labelText, const QString& cancelText,
                              QString filePath, QVector<labelqt::services::ReviewChange> changes,
                              labelqt::core::Project beforeProject, labelqt::core::Project currentProject,
-                             labelqt::services::ProofreadReportTexts texts, QString sourceDescription,
+                             labelqt::services::ProofreadReportTexts texts, QString filterDescription,
                              labelqt::services::ProofreadReportOptions options)
 {
     QDialog progress(parent);
@@ -187,9 +192,9 @@ runProofreadReportExportTask(QWidget* parent, const QString& title, const QStrin
     watcher->setFuture(QtConcurrent::run([temporaryPath, changes = std::move(changes),
                                           beforeProject = std::move(beforeProject),
                                           currentProject = std::move(currentProject), texts = std::move(texts),
-                                          sourceDescription = std::move(sourceDescription), options]() {
+                                          filterDescription = std::move(filterDescription), options]() {
         return labelqt::services::ProofreadReportService::saveHtmlReport(
-            temporaryPath, changes, beforeProject, currentProject, texts, sourceDescription, options);
+            temporaryPath, changes, beforeProject, currentProject, texts, filterDescription, options);
     }));
 
     if (watcher->isFinished()) {
@@ -253,6 +258,11 @@ QPointF focusPositionForChange(const labelqt::services::ReviewChange& change)
 QString baselineImageNameForChange(const labelqt::services::ReviewChange& change)
 {
     return change.baselineImageName.isEmpty() ? change.imageName : change.baselineImageName;
+}
+
+QString pageNameForReviewChange(const labelqt::services::ReviewChange& change)
+{
+    return change.imageName.isEmpty() ? change.baselineImageName : change.imageName;
 }
 
 int wrappedPlainTextHeight(const QString& text, const QFont& font, int width)
@@ -344,6 +354,19 @@ void ProofreadChangesDialog::buildUi()
     auto* rootLayout = new QVBoxLayout(this);
     m_summaryLabel = new QLabel(tr("%n proofreading change(s)", nullptr, static_cast<int>(m_changes.size())), this);
     rootLayout->addWidget(m_summaryLabel);
+
+    auto* filterLayout = new QHBoxLayout;
+    filterLayout->addWidget(new QLabel(tr("Page"), this));
+    m_pageFilterButton = new CheckableFilterButton(this);
+    filterLayout->addWidget(m_pageFilterButton);
+    filterLayout->addWidget(new QLabel(tr("Change"), this));
+    m_kindFilterButton = new CheckableFilterButton(this);
+    filterLayout->addWidget(m_kindFilterButton);
+    filterLayout->addWidget(new QLabel(tr("Summary"), this));
+    m_summaryFilterButton = new CheckableFilterButton(this);
+    filterLayout->addWidget(m_summaryFilterButton);
+    filterLayout->addStretch(1);
+    rootLayout->addLayout(filterLayout);
 
     auto* splitter = new QSplitter(Qt::Horizontal, this);
     m_table = new QTableWidget(splitter);
@@ -440,7 +463,8 @@ void ProofreadChangesDialog::buildUi()
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     rootLayout->addWidget(buttons);
 
-    populateRows();
+    rebuildFilters();
+    applyFilters();
     m_table->setSortingEnabled(true);
     connect(m_table, &QTableWidget::currentCellChanged, this, [this](int currentRow) {
         scheduleDetailsUpdate(currentRow);
@@ -468,20 +492,119 @@ void ProofreadChangesDialog::populateRows()
     }
 
     m_table->setSortingEnabled(false);
-    m_table->setRowCount(static_cast<int>(m_changes.size()));
-    for (int changeIndex = 0; changeIndex < m_changes.size(); ++changeIndex) {
+    m_table->clearContents();
+    m_table->setRowCount(static_cast<int>(m_filteredChangeIndexes.size()));
+    for (int row = 0; row < m_filteredChangeIndexes.size(); ++row) {
+        const int changeIndex = m_filteredChangeIndexes.at(row);
         const labelqt::services::ReviewChange& change = m_changes.at(changeIndex);
         const QString number = labelNumber(change.labelIndex);
         const QString kind = changeKindText(change.kind);
         const QString summary = changeSummary(change);
         const int sortNumber = change.labelIndex < 0 ? std::numeric_limits<int>::max() : change.labelIndex;
 
-        m_table->setItem(changeIndex, PageColumn, changeItem(change.imageName, changeIndex, change.imageName, sortNumber));
-        m_table->setItem(changeIndex, NumberColumn, changeItem(number, changeIndex, QString(), sortNumber));
-        m_table->setItem(changeIndex, KindColumn, changeItem(kind, changeIndex, kind, sortNumber));
-        m_table->setItem(changeIndex, SummaryColumn, changeItem(summary, changeIndex, summary, sortNumber));
-        m_table->setCellWidget(changeIndex, SummaryColumn, readOnlyCellTextEdit(summary, m_table));
+        m_table->setItem(row, PageColumn, changeItem(change.imageName, changeIndex, change.imageName, sortNumber));
+        m_table->setItem(row, NumberColumn, changeItem(number, changeIndex, QString(), sortNumber));
+        m_table->setItem(row, KindColumn, changeItem(kind, changeIndex, kind, sortNumber));
+        m_table->setItem(row, SummaryColumn, changeItem(summary, changeIndex, summary, sortNumber));
+        m_table->setCellWidget(row, SummaryColumn, readOnlyCellTextEdit(summary, m_table));
     }
+}
+
+void ProofreadChangesDialog::rebuildFilters()
+{
+    auto installFilter = [this](CheckableFilterButton* button, QString allText, QString noneText, QString countText,
+                                QVector<CheckableFilterOption> options) {
+        button->setTexts(std::move(allText), std::move(noneText), std::move(countText));
+        button->setOptions(std::move(options));
+        connect(button, &CheckableFilterButton::selectionChanged, this, &ProofreadChangesDialog::applyFilters,
+                Qt::UniqueConnection);
+    };
+
+    QVector<CheckableFilterOption> pageOptions;
+    QSet<QString> seenPages;
+    for (const labelqt::services::ReviewChange& change : m_changes) {
+        const QString pageName = pageNameForReviewChange(change);
+        if (pageName.isEmpty() || seenPages.contains(pageName)) {
+            continue;
+        }
+        seenPages.insert(pageName);
+        pageOptions.append({pageName, pageName});
+    }
+
+    installFilter(m_pageFilterButton, tr("All pages"), tr("No pages"), tr("%1 page(s)"), pageOptions);
+    installFilter(m_kindFilterButton, tr("All changes"), tr("No changes"), tr("%1 change type(s)"),
+                  {
+                      {QString(addedKindKey), changeKindText(labelqt::services::ReviewChangeKind::Added)},
+                      {QString(deletedKindKey), changeKindText(labelqt::services::ReviewChangeKind::Deleted)},
+                      {QString(modifiedKindKey), changeKindText(labelqt::services::ReviewChangeKind::Modified)},
+                  });
+    installFilter(m_summaryFilterButton, tr("All summaries"), tr("No summaries"), tr("%1 summary item(s)"),
+                  {
+                      {labelqt::services::ReviewChangeClassifier::facetKey(labelqt::services::ReviewChangeFacet::Text),
+                       facetText(labelqt::services::ReviewChangeFacet::Text)},
+                      {labelqt::services::ReviewChangeClassifier::facetKey(labelqt::services::ReviewChangeFacet::Format),
+                       facetText(labelqt::services::ReviewChangeFacet::Format)},
+                      {labelqt::services::ReviewChangeClassifier::facetKey(labelqt::services::ReviewChangeFacet::Group),
+                       facetText(labelqt::services::ReviewChangeFacet::Group)},
+                      {labelqt::services::ReviewChangeClassifier::facetKey(labelqt::services::ReviewChangeFacet::Marker),
+                       facetText(labelqt::services::ReviewChangeFacet::Marker)},
+                      {labelqt::services::ReviewChangeClassifier::facetKey(labelqt::services::ReviewChangeFacet::Order),
+                       facetText(labelqt::services::ReviewChangeFacet::Order)},
+                  });
+}
+
+void ProofreadChangesDialog::applyFilters()
+{
+    const auto* pageFilter = m_pageFilterButton;
+    const auto* kindFilter = m_kindFilterButton;
+    const auto* summaryFilter = m_summaryFilterButton;
+    if (pageFilter == nullptr || kindFilter == nullptr || summaryFilter == nullptr) {
+        return;
+    }
+
+    const QSet<QString> selectedPages = pageFilter->selectedKeys();
+    const QSet<QString> selectedKinds = kindFilter->selectedKeys();
+    const QSet<QString> selectedSummaryFacets = summaryFilter->selectedKeys();
+    const bool allSummariesSelected = summaryFilter->isAllSelected();
+
+    m_filteredChangeIndexes.clear();
+    for (int changeIndex = 0; changeIndex < m_changes.size(); ++changeIndex) {
+        const labelqt::services::ReviewChange& change = m_changes.at(changeIndex);
+        if (!selectedPages.contains(pageNameForReviewChange(change))) {
+            continue;
+        }
+        if (!selectedKinds.contains(labelqt::services::ReviewChangeClassifier::kindKey(change.kind))) {
+            continue;
+        }
+        if (!allSummariesSelected) {
+            const QVector<labelqt::services::ReviewChangeFacet> facets =
+                labelqt::services::ReviewChangeClassifier::facets(change);
+            const bool hasSelectedFacet = std::ranges::any_of(facets, [&selectedSummaryFacets](auto facet) {
+                return selectedSummaryFacets.contains(labelqt::services::ReviewChangeClassifier::facetKey(facet));
+            });
+            if (!hasSelectedFacet) {
+                continue;
+            }
+        }
+        m_filteredChangeIndexes.append(changeIndex);
+    }
+
+    const bool sortingEnabled = m_table->isSortingEnabled();
+    const int sortSection = m_table->horizontalHeader()->sortIndicatorSection();
+    const Qt::SortOrder sortOrder = m_table->horizontalHeader()->sortIndicatorOrder();
+    populateRows();
+    m_table->setSortingEnabled(sortingEnabled);
+    if (sortingEnabled) {
+        m_table->sortItems(sortSection, sortOrder);
+    }
+    resizeTableRowsToContents();
+    if (m_table->rowCount() > 0) {
+        m_table->setCurrentCell(0, 0);
+    } else {
+        updateDetails(-1);
+        updateJumpButton();
+    }
+    m_summaryLabel->setText(tr("%n proofreading change(s)", nullptr, static_cast<int>(m_filteredChangeIndexes.size())));
 }
 
 void ProofreadChangesDialog::restoreTableColumnWidths()
@@ -512,7 +635,8 @@ void ProofreadChangesDialog::saveTableColumnWidths() const
 
 void ProofreadChangesDialog::exportReport()
 {
-    if (m_changes.isEmpty()) {
+    const QVector<labelqt::services::ReviewChange> changesToExport = filteredChanges();
+    if (changesToExport.isEmpty()) {
         QMessageBox::information(this, tr("Proofreading"), tr("No proofreading changes to export."));
         return;
     }
@@ -531,13 +655,10 @@ void ProofreadChangesDialog::exportReport()
     }
     m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::ExportProofreadingReport, path);
 
-    const QString sourceDescription = m_currentProject.filePath().isEmpty()
-        ? QString()
-        : tr("Project: %1").arg(QDir::toNativeSeparators(m_currentProject.filePath()));
     labelqt::services::ProofreadReportOptions options;
     const std::optional<std::expected<void, QString>> result = runProofreadReportExportTask(
-        this, QString(), tr("Exporting proofreading report..."), tr("Abort"), path, m_changes, m_beforeProject,
-        m_currentProject, reportTexts(), sourceDescription, options);
+        this, QString(), tr("Exporting proofreading report..."), tr("Abort"), path, changesToExport, m_beforeProject,
+        m_currentProject, reportTexts(), reportFilterDescription(), options);
     if (!result.has_value()) {
         return;
     }
@@ -593,6 +714,15 @@ void ProofreadChangesDialog::updateDetails(int row)
     }
     const int changeIndex = changeIndexForRow(row);
     if (m_diffBrowser == nullptr || changeIndex < 0) {
+        if (m_diffBrowser != nullptr) {
+            m_diffBrowser->clear();
+        }
+        if (m_beforeCanvas != nullptr) {
+            m_beforeCanvas->setImage(QString(), {});
+        }
+        if (m_afterCanvas != nullptr) {
+            m_afterCanvas->setImage(QString(), {});
+        }
         return;
     }
 
@@ -712,19 +842,53 @@ QString ProofreadChangesDialog::changeSummary(const labelqt::services::ReviewCha
     }
 
     QStringList parts;
-    if (change.textChanged) {
-        parts.append(tr("text"));
-    }
-    if (change.groupChanged) {
-        parts.append(tr("group"));
-    }
-    if (change.positionChanged) {
-        parts.append(tr("marker"));
-    }
-    if (change.orderChanged) {
-        parts.append(tr("order"));
+    for (const labelqt::services::ReviewChangeFacet facet : labelqt::services::ReviewChangeClassifier::facets(change)) {
+        parts.append(facetText(facet));
     }
     return parts.isEmpty() ? tr("Modified") : parts.join(QStringLiteral(", "));
+}
+
+QString ProofreadChangesDialog::facetText(labelqt::services::ReviewChangeFacet facet) const
+{
+    switch (facet) {
+    case labelqt::services::ReviewChangeFacet::Text:
+        return tr("text");
+    case labelqt::services::ReviewChangeFacet::Format:
+        return tr("format");
+    case labelqt::services::ReviewChangeFacet::Group:
+        return tr("group");
+    case labelqt::services::ReviewChangeFacet::Marker:
+        return tr("marker");
+    case labelqt::services::ReviewChangeFacet::Order:
+        return tr("order");
+    }
+    return {};
+}
+
+QVector<labelqt::services::ReviewChange> ProofreadChangesDialog::filteredChanges() const
+{
+    QVector<labelqt::services::ReviewChange> changes;
+    changes.reserve(m_filteredChangeIndexes.size());
+    for (const int changeIndex : m_filteredChangeIndexes) {
+        if (changeIndex >= 0 && changeIndex < m_changes.size()) {
+            changes.append(m_changes.at(changeIndex));
+        }
+    }
+    return changes;
+}
+
+QString ProofreadChangesDialog::reportFilterDescription() const
+{
+    auto selectedText = [this](const CheckableFilterButton* button) {
+        if (button == nullptr || button->isAllSelected()) {
+            return button == nullptr ? QString() : button->text();
+        }
+        const QStringList texts = button->selectedTexts();
+        return texts.isEmpty() ? button->text() : texts.join(QStringLiteral(", "));
+    };
+
+    return tr("Pages: %1; Changes: %2; Summaries: %3")
+        .arg(selectedText(m_pageFilterButton), selectedText(m_kindFilterButton), selectedText(m_summaryFilterButton));
 }
 
 QString ProofreadChangesDialog::diffHtml(const QString& beforeText, const QString& afterText) const
@@ -752,10 +916,12 @@ labelqt::services::ProofreadReportTexts ProofreadChangesDialog::reportTexts() co
         .deleted = tr("Deleted"),
         .modified = tr("Modified"),
         .text = tr("text"),
+        .format = tr("format"),
         .group = tr("group"),
         .marker = tr("marker"),
         .order = tr("order"),
         .noTextChange = tr("No text change."),
+        .filter = tr("Filters"),
     };
 }
 

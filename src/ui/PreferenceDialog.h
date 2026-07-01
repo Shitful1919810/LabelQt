@@ -11,14 +11,17 @@
 class QComboBox;
 class QCheckBox;
 class QDoubleSpinBox;
+class QIcon;
 class QKeySequenceEdit;
 class QLabel;
 class QLineEdit;
+class QListWidget;
+class QListWidgetItem;
 class QPlainTextEdit;
 class QPushButton;
 class QScrollBar;
 class QSpinBox;
-class QTabWidget;
+class QStackedWidget;
 class QWidget;
 class AutomationShortcutEditorWidget;
 class GroupStyleEditorWidget;
@@ -35,12 +38,18 @@ signals:
 
 private:
     void createUi();
-    QWidget* createGeneralPage(QTabWidget* tabWidget);
-    QWidget* createKeyMappingPage(QTabWidget* tabWidget);
-    QWidget* createAutomationPage(QTabWidget* tabWidget);
-    QWidget* createAutomationShortcutsPage(QTabWidget* tabWidget);
-    QWidget* createGroupStylesPage(QTabWidget* tabWidget);
-    QWidget* createJsonPage(QTabWidget* tabWidget);
+    void addPreferencePage(const QString& title, const QIcon& icon, QWidget* page);
+    void filterPreferencePages(const QString& filterText);
+    void updateCurrentPageTitle(QListWidgetItem* currentItem);
+    QWidget* createGeneralPage(QWidget* parent);
+    QWidget* createAppearancePage(QWidget* parent);
+    QWidget* createLabelDisplayPage(QWidget* parent);
+    QWidget* createProofreadingPage(QWidget* parent);
+    QWidget* createKeyMappingPage(QWidget* parent);
+    QWidget* createAutomationPage(QWidget* parent);
+    QWidget* createAutomationShortcutsPage(QWidget* parent);
+    QWidget* createGroupStylesPage(QWidget* parent);
+    QWidget* createJsonPage(QWidget* parent);
     void connectPreferenceChangeSignals();
     void loadFromDisk();
     void loadDocument(const QJsonDocument& document);
@@ -66,6 +75,9 @@ private:
     QString m_preferencePath;
     labelqt::core::AppPreferences m_currentPreferences;
     QVector<labelqt::services::AutomationScript> m_automationScripts;
+    QListWidget* m_categoryList{nullptr};
+    QStackedWidget* m_pageStack{nullptr};
+    QLabel* m_pageTitleLabel{nullptr};
     QDoubleSpinBox* m_markerDiameterSpinBox{nullptr};
     QDoubleSpinBox* m_markerFontSpinBox{nullptr};
     QSpinBox* m_tableMaxRowsSpinBox{nullptr};

@@ -1,8 +1,10 @@
 #include "ui/GroupFilterComboBox.h"
 
-#include <QAction>
 #include <QCheckBox>
-#include <QTimer>
+#include <QFrame>
+#include <QHBoxLayout>
+#include <QSignalBlocker>
+#include <QToolButton>
 #include <QWidgetAction>
 
 #include <utility>
@@ -47,11 +49,30 @@ void GroupFilterComboBox::rebuildMenu()
 {
     m_menu.clear();
 
-    QAction* selectAllAction = m_menu.addAction(tr("Select All"));
-    connect(selectAllAction, &QAction::triggered, this, &GroupFilterComboBox::selectAll);
-
-    QAction* clearAction = m_menu.addAction(tr("Clear"));
-    connect(clearAction, &QAction::triggered, this, &GroupFilterComboBox::clearSelection);
+    auto* actionsWidgetAction = new QWidgetAction(&m_menu);
+    auto* actionsWidget = new QWidget(&m_menu);
+    auto* actionsLayout = new QHBoxLayout(actionsWidget);
+    actionsLayout->setContentsMargins(8, 2, 8, 2);
+    actionsLayout->setSpacing(4);
+    auto* selectAllButton = new QToolButton(actionsWidget);
+    selectAllButton->setText(tr("Select All"));
+    selectAllButton->setAutoRaise(true);
+    selectAllButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    auto* separator = new QFrame(actionsWidget);
+    separator->setFrameShape(QFrame::VLine);
+    separator->setFrameShadow(QFrame::Sunken);
+    auto* clearButton = new QToolButton(actionsWidget);
+    clearButton->setText(tr("Clear"));
+    clearButton->setAutoRaise(true);
+    clearButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    actionsLayout->addWidget(selectAllButton);
+    actionsLayout->addWidget(separator);
+    actionsLayout->addWidget(clearButton);
+    actionsLayout->addStretch();
+    actionsWidgetAction->setDefaultWidget(actionsWidget);
+    m_menu.addAction(actionsWidgetAction);
+    connect(selectAllButton, &QToolButton::clicked, this, &GroupFilterComboBox::selectAll);
+    connect(clearButton, &QToolButton::clicked, this, &GroupFilterComboBox::clearSelection);
 
     m_menu.addSeparator();
 
@@ -62,6 +83,7 @@ void GroupFilterComboBox::rebuildMenu()
         if (color.isValid()) {
             checkBox->setStyleSheet(QStringLiteral("QCheckBox { color: %1; }").arg(color.name()));
         }
+        checkBox->setProperty("filterKey", group);
         checkBox->setChecked(m_selectedGroups.contains(group));
         action->setDefaultWidget(checkBox);
         m_menu.addAction(action);
@@ -79,6 +101,23 @@ void GroupFilterComboBox::rebuildMenu()
     }
 }
 
+void GroupFilterComboBox::refreshMenuChecks()
+{
+    for (QAction* action : m_menu.actions()) {
+        auto* widgetAction = qobject_cast<QWidgetAction*>(action);
+        if (widgetAction == nullptr) {
+            continue;
+        }
+        auto* checkBox = qobject_cast<QCheckBox*>(widgetAction->defaultWidget());
+        if (checkBox == nullptr) {
+            continue;
+        }
+        const QString group = checkBox->property("filterKey").toString();
+        const QSignalBlocker blocker(checkBox);
+        checkBox->setChecked(m_selectedGroups.contains(group));
+    }
+}
+
 QColor GroupFilterComboBox::colorForGroup(const QString& group) const
 {
     const int index = static_cast<int>(m_groups.indexOf(group));
@@ -93,17 +132,17 @@ void GroupFilterComboBox::selectAll()
     for (const QString& group : m_groups) {
         m_selectedGroups.insert(group);
     }
+    refreshMenuChecks();
     updateButtonText();
     emitSelectionChanged();
-    QTimer::singleShot(0, this, &GroupFilterComboBox::rebuildMenu);
 }
 
 void GroupFilterComboBox::clearSelection()
 {
     m_selectedGroups.clear();
+    refreshMenuChecks();
     updateButtonText();
     emitSelectionChanged();
-    QTimer::singleShot(0, this, &GroupFilterComboBox::rebuildMenu);
 }
 
 void GroupFilterComboBox::emitSelectionChanged()

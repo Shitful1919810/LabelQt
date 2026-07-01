@@ -11,10 +11,8 @@ namespace {
 
 constexpr int gapPenalty = -24;
 constexpr int minimumPairScore = 42;
-constexpr int shortChangedTextMaxLength = 3;
-constexpr int shortChangedTextMovedMinimumPairScore = 58;
-constexpr double positionMatchScoreMaximum = 62.0;
-constexpr double positionMatchScoreSigma = 0.03;
+constexpr double positionMatchScoreMaximum = 90.0;
+constexpr double positionMatchScoreSigma = 0.1;
 
 QString normalizedText(QString text)
 {
@@ -61,24 +59,6 @@ int textSimilarityScore(const QString& baselineText, const QString& currentText)
     const int score = static_cast<int>(std::round(100.0 * static_cast<double>(commonLength) /
                                                   static_cast<double>(maxLength) * lengthConfidence));
     return score;
-}
-
-bool isShortChangedTextPair(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
-{
-    const QString baselineText = normalizedText(baseline.text);
-    const QString currentText = normalizedText(current.text);
-    if (baselineText == currentText) {
-        return false;
-    }
-    return std::max(baselineText.size(), currentText.size()) <= shortChangedTextMaxLength;
-}
-
-int minimumScoreForPair(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
-{
-    if (baseline.labelIndex == current.labelIndex) {
-        return minimumPairScore;
-    }
-    return isShortChangedTextPair(baseline, current) ? shortChangedTextMovedMinimumPairScore : minimumPairScore;
 }
 
 int positionTieBreakScore(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& current)
@@ -152,7 +132,7 @@ QVector<LabelSequenceDiffEntry> orderedAlignment(const QVector<ReviewLabelSnapsh
     while (i > 0 || j > 0) {
         if (i > 0 && j > 0) {
             const int score = orderedPairScore(baselineLabels.at(i - 1), currentLabels.at(j - 1));
-            if (score >= minimumScoreForPair(baselineLabels.at(i - 1), currentLabels.at(j - 1)) &&
+            if (score >= minimumPairScore &&
                 scores.at(i).at(j) == scores.at(i - 1).at(j - 1) + score) {
                 const ReviewLabelSnapshot& baseline = baselineLabels.at(i - 1);
                 const ReviewLabelSnapshot& current = currentLabels.at(j - 1);
@@ -194,8 +174,7 @@ void pairMovedLabels(QVector<LabelSequenceDiffEntry>& entries, const QVector<Rev
                     continue;
                 }
                 const int score = pairScore(baselineLabels.at(baselineIndex), currentLabels.at(currentIndex));
-                if (score >= minimumScoreForPair(baselineLabels.at(baselineIndex), currentLabels.at(currentIndex)) &&
-                    score > bestScore) {
+                if (score >= minimumPairScore && score > bestScore) {
                     bestScore = score;
                     bestBaselineIndex = baselineIndex;
                     bestCurrentIndex = currentIndex;

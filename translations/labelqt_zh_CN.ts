@@ -353,74 +353,6 @@ Last error: %2</source>
         </translation>
     </message>
     <message>
-        <source>No automation scripts found</source>
-        <translation type="vanished">未找到自动化脚本</translation>
-    </message>
-    <message>
-        <source>Cancel Running Script</source>
-        <translation type="vanished">中断正在运行的脚本</translation>
-    </message>
-    <message>
-        <source>Refresh Scripts</source>
-        <translation type="vanished">刷新脚本</translation>
-    </message>
-    <message>
-        <source>Automation</source>
-        <translation type="vanished">自动化</translation>
-    </message>
-    <message>
-        <source>Open a project before running automation scripts.</source>
-        <translation type="vanished">请先打开工程，再运行自动化脚本。</translation>
-    </message>
-    <message>
-        <source>Running automation script: %1</source>
-        <translation type="vanished">正在运行自动化脚本：%1</translation>
-    </message>
-    <message>
-        <source>Automation failed</source>
-        <translation type="vanished">自动化失败</translation>
-    </message>
-    <message>
-        <source>The automation script failed.</source>
-        <translation type="vanished">自动化脚本运行失败。</translation>
-    </message>
-    <message>
-        <source>Automation script failed: %1</source>
-        <translation type="vanished">自动化脚本失败：%1</translation>
-    </message>
-    <message>
-        <source>Automation script finished: %1</source>
-        <translation type="vanished">自动化脚本已完成：%1</translation>
-    </message>
-    <message>
-        <source>Canceling automation script...</source>
-        <translation type="vanished">正在中断自动化脚本...</translation>
-    </message>
-    <message>
-        <source>Automation script was canceled.</source>
-        <translation type="vanished">自动化脚本已被中断。</translation>
-    </message>
-    <message>
-        <source>Automation script is no longer available: %1</source>
-        <translation type="vanished">自动化脚本已不可用：%1</translation>
-    </message>
-    <message>
-        <source>Automation Parameters</source>
-        <translation type="vanished">自动化参数</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation type="vanished">浏览...</translation>
-    </message>
-    <message>
-        <source>Choose Directory</source>
-        <translation type="vanished">选择目录</translation>
-    </message>
-    <message>
-        <source>Choose File</source>
-        <translation type="vanished">选择文件</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="846"/>
         <source>Run automation script</source>
         <translation>运行自动化脚本</translation>
@@ -430,14 +362,6 @@ Last error: %2</source>
         <location filename="../src/ui/MainWindow.cpp" line="847"/>
         <source>Automation script %1</source>
         <translation>自动化脚本 %1</translation>
-    </message>
-    <message>
-        <source>Undo automation: %1</source>
-        <translation type="vanished">撤销自动化：%1</translation>
-    </message>
-    <message>
-        <source>Redo automation: %1</source>
-        <translation type="vanished">重做自动化：%1</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ui/MainWindow.cpp" line="849"/>
@@ -505,14 +429,6 @@ Last error: %2</source>
         <location filename="../src/ui/MainWindow.cpp" line="359"/>
         <source>Next page</source>
         <translation>下一页</translation>
-    </message>
-    <message>
-        <source>+</source>
-        <translation type="vanished">+</translation>
-    </message>
-    <message>
-        <source>-</source>
-        <translation type="vanished">-</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="213"/>
@@ -966,18 +882,6 @@ Last error: %2</source>
         <translation>%1 必须是字符串；将使用默认值。</translation>
     </message>
     <message>
-        <source>Failed to store automation secret %1: %2</source>
-        <translation type="vanished">无法保存自动化密钥 %1：%2</translation>
-    </message>
-    <message>
-        <source>Failed to read automation secret %1: %2</source>
-        <translation type="vanished">无法读取自动化密钥 %1：%2</translation>
-    </message>
-    <message>
-        <source>Automation secret %1 is not configured. Run the script&apos;s configuration first.</source>
-        <translation type="vanished">尚未配置自动化密钥 %1。请先运行该脚本的配置项。</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="2391"/>
         <source>%1 must name a built-in theme; using no application theme.</source>
         <translation>%1 必须指定内置主题；将不使用应用程序主题。</translation>
@@ -1081,10 +985,6 @@ Last error: %2</source>
         <translation>框外</translation>
     </message>
     <message>
-        <source>Selection copied to clipboard.</source>
-        <translation type="vanished">选区图像已复制到剪贴板。</translation>
-    </message>
-    <message>
         <location filename="../src/ui/MainWindow.cpp" line="630"/>
         <source>Image copied to clipboard.</source>
         <translation>图像已复制到剪贴板。</translation>
@@ -1152,10 +1052,6 @@ Last error: %2</source>
     <message>
         <source>HTML files (*.html);;All files (*)</source>
         <translation>HTML 文件 (*.html);;所有文件 (*)</translation>
-    </message>
-    <message>
-        <source>Project: %1</source>
-        <translation>工程：%1</translation>
     </message>
     <message>
         <source>Failed to export proofreading report: %1</source>
@@ -1381,10 +1277,6 @@ Last error: %2</source>
         <translation>使用系统默认</translation>
     </message>
     <message>
-        <source>Application style</source>
-        <translation type="vanished">应用程序风格</translation>
-    </message>
-    <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="266"/>
         <source>Qt widget style</source>
         <translation>Qt 控件风格</translation>
@@ -1403,10 +1295,6 @@ Last error: %2</source>
         <location filename="../src/ui/PreferenceDialog.cpp" line="138"/>
         <source>Breeze Light</source>
         <translation>Breeze 浅色</translation>
-    </message>
-    <message>
-        <source>Application theme</source>
-        <translation type="vanished">应用程序主题</translation>
     </message>
     <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="267"/>
@@ -1492,22 +1380,6 @@ Last error: %2</source>
         <location filename="../src/ui/PreferenceDialog.cpp" line="84"/>
         <source>Use Default</source>
         <translation>使用默认</translation>
-    </message>
-    <message>
-        <source>Default font</source>
-        <translation type="vanished">默认字体</translation>
-    </message>
-    <message>
-        <source>Default size</source>
-        <translation type="vanished">默认字号</translation>
-    </message>
-    <message>
-        <source>Text editor font family</source>
-        <translation type="vanished">文本编辑器字体</translation>
-    </message>
-    <message>
-        <source>Text editor font size</source>
-        <translation type="vanished">文本编辑器字号</translation>
     </message>
     <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="272"/>
@@ -1833,6 +1705,22 @@ Last error: %2</source>
         <source>Text diff cleanup</source>
         <translation>文本差异清理</translation>
     </message>
+    <message>
+        <source>Search...</source>
+        <translation>搜索...</translation>
+    </message>
+    <message>
+        <source>Appearance</source>
+        <translation>外观</translation>
+    </message>
+    <message>
+        <source>Label display</source>
+        <translation>标签显示</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校对</translation>
+    </message>
 </context>
 <context>
     <name>AutomationShortcutEditorWidget</name>
@@ -2113,10 +2001,6 @@ Last error: %2</source>
         <translation>HTML 文件 (*.html);;所有文件 (*)</translation>
     </message>
     <message>
-        <source>Project: %1</source>
-        <translation>工程：%1</translation>
-    </message>
-    <message>
         <source>Failed to export proofreading report: %1</source>
         <translation>导出校对报告失败：%1</translation>
     </message>
@@ -2155,6 +2039,65 @@ Last error: %2</source>
     <message>
         <source>Order Change</source>
         <translation>顺序变化</translation>
+    </message>
+    <message>
+        <source>All pages</source>
+        <translation>全部页面</translation>
+    </message>
+    <message>
+        <source>No pages</source>
+        <translation>无页面</translation>
+    </message>
+    <message>
+        <source>%1 page(s)</source>
+        <translation>%1 个页面</translation>
+    </message>
+    <message>
+        <source>All changes</source>
+        <translation>全部变更</translation>
+    </message>
+    <message>
+        <source>No changes</source>
+        <translation>无变更</translation>
+    </message>
+    <message>
+        <source>%1 change type(s)</source>
+        <translation>%1 种变更</translation>
+    </message>
+    <message>
+        <source>All summaries</source>
+        <translation>全部摘要</translation>
+    </message>
+    <message>
+        <source>No summaries</source>
+        <translation>无摘要</translation>
+    </message>
+    <message>
+        <source>%1 summary item(s)</source>
+        <translation>%1 个摘要项</translation>
+    </message>
+    <message>
+        <source>format</source>
+        <translation>格式</translation>
+    </message>
+    <message>
+        <source>Filters</source>
+        <translation>筛选</translation>
+    </message>
+    <message>
+        <source>Pages: %1; Changes: %2; Summaries: %3</source>
+        <translation>页面：%1；变更：%2；摘要：%3</translation>
+    </message>
+</context>
+<context>
+    <name>CheckableFilterButton</name>
+    <message>
+        <source>Select All</source>
+        <translation>全选</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清空</translation>
     </message>
 </context>
 </TS>

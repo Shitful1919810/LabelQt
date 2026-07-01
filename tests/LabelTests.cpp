@@ -18,6 +18,7 @@
 #include "services/ProjectMergeService.h"
 #include "services/ProjectPageOrderService.h"
 #include "services/ProofreadReportService.h"
+#include "services/ReviewChangeClassifier.h"
 #include "services/ReviewMetadataService.h"
 #include "services/SaveChangesDecision.h"
 #include "services/SessionStateStore.h"
@@ -1859,7 +1860,7 @@ private slots:
         }));
     }
 
-    void labelSequenceDiffRaisesMovedShortChangedTextThreshold()
+    void labelSequenceDiffPrioritizesNearbyMarkerPositions()
     {
         labelqt::services::ReviewLabelSnapshot baseline;
         baseline.imageName = QStringLiteral("001.png");
@@ -1877,24 +1878,38 @@ private slots:
         QCOMPARE(sameIndexShortEntries.first().baselineLabelIndex, 0);
         QCOMPARE(sameIndexShortEntries.first().currentLabelIndex, 0);
 
+        baseline.text = QStringLiteral("完全不同的一句话");
+        current.text = QStringLiteral("另一条不相关文本");
         current.labelIndex = 1;
-        current.position = QPointF(0.58, 0.5);
-        QVector<labelqt::services::LabelSequenceDiffEntry> shortEntries =
+        current.position = QPointF(0.75, 0.5);
+        QVector<labelqt::services::LabelSequenceDiffEntry> farDifferentEntries =
             labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
-        QCOMPARE(shortEntries.size(), 2);
-        QVERIFY(std::ranges::any_of(shortEntries, [](const labelqt::services::LabelSequenceDiffEntry& entry) {
+        QCOMPARE(farDifferentEntries.size(), 2);
+        QVERIFY(std::ranges::any_of(farDifferentEntries, [](const labelqt::services::LabelSequenceDiffEntry& entry) {
             return entry.baselineLabelIndex == 0 && entry.currentLabelIndex < 0;
         }));
-        QVERIFY(std::ranges::any_of(shortEntries, [](const labelqt::services::LabelSequenceDiffEntry& entry) {
+        QVERIFY(std::ranges::any_of(farDifferentEntries, [](const labelqt::services::LabelSequenceDiffEntry& entry) {
             return entry.baselineLabelIndex < 0 && entry.currentLabelIndex == 1;
         }));
 
+        baseline.text = QStringLiteral("魔理沙");
+        current.text = QStringLiteral("魔理呀");
         current.position = QPointF(0.512, 0.512);
         QVector<labelqt::services::LabelSequenceDiffEntry> slightlyMovedShortEntries =
             labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
         QCOMPARE(slightlyMovedShortEntries.size(), 1);
         QCOMPARE(slightlyMovedShortEntries.first().baselineLabelIndex, 0);
         QCOMPARE(slightlyMovedShortEntries.first().currentLabelIndex, 1);
+
+        baseline.text = QStringLiteral("唔唔");
+        current.text = QStringLiteral("啊啊啊");
+        current.labelIndex = 1;
+        current.position = QPointF(0.525, 0.515);
+        QVector<labelqt::services::LabelSequenceDiffEntry> nearbyDifferentShortEntries =
+            labelqt::services::LabelSequenceDiffService::diff({baseline}, {current});
+        QCOMPARE(nearbyDifferentShortEntries.size(), 1);
+        QCOMPARE(nearbyDifferentShortEntries.first().baselineLabelIndex, 0);
+        QCOMPARE(nearbyDifferentShortEntries.first().currentLabelIndex, 1);
 
         baseline.text = QStringLiteral("魔理沙说");
         current.text = QStringLiteral("魔理沙呀");
@@ -2102,6 +2117,41 @@ private slots:
         QVERIFY(html.contains(QStringLiteral("background:#7f1d1d")));
     }
 
+    void reviewChangeClassifierSplitsTextAndFormatFacets()
+    {
+        labelqt::services::ReviewChange contentChange;
+        contentChange.kind = labelqt::services::ReviewChangeKind::Modified;
+        contentChange.textChanged = true;
+        contentChange.baseline.text = QStringLiteral("这么一说");
+        contentChange.current.text = QStringLiteral("这么说来确实");
+        const QVector<labelqt::services::ReviewChangeFacet> contentFacets =
+            labelqt::services::ReviewChangeClassifier::facets(contentChange);
+        QVERIFY(contentFacets.contains(labelqt::services::ReviewChangeFacet::Text));
+        QVERIFY(!contentFacets.contains(labelqt::services::ReviewChangeFacet::Format));
+
+        labelqt::services::ReviewChange punctuationChange;
+        punctuationChange.kind = labelqt::services::ReviewChangeKind::Modified;
+        punctuationChange.textChanged = true;
+        punctuationChange.baseline.text = QStringLiteral("你好");
+        punctuationChange.current.text = QStringLiteral("你好！");
+        const QVector<labelqt::services::ReviewChangeFacet> punctuationFacets =
+            labelqt::services::ReviewChangeClassifier::facets(punctuationChange);
+        QVERIFY(!punctuationFacets.contains(labelqt::services::ReviewChangeFacet::Text));
+        QVERIFY(punctuationFacets.contains(labelqt::services::ReviewChangeFacet::Format));
+
+        labelqt::services::ReviewChange mixedChange;
+        mixedChange.kind = labelqt::services::ReviewChangeKind::Modified;
+        mixedChange.textChanged = true;
+        mixedChange.groupChanged = true;
+        mixedChange.baseline.text = QStringLiteral("你好");
+        mixedChange.current.text = QStringLiteral("你好呀！");
+        const QVector<labelqt::services::ReviewChangeFacet> mixedFacets =
+            labelqt::services::ReviewChangeClassifier::facets(mixedChange);
+        QVERIFY(mixedFacets.contains(labelqt::services::ReviewChangeFacet::Text));
+        QVERIFY(mixedFacets.contains(labelqt::services::ReviewChangeFacet::Format));
+        QVERIFY(mixedFacets.contains(labelqt::services::ReviewChangeFacet::Group));
+    }
+
     void proofreadReportServiceWritesHtml()
     {
         labelqt::services::ReviewChange change;
@@ -2156,14 +2206,16 @@ private slots:
             .deleted = QStringLiteral("删除"),
             .modified = QStringLiteral("修改"),
             .text = QStringLiteral("文本"),
+            .format = QStringLiteral("格式"),
             .group = QStringLiteral("类别"),
             .marker = QStringLiteral("标记"),
             .order = QStringLiteral("顺序"),
             .noTextChange = QStringLiteral("文本未变化"),
+            .filter = QStringLiteral("筛选"),
         };
 
         const QString html = labelqt::services::ProofreadReportService::htmlReport(
-            {change}, beforeProject, currentProject, texts, QStringLiteral("工程：demo.txt"));
+            {change}, beforeProject, currentProject, texts, QStringLiteral("页面：001.png；变更：修改；摘要：文本"));
         QVERIFY(html.contains(QStringLiteral("<!doctype html>")));
         QVERIFY(html.contains(QStringLiteral("<table>")));
         QVERIFY(html.contains(QStringLiteral("page-section")));
@@ -2173,7 +2225,9 @@ private slots:
         QVERIFY(html.contains(QStringLiteral("欢迎光临")));
         QVERIFY(html.contains(QStringLiteral("啊")));
         QVERIFY(html.contains(QStringLiteral("类别")));
-        QVERIFY(html.contains(QStringLiteral("工程：demo.txt")));
+        QVERIFY(html.contains(QStringLiteral("筛选")));
+        QVERIFY(html.contains(QStringLiteral("页面：001.png；变更：修改；摘要：文本")));
+        QVERIFY(!html.contains(QStringLiteral("工程：demo.txt")));
         QVERIFY(html.contains(QStringLiteral("<td>2</td>")));
         QVERIFY(!html.contains(QStringLiteral("002")));
 
