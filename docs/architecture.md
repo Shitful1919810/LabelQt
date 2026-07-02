@@ -22,6 +22,30 @@ tests          Qt Test 测试
 - `src/ui` 负责呈现和交互，可以调用核心层和服务层，但不要直接承担文件格式、工程工作流、撤销命令生成和本机状态存储。
 - `MainWindow` 是 UI 编排层，不是业务逻辑仓库。新功能如果需要独立状态、异步流程、数据转换或可复用规则，优先放进服务类或专门的 UI 控制器。
 
+当前 `src/services` 按领域分成：
+
+```text
+src/services/automation   自动化脚本发现、运行、Python 解析、密钥和操作应用
+src/services/io           压缩包读取、图片异步缓存等输入输出设施
+src/services/label        标签编辑、导航、复制剪切粘贴规划
+src/services/project      工程打开保存、合并、页序调整、来源信息、会话状态
+src/services/proofread    校对/工程对比、文本 diff、报告导出和修订元数据
+```
+
+当前 `src/ui` 按界面区域分成：
+
+```text
+src/ui/automation         自动化菜单、参数窗口、日志窗口和快捷键配置
+src/ui/canvas             图像预览画布、标记绘制、临时文本框和图片页显示控制
+src/ui/labeltable         右侧标签表格、委托、选择同步和表格列宽辅助
+src/ui/preferences        偏好设置窗口和复杂配置子控件
+src/ui/project            页面选择、页面顺序调整、工程合并和主界面页控件
+src/ui/proofread          校对变更展示窗口
+src/ui/widgets            可复用小控件、主题、对话框窗口标志等通用 UI 辅助
+```
+
+新增文件时优先落到这些领域子目录。只有确实属于主窗口编排、全局快捷键路由或活动编辑器状态检测的代码，才继续放在 `src/ui` 根目录。
+
 ## `src/core`
 
 `src/core` 是工程数据和基础规则层。
@@ -80,7 +104,7 @@ tests          Qt Test 测试
 - `CanvasLabelTextEditController` / `CanvasLabelTextEditor`：双击标签标记后出现的临时文本编辑框生命周期。
 - `ImagePageViewController`：当前页图片显示协调。缓存命中、异步加载 request id、过期结果丢弃、相邻页预加载和延迟恢复视图都属于它。
 - `ProjectViewController`：页码下拉框、来源显示、翻页控件刷新。
-- `LabelSelectionController`：右侧表格、左侧标签标记和当前标签之间的选择同步。`Ctrl` 多选、`Shift` 连续选择等语义应集中在这里。
+- `LabelSelectionController`：右侧表格、左侧标签标记和当前标签之间的选择同步。`Ctrl` 多选、`Shift` 连续选择，以及“用户点表格”“程序同步选择”“修订模式下悬停标记”等选择来源语义应集中在这里。新增选择路径时，应通过 `selectSingle()`、`selectIndexes()` 或 `clearSelection()` 传入正确来源，不要在 `MainWindow` 里手写表格/画布双向同步状态。
 - `EditorStateController`：检测、提交和恢复当前活动文本编辑器。快捷键切换标签时保持编辑状态的逻辑放这里。
 - `MainWindowShortcutController`：主窗口快捷键路由，只匹配按键并调用回调，不直接改工程数据。
 - `AutomationController`：自动化菜单构建、脚本发现、脚本运行、日志窗口、取消运行和结果派发。不要再把自动化菜单和进程生命周期散落回 `MainWindow`。
@@ -132,6 +156,12 @@ tests          Qt Test 测试
 由于图片通过 `ImagePageCache` 异步加载，恢复缩放和视图中心必须等目标 pixmap 安装进 `ImageCanvas` 后再做。需要恢复视图时，使用 `ImagePageViewController::restoreViewAfterCurrentImageDisplayed()`。
 
 `ImageCanvas::setImageLoading()` 表示真实换页，会清理当前页瞬时状态。`ImageCanvas::setImage()` 完成同一页加载后应保留已经恢复的选中标签标记，避免异步完成回调清掉会话恢复结果。
+
+## 标签选择与视图聚焦
+
+标签选择存在多个来源：用户在右侧表格点击、用户在左侧标记点击或拖动、修订模式下鼠标悬停标记、撤销/重做、删除和快捷键导航等。只有真正的右侧表格用户选择，才应该触发“修订模式下右侧表格选择后左侧画面聚焦到对应标记”的行为。其他来源只是同步选中状态，不应顺手改变图像视图中心或缩放。
+
+因此选择来源统一由 `LabelSelectionController::SelectionOrigin` 表示。`MainWindow` 可以根据控制器报告的来源决定是否执行视图聚焦，但不应该自己维护额外的“正在程序选择”布尔状态。以后新增会改变选中标签的功能时，先判断它属于表格用户选择、程序同步选择还是画布悬停选择，再通过 `LabelSelectionController` 入口完成同步。
 
 ## 撤销/重做
 

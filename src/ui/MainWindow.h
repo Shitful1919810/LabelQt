@@ -2,15 +2,15 @@
 
 #include "core/AppPreferences.h"
 #include "core/UndoStack.h"
-#include "services/AutomationService.h"
-#include "services/ImagePageCache.h"
-#include "services/LabelEditController.h"
-#include "services/ProjectController.h"
-#include "services/ProjectWorkflowController.h"
-#include "services/SessionStateStore.h"
-#include "ui/GroupFilterComboBox.h"
-#include "ui/ImageCanvas.h"
-#include "ui/LabelTableModel.h"
+#include "services/automation/AutomationService.h"
+#include "services/io/ImagePageCache.h"
+#include "services/label/LabelEditController.h"
+#include "services/project/ProjectController.h"
+#include "services/project/ProjectWorkflowController.h"
+#include "services/project/SessionStateStore.h"
+#include "ui/widgets/GroupFilterComboBox.h"
+#include "ui/canvas/ImageCanvas.h"
+#include "ui/labeltable/LabelTableModel.h"
 
 #include <QColor>
 #include <QFont>
@@ -255,7 +255,6 @@ private:
     int m_currentLabelIndex{-1};
     bool m_isUpdatingUi{false};
     bool m_isTableEditorShortcutNavigation{false};
-    bool m_isProgrammaticLabelSelection{false};
     int m_suppressedTableCommitSelectionSourceIndex{-1};
     int m_pendingTextEditImageIndex{-1};
     int m_pendingTextEditLabelIndex{-1};

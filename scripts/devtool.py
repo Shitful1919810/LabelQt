@@ -44,11 +44,11 @@ MODULE_TOPICS = (
         name="label-edit",
         keywords=("label", "edit", "undo", "clipboard", "paste", "marker"),
         files=(
-            "src/services/LabelEditController.*",
+            "src/services/label/LabelEditController.*",
             "src/core/UndoStack.*",
-            "src/ui/LabelTableModel.*",
-            "src/ui/LabelEditDelegates.*",
-            "src/ui/CurrentPageLabelContext.*",
+            "src/ui/labeltable/LabelTableModel.*",
+            "src/ui/labeltable/LabelEditDelegates.*",
+            "src/ui/labeltable/CurrentPageLabelContext.*",
         ),
         notes=(
             "可逆 label 编辑必须通过 LabelEditController 和 UndoStack。",
@@ -59,9 +59,9 @@ MODULE_TOPICS = (
         name="selection",
         keywords=("selection", "select", "multi", "shift", "ctrl", "visible"),
         files=(
-            "src/ui/LabelSelectionController.*",
-            "src/ui/CurrentPageLabelContext.*",
-            "src/ui/ImageCanvas.*",
+            "src/ui/labeltable/LabelSelectionController.*",
+            "src/ui/labeltable/CurrentPageLabelContext.*",
+            "src/ui/canvas/ImageCanvas.*",
             "src/ui/MainWindow.*",
         ),
         notes=(
@@ -73,11 +73,11 @@ MODULE_TOPICS = (
         name="image-canvas",
         keywords=("canvas", "image", "zoom", "viewport", "hover", "selection mode"),
         files=(
-            "src/ui/ImageCanvas.*",
-            "src/ui/CanvasLabelItems.*",
-            "src/ui/CanvasLabelTextEditor.*",
-            "src/ui/ImagePageViewController.*",
-            "src/services/ImagePageCache.*",
+            "src/ui/canvas/ImageCanvas.*",
+            "src/ui/canvas/CanvasLabelItems.*",
+            "src/ui/canvas/CanvasLabelTextEditor.*",
+            "src/ui/canvas/ImagePageViewController.*",
+            "src/services/io/ImagePageCache.*",
         ),
         notes=(
             "图片加载、缓存、相邻页预加载和视图恢复归 ImagePageViewController/ImagePageCache。",
@@ -88,12 +88,12 @@ MODULE_TOPICS = (
         name="proofread-diff",
         keywords=("proofread", "review", "diff", "compare", "report"),
         files=(
-            "src/services/ProjectComparisonService.*",
-            "src/services/LabelSequenceDiffService.*",
-            "src/services/TextDiffService.*",
-            "src/services/TextDiffHtmlRenderer.*",
-            "src/services/ProofreadReportService.*",
-            "src/ui/ProofreadChangesDialog.*",
+            "src/services/proofread/ProjectComparisonService.*",
+            "src/services/proofread/LabelSequenceDiffService.*",
+            "src/services/proofread/TextDiffService.*",
+            "src/services/proofread/TextDiffHtmlRenderer.*",
+            "src/services/proofread/ProofreadReportService.*",
+            "src/ui/proofread/ProofreadChangesDialog.*",
         ),
         notes=(
             "工程对比、页匹配和 label 对齐属于 services，UI 只展示结构化结果。",
@@ -105,11 +105,11 @@ MODULE_TOPICS = (
         name="automation",
         keywords=("automation", "script", "python", "ocr", "translate", "keychain"),
         files=(
-            "src/services/AutomationService.*",
-            "src/services/AutomationManifestParser.*",
-            "src/services/AutomationOperationApplier.*",
-            "src/services/AutomationPythonResolver.*",
-            "src/ui/AutomationController.*",
+            "src/services/automation/AutomationService.*",
+            "src/services/automation/AutomationManifestParser.*",
+            "src/services/automation/AutomationOperationApplier.*",
+            "src/services/automation/AutomationPythonResolver.*",
+            "src/ui/automation/AutomationController.*",
             "scripts/official/sdk/labelqt_automation.py",
         ),
         notes=(
@@ -122,11 +122,11 @@ MODULE_TOPICS = (
         name="project-workflow",
         keywords=("project", "open", "save", "merge", "page order", "metadata"),
         files=(
-            "src/services/ProjectController.*",
-            "src/services/ProjectWorkflowController.*",
-            "src/services/ProjectMergeService.*",
-            "src/services/ProjectPageOrderService.*",
-            "src/services/ProjectMetadataService.*",
+            "src/services/project/ProjectController.*",
+            "src/services/project/ProjectWorkflowController.*",
+            "src/services/project/ProjectMergeService.*",
+            "src/services/project/ProjectPageOrderService.*",
+            "src/core/ProjectMetadataService.*",
         ),
         notes=(
             "打开、保存、新建、合并、页序调整等流程应留在 services/controller。",
@@ -139,7 +139,7 @@ MODULE_TOPICS = (
         files=(
             "src/core/AppPreferences.*",
             "src/core/TranslationManager.*",
-            "src/ui/PreferenceDialog.*",
+            "src/ui/preferences/PreferenceDialog.*",
             "translations/labelqt_*.ts",
         ),
         notes=(

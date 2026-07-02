@@ -11,35 +11,35 @@ qt_add_executable(LabelQtTests
     ../src/core/ProjectMetadataService.cpp
     ../src/core/RuntimePaths.cpp
     ../src/core/UndoStack.cpp
-    ../src/services/AutomationManifestParser.cpp
-    ../src/services/AutomationOperationApplier.cpp
-    ../src/services/AutomationPythonResolver.cpp
-    ../src/services/AutomationService.cpp
-    ../src/services/LabelClipboardService.cpp
-    ../src/services/LabelEditController.cpp
-    ../src/services/LabelSequenceDiffService.cpp
-    ../src/services/LabelPastePlanner.cpp
-    ../src/services/LabelNavigator.cpp
-    ../src/services/PageSourceInfoService.cpp
-    ../src/services/ProjectComparisonService.cpp
-    ../src/services/ProjectImageValidator.cpp
-    ../src/services/ProjectController.cpp
-    ../src/services/ProjectMergeService.cpp
-    ../src/services/ProjectPageOrderService.cpp
-    ../src/services/ProofreadReportService.cpp
-    ../src/services/ReviewChangeClassifier.cpp
-    ../src/services/ReviewMetadataService.cpp
-    ../src/services/SaveChangesDecision.cpp
-    ../src/services/SessionStateStore.cpp
-    ../src/services/SecretStore.cpp
-    ../src/services/TextDiffHtmlRenderer.cpp
-    ../src/services/TextDiffService.cpp
-    ../src/ui/CanvasLabelItems.cpp
-    ../src/ui/CurrentPageLabelContext.cpp
-    ../src/ui/ImageCanvas.cpp
-    ../src/ui/LabelSelectionController.cpp
-    ../src/ui/LabelTableModel.cpp
-    ../src/ui/PageOrderListModel.cpp
+    ../src/services/automation/AutomationManifestParser.cpp
+    ../src/services/automation/AutomationOperationApplier.cpp
+    ../src/services/automation/AutomationPythonResolver.cpp
+    ../src/services/automation/AutomationService.cpp
+    ../src/services/automation/SecretStore.cpp
+    ../src/services/label/LabelClipboardService.cpp
+    ../src/services/label/LabelEditController.cpp
+    ../src/services/label/LabelNavigator.cpp
+    ../src/services/label/LabelPastePlanner.cpp
+    ../src/services/project/PageSourceInfoService.cpp
+    ../src/services/project/ProjectController.cpp
+    ../src/services/project/ProjectImageValidator.cpp
+    ../src/services/project/ProjectMergeService.cpp
+    ../src/services/project/ProjectPageOrderService.cpp
+    ../src/services/project/SaveChangesDecision.cpp
+    ../src/services/project/SessionStateStore.cpp
+    ../src/services/proofread/LabelSequenceDiffService.cpp
+    ../src/services/proofread/ProjectComparisonService.cpp
+    ../src/services/proofread/ProofreadReportService.cpp
+    ../src/services/proofread/ReviewChangeClassifier.cpp
+    ../src/services/proofread/ReviewMetadataService.cpp
+    ../src/services/proofread/TextDiffHtmlRenderer.cpp
+    ../src/services/proofread/TextDiffService.cpp
+    ../src/ui/canvas/CanvasLabelItems.cpp
+    ../src/ui/labeltable/CurrentPageLabelContext.cpp
+    ../src/ui/canvas/ImageCanvas.cpp
+    ../src/ui/labeltable/LabelSelectionController.cpp
+    ../src/ui/labeltable/LabelTableModel.cpp
+    ../src/ui/project/PageOrderListModel.cpp
 )
 
 target_include_directories(LabelQtTests

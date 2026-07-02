@@ -33,16 +33,16 @@ CMake 会把根目录 `preference.json` 和 `scripts/official` 同步到构建�
 4. `src/core/AppPreferences.h`
 5. `src/ui/MainWindow.h`
 6. `src/ui/MainWindow.cpp` 的构造函数、`createActions()`、`createCentralWidget()` 和项目打开/保存相关函数
-7. `src/services/ProjectController.cpp`
-8. `src/services/LabelEditController.cpp`
-9. `src/ui/ImageCanvas.cpp`
-10. `src/ui/ImagePageViewController.cpp`
-11. `src/ui/LabelTableModel.cpp`
-12. `src/ui/AutomationController.cpp`
-13. `src/services/ProjectComparisonService.cpp`
-14. `src/services/LabelSequenceDiffService.cpp`
-15. `src/services/TextDiffService.cpp`
-16. `src/ui/ProofreadChangesDialog.cpp`
+7. `src/services/project/ProjectController.cpp`
+8. `src/services/label/LabelEditController.cpp`
+9. `src/ui/canvas/ImageCanvas.cpp`
+10. `src/ui/canvas/ImagePageViewController.cpp`
+11. `src/ui/labeltable/LabelTableModel.cpp`
+12. `src/ui/automation/AutomationController.cpp`
+13. `src/services/proofread/ProjectComparisonService.cpp`
+14. `src/services/proofread/LabelSequenceDiffService.cpp`
+15. `src/services/proofread/TextDiffService.cpp`
+16. `src/ui/proofread/ProofreadChangesDialog.cpp`
 17. `tests/LabelTests.cpp`
 
 读 `MainWindow.cpp` 时不要从头到尾硬啃。更有效的方式是围绕一个功能追信号和槽，例如“点击标签标记多选”“新增标签”“运行自动化脚本”“调整页面顺序”。
@@ -126,7 +126,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `ProjectController`
 
-文件：`src/services/ProjectController.h`、`src/services/ProjectController.cpp`
+文件：`src/services/project/ProjectController.h`、`src/services/project/ProjectController.cpp`
 
 负责当前工程生命周期：
 
@@ -140,7 +140,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `ProjectWorkflowController`
 
-文件：`src/services/ProjectWorkflowController.h`、`src/services/ProjectWorkflowController.cpp`
+文件：`src/services/project/ProjectWorkflowController.h`、`src/services/project/ProjectWorkflowController.cpp`
 
 承接较大的项目级工作流：
 
@@ -153,7 +153,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `ProjectMergeService`
 
-文件：`src/services/ProjectMergeService.h`、`src/services/ProjectMergeService.cpp`
+文件：`src/services/project/ProjectMergeService.h`、`src/services/project/ProjectMergeService.cpp`
 
 负责多工程按页合并：
 
@@ -171,13 +171,13 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 主要文件：
 
-- `src/services/ProjectComparisonService.cpp`
-- `src/services/LabelSequenceDiffService.cpp`
-- `src/services/TextDiffService.cpp`
-- `src/services/TextDiffHtmlRenderer.cpp`
-- `src/services/ProofreadReportService.cpp`
-- `src/services/ReviewMetadataService.cpp`
-- `src/ui/ProofreadChangesDialog.cpp`
+- `src/services/proofread/ProjectComparisonService.cpp`
+- `src/services/proofread/LabelSequenceDiffService.cpp`
+- `src/services/proofread/TextDiffService.cpp`
+- `src/services/proofread/TextDiffHtmlRenderer.cpp`
+- `src/services/proofread/ProofreadReportService.cpp`
+- `src/services/proofread/ReviewMetadataService.cpp`
+- `src/ui/proofread/ProofreadChangesDialog.cpp`
 
 校对功能有两种入口：
 
@@ -195,7 +195,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `ProjectImageValidator`
 
-文件：`src/services/ProjectImageValidator.h`、`src/services/ProjectImageValidator.cpp`
+文件：`src/services/project/ProjectImageValidator.h`、`src/services/project/ProjectImageValidator.cpp`
 
 打开工程后扫描图片路径是否存在。它只返回缺失项，UI 决定如何非阻塞提示用户。
 
@@ -233,7 +233,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `ImageCanvas`
 
-文件：`src/ui/ImageCanvas.h`、`src/ui/ImageCanvas.cpp`
+文件：`src/ui/canvas/ImageCanvas.h`、`src/ui/canvas/ImageCanvas.cpp`
 
 负责可视交互：
 
@@ -248,7 +248,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `ImagePageCache`
 
-文件：`src/services/ImagePageCache.h`、`src/services/ImagePageCache.cpp`
+文件：`src/services/io/ImagePageCache.h`、`src/services/io/ImagePageCache.cpp`
 
 负责图片加载：
 
@@ -260,7 +260,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `ImagePageViewController`
 
-文件：`src/ui/ImagePageViewController.h`、`src/ui/ImagePageViewController.cpp`
+文件：`src/ui/canvas/ImagePageViewController.h`、`src/ui/canvas/ImagePageViewController.cpp`
 
 负责把 `Project` 当前页、`ImagePageCache` 和 `ImageCanvas` 串起来：
 
@@ -277,7 +277,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `LabelTableModel`
 
-文件：`src/ui/LabelTableModel.h`、`src/ui/LabelTableModel.cpp`
+文件：`src/ui/labeltable/LabelTableModel.h`、`src/ui/labeltable/LabelTableModel.cpp`
 
 这是 `QAbstractTableModel`，负责：
 
@@ -292,7 +292,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 ### `LabelEditDelegates`
 
-文件：`src/ui/LabelEditDelegates.h`、`src/ui/LabelEditDelegates.cpp`
+文件：`src/ui/labeltable/LabelEditDelegates.h`、`src/ui/labeltable/LabelEditDelegates.cpp`
 
 负责表格编辑控件：
 
@@ -329,12 +329,12 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 主要文件：
 
-- `src/ui/AutomationController.cpp`
-- `src/services/AutomationService.cpp`
-- `src/services/AutomationManifestParser.cpp`
-- `src/services/AutomationOperationApplier.cpp`
-- `src/services/AutomationPythonResolver.cpp`
-- `src/services/SecretStore.cpp`
+- `src/ui/automation/AutomationController.cpp`
+- `src/services/automation/AutomationService.cpp`
+- `src/services/automation/AutomationManifestParser.cpp`
+- `src/services/automation/AutomationOperationApplier.cpp`
+- `src/services/automation/AutomationPythonResolver.cpp`
+- `src/services/automation/SecretStore.cpp`
 
 运行流程：
 
@@ -366,10 +366,10 @@ Python 脚本不应该直接写 `.txt` 工程文件。要修改工程时输出 `
 
 文件：
 
-- `src/ui/PreferenceDialog.cpp`
-- `src/ui/PreferenceDialogWidgets.cpp`
-- `src/ui/GroupStyleEditorWidget.cpp`
-- `src/ui/AutomationShortcutEditorWidget.cpp`
+- `src/ui/preferences/PreferenceDialog.cpp`
+- `src/ui/preferences/PreferenceDialogWidgets.cpp`
+- `src/ui/preferences/GroupStyleEditorWidget.cpp`
+- `src/ui/automation/AutomationShortcutEditorWidget.cpp`
 
 偏好设置窗口当前只有保存语义：
 

@@ -1,9 +1,9 @@
 #include "ui/MainWindow.h"
-#include "ui/ThemeManager.h"
+#include "ui/widgets/ThemeManager.h"
 
 #include "core/AppPreferences.h"
 #include "core/TranslationManager.h"
-#include "services/TextDiffService.h"
+#include "services/proofread/TextDiffService.h"
 
 #include <QApplication>
 #include <QCommandLineParser>

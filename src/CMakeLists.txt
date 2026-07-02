@@ -16,43 +16,43 @@ set(LABELQT_CORE_SOURCES
 )
 
 set(LABELQT_SERVICE_SOURCES
-    services/ArchiveReader.cpp
-    services/AutomationManifestParser.cpp
-    services/AutomationOperationApplier.cpp
-    services/AutomationPythonResolver.cpp
-    services/AutomationService.cpp
-    services/ImagePageCache.cpp
-    services/ImagePageCache.h
-    services/LabelClipboardService.cpp
-    services/LabelClipboardService.h
-    services/LabelEditController.cpp
-    services/LabelSequenceDiffService.cpp
-    services/LabelSequenceDiffService.h
-    services/LabelPastePlanner.cpp
-    services/LabelPastePlanner.h
-    services/LabelNavigator.cpp
-    services/PageSourceInfoService.cpp
-    services/ProjectComparisonService.cpp
-    services/ProjectComparisonService.h
-    services/ProjectImageValidator.cpp
-    services/ProjectPageOrderService.cpp
-    services/ProjectMergeService.cpp
-    services/ProjectController.cpp
-    services/ProjectWorkflowController.cpp
-    services/ProofreadReportService.cpp
-    services/ProofreadReportService.h
-    services/ReviewChangeClassifier.cpp
-    services/ReviewChangeClassifier.h
-    services/ReviewMetadataService.cpp
-    services/ReviewMetadataService.h
-    services/SaveChangesDecision.cpp
-    services/SaveChangesDecision.h
-    services/SessionStateStore.cpp
-    services/SecretStore.cpp
-    services/TextDiffHtmlRenderer.cpp
-    services/TextDiffHtmlRenderer.h
-    services/TextDiffService.cpp
-    services/TextDiffService.h
+    services/automation/AutomationManifestParser.cpp
+    services/automation/AutomationOperationApplier.cpp
+    services/automation/AutomationPythonResolver.cpp
+    services/automation/AutomationService.cpp
+    services/automation/SecretStore.cpp
+    services/io/ArchiveReader.cpp
+    services/io/ImagePageCache.cpp
+    services/io/ImagePageCache.h
+    services/label/LabelClipboardService.cpp
+    services/label/LabelClipboardService.h
+    services/label/LabelEditController.cpp
+    services/label/LabelNavigator.cpp
+    services/label/LabelPastePlanner.cpp
+    services/label/LabelPastePlanner.h
+    services/project/PageSourceInfoService.cpp
+    services/project/ProjectController.cpp
+    services/project/ProjectImageValidator.cpp
+    services/project/ProjectMergeService.cpp
+    services/project/ProjectPageOrderService.cpp
+    services/project/ProjectWorkflowController.cpp
+    services/project/SaveChangesDecision.cpp
+    services/project/SaveChangesDecision.h
+    services/project/SessionStateStore.cpp
+    services/proofread/LabelSequenceDiffService.cpp
+    services/proofread/LabelSequenceDiffService.h
+    services/proofread/ProjectComparisonService.cpp
+    services/proofread/ProjectComparisonService.h
+    services/proofread/ProofreadReportService.cpp
+    services/proofread/ProofreadReportService.h
+    services/proofread/ReviewChangeClassifier.cpp
+    services/proofread/ReviewChangeClassifier.h
+    services/proofread/ReviewMetadataService.cpp
+    services/proofread/ReviewMetadataService.h
+    services/proofread/TextDiffHtmlRenderer.cpp
+    services/proofread/TextDiffHtmlRenderer.h
+    services/proofread/TextDiffService.cpp
+    services/proofread/TextDiffService.h
 )
 
 file(GLOB LABELQT_TRANSLATION_FILES CONFIGURE_DEPENDS
@@ -61,40 +61,40 @@ file(GLOB LABELQT_TRANSLATION_FILES CONFIGURE_DEPENDS
 list(SORT LABELQT_TRANSLATION_FILES)
 
 set(LABELQT_UI_SOURCES
-    ui/AutomationController.cpp
-    ui/AutomationParameterDialog.cpp
-    ui/AutomationRunDialog.cpp
-    ui/AutomationShortcutEditorWidget.cpp
-    ui/AutomationShortcutController.cpp
-    ui/CanvasLabelItems.cpp
-    ui/CanvasLabelTextEditController.cpp
-    ui/CanvasLabelTextEditor.cpp
-    ui/CheckableFilterButton.cpp
-    ui/CurrentPageLabelContext.cpp
-    ui/CurrentPageLabelContext.h
-    ui/DialogWindowUtils.cpp
-    ui/DialogWindowUtils.h
+    ui/automation/AutomationController.cpp
+    ui/automation/AutomationParameterDialog.cpp
+    ui/automation/AutomationRunDialog.cpp
+    ui/automation/AutomationShortcutController.cpp
+    ui/automation/AutomationShortcutEditorWidget.cpp
+    ui/canvas/CanvasLabelItems.cpp
+    ui/canvas/CanvasLabelTextEditController.cpp
+    ui/canvas/CanvasLabelTextEditor.cpp
+    ui/canvas/ImageCanvas.cpp
+    ui/canvas/ImagePageViewController.cpp
+    ui/labeltable/LabelEditDelegates.cpp
+    ui/labeltable/LabelSelectionController.cpp
+    ui/labeltable/LabelTableModel.cpp
+    ui/labeltable/LabelTableView.cpp
+    ui/labeltable/CurrentPageLabelContext.cpp
+    ui/labeltable/CurrentPageLabelContext.h
     ui/EditorStateController.cpp
-    ui/GroupFilterComboBox.cpp
-    ui/GroupStyleEditorWidget.cpp
-    ui/ImageCanvas.cpp
-    ui/ImagePageViewController.cpp
-    ui/LabelEditDelegates.cpp
-    ui/LabelSelectionController.cpp
-    ui/LabelTableModel.cpp
-    ui/LabelTableView.cpp
+    ui/preferences/GroupStyleEditorWidget.cpp
+    ui/preferences/PreferenceDialog.cpp
+    ui/preferences/PreferenceDialogWidgets.cpp
+    ui/project/PageOrderDialog.cpp
+    ui/project/PageOrderListModel.cpp
+    ui/project/PageSelectorComboBox.cpp
+    ui/project/ProjectMergeDialog.cpp
+    ui/project/ProjectViewController.cpp
+    ui/proofread/ProofreadChangesDialog.cpp
+    ui/widgets/CheckableFilterButton.cpp
+    ui/widgets/DialogWindowUtils.cpp
+    ui/widgets/DialogWindowUtils.h
+    ui/widgets/GroupFilterComboBox.cpp
+    ui/widgets/ThemeManager.cpp
+    ui/labeltable/ViewportFittedTableColumns.cpp
     ui/MainWindow.cpp
     ui/MainWindowShortcutController.cpp
-    ui/PageOrderDialog.cpp
-    ui/PageOrderListModel.cpp
-    ui/PageSelectorComboBox.cpp
-    ui/PreferenceDialog.cpp
-    ui/PreferenceDialogWidgets.cpp
-    ui/ProofreadChangesDialog.cpp
-    ui/ProjectMergeDialog.cpp
-    ui/ProjectViewController.cpp
-    ui/ThemeManager.cpp
-    ui/ViewportFittedTableColumns.cpp
 )
 
 qt_add_resources(LABELQT_RESOURCE_SOURCES

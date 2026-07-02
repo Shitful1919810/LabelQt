@@ -1,6 +1,6 @@
 #include "ui/EditorStateController.h"
 
-#include "ui/CanvasLabelTextEditController.h"
+#include "ui/canvas/CanvasLabelTextEditController.h"
 
 #include <QAbstractItemDelegate>
 #include <QApplication>

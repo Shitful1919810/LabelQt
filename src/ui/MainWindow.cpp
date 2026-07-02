@@ -1,34 +1,34 @@
 #include "ui/MainWindow.h"
 
 #include "core/LabelPlusDocument.h"
-#include "services/AutomationOperationApplier.h"
-#include "services/LabelClipboardService.h"
-#include "services/LabelNavigator.h"
-#include "services/LabelPastePlanner.h"
-#include "services/ProjectComparisonService.h"
-#include "services/ProjectImageValidator.h"
-#include "services/ReviewMetadataService.h"
-#include "services/SaveChangesDecision.h"
-#include "services/SessionStateStore.h"
-#include "services/TextDiffService.h"
-#include "ui/AutomationController.h"
-#include "ui/AutomationShortcutController.h"
-#include "ui/CanvasLabelTextEditController.h"
-#include "ui/DialogWindowUtils.h"
+#include "services/automation/AutomationOperationApplier.h"
+#include "services/label/LabelClipboardService.h"
+#include "services/label/LabelNavigator.h"
+#include "services/label/LabelPastePlanner.h"
+#include "services/proofread/ProjectComparisonService.h"
+#include "services/project/ProjectImageValidator.h"
+#include "services/proofread/ReviewMetadataService.h"
+#include "services/project/SaveChangesDecision.h"
+#include "services/project/SessionStateStore.h"
+#include "services/proofread/TextDiffService.h"
+#include "ui/automation/AutomationController.h"
+#include "ui/automation/AutomationShortcutController.h"
+#include "ui/canvas/CanvasLabelTextEditController.h"
+#include "ui/widgets/DialogWindowUtils.h"
 #include "ui/EditorStateController.h"
-#include "ui/ImagePageViewController.h"
-#include "ui/LabelEditDelegates.h"
-#include "ui/LabelSelectionController.h"
-#include "ui/LabelTableView.h"
+#include "ui/canvas/ImagePageViewController.h"
+#include "ui/labeltable/LabelEditDelegates.h"
+#include "ui/labeltable/LabelSelectionController.h"
+#include "ui/labeltable/LabelTableView.h"
 #include "ui/MainWindowShortcutController.h"
-#include "ui/PageOrderDialog.h"
-#include "ui/PageSelectorComboBox.h"
-#include "ui/PreferenceDialog.h"
-#include "ui/ProofreadChangesDialog.h"
-#include "ui/ProjectMergeDialog.h"
-#include "ui/ProjectViewController.h"
-#include "ui/ThemeManager.h"
-#include "ui/ViewportFittedTableColumns.h"
+#include "ui/project/PageOrderDialog.h"
+#include "ui/project/PageSelectorComboBox.h"
+#include "ui/preferences/PreferenceDialog.h"
+#include "ui/proofread/ProofreadChangesDialog.h"
+#include "ui/project/ProjectMergeDialog.h"
+#include "ui/project/ProjectViewController.h"
+#include "ui/widgets/ThemeManager.h"
+#include "ui/labeltable/ViewportFittedTableColumns.h"
 
 #include <QAbstractItemDelegate>
 #include <QAbstractItemView>
@@ -1574,7 +1574,6 @@ void MainWindow::selectImage(int index)
 
 void MainWindow::selectLabel(int index)
 {
-    const QScopedValueRollback programmaticSelection(m_isProgrammaticLabelSelection, true);
     const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
     const bool selected = m_labelSelectionController != nullptr && m_labelSelectionController->selectSingle(index);
     setEditorEnabled(selected && !m_isAutomationRunning);
@@ -1635,9 +1634,9 @@ void MainWindow::selectLabelFromCanvasHover(int index)
         return;
     }
 
-    const QScopedValueRollback programmaticSelection(m_isProgrammaticLabelSelection, true);
     const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
-    const bool selected = m_labelSelectionController->selectSingle(index, false);
+    const bool selected = m_labelSelectionController->selectSingle(
+        index, {LabelSelectionController::SelectionOrigin::CanvasHover, false});
     setEditorEnabled(selected && !m_isAutomationRunning);
 }
 
@@ -2596,7 +2595,6 @@ void MainWindow::selectLabelIndexes(const QVector<int>& sourceIndexes, int prima
         return;
     }
 
-    const QScopedValueRollback programmaticSelection(m_isProgrammaticLabelSelection, true);
     const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
     m_labelSelectionController->selectIndexes(sourceIndexes, primarySourceIndex);
 }
@@ -3239,7 +3237,8 @@ bool MainWindow::isProofreadingModeActive() const
 
 bool MainWindow::shouldCenterCanvasForTableSelection() const
 {
-    return isProofreadingModeActive() && !m_isProgrammaticLabelSelection && m_canvas != nullptr;
+    return isProofreadingModeActive() && m_labelSelectionController != nullptr &&
+           m_labelSelectionController->isTableUserSelectionChange() && m_canvas != nullptr;
 }
 
 void MainWindow::markDirty()
