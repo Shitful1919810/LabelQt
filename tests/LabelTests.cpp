@@ -34,6 +34,7 @@
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QKeySequence>
@@ -859,6 +860,39 @@ private slots:
                  QString());
     }
 
+    void pageOrderListModelDisplaysMissingPageRenameAsFileReference()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("replacement.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::white);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing.png")),
+                                                          {}});
+
+        PageOrderListModel model(project);
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenameStatusColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("Image missing"));
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("replacement"), 1, {0}));
+        QVERIFY(plan.isValid());
+        QVERIFY(plan.items.first().referenceOnly);
+        model.setPendingRenamePlan(plan);
+        model.setRenamePlan(plan);
+
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenamePreviewColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("replacement.jpg"));
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenameStatusColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("Will point to replacement.jpg"));
+    }
+
     void sessionStateStorePersistsMultiSelectedLabels()
     {
         const QString projectPath =
@@ -1514,6 +1548,141 @@ private slots:
         QVERIFY(!invalidMergedPlan.error.isEmpty());
         QVERIFY(!invalidMergedPlan.items.at(0).error.isEmpty());
         QVERIFY(!invalidMergedPlan.items.at(1).error.isEmpty());
+    }
+
+    void projectImageRenameServiceUpdatesMissingPageReferenceToActualSuffix()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("fixed")));
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("fixed/page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::white);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("fixed/missing.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("fixed/missing.png")),
+                                                          {}});
+        project.images().last().labels.append(Label(QStringLiteral("baseline"), QStringLiteral("框内"), QPointF(0.2, 0.3)));
+        setMergeSources(project, {{QStringLiteral("fixed/missing.png"), {1, QDir(dir.path()).filePath("part-a.txt")}}});
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+        project.setCommentLines(
+            labelqt::services::ReviewMetadataService::rewriteCommentLines(project.commentLines(), metadata));
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        QVERIFY(plan.isValid());
+        QVERIFY(plan.hasChanges());
+        QVERIFY(plan.items.first().referenceOnly);
+        QCOMPARE(plan.items.first().newName, QStringLiteral("fixed/page.jpg"));
+        QCOMPARE(plan.items.first().newPath, replacementPath);
+
+        const std::expected<void, QString> result =
+            labelqt::services::ProjectImageRenameService::applyPlan(project, plan);
+        QVERIFY(result.has_value());
+        QCOMPARE(project.images().first().name, QStringLiteral("fixed/page.jpg"));
+        QCOMPARE(project.images().first().path, replacementPath);
+
+        const auto sources = labelqt::services::PageSourceInfoService::sourcesForProject(project);
+        QCOMPARE(sources.value(QStringLiteral("fixed/page.jpg")).sourceIndex, 1);
+        const labelqt::services::ReviewMetadata migratedMetadata =
+            labelqt::services::ReviewMetadataService::metadataForProject(project);
+        QVERIFY(migratedMetadata.hasBaseline());
+        QCOMPARE(migratedMetadata.baselineFor(QStringLiteral("fixed/page.jpg"), 0).text, QStringLiteral("baseline"));
+    }
+
+    void projectImageRenameServiceRejectsDuplicateMissingPageReferenceTargets()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::black);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-a.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-a.png")),
+                                                          {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-b.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-b.png")),
+                                                          {}});
+
+        const labelqt::services::ProjectImageRenamePlan firstPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        const labelqt::services::ProjectImageRenamePlan secondPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {1}));
+        QVERIFY(firstPlan.isValid());
+        QVERIFY(secondPlan.isValid());
+
+        const labelqt::services::ProjectImageRenamePlan mergedPlan =
+            labelqt::services::ProjectImageRenameService::mergePlans(firstPlan, secondPlan);
+        QVERIFY(!mergedPlan.isValid());
+        QVERIFY(!mergedPlan.error.isEmpty());
+    }
+
+    void projectImageRenameServiceRejectsMissingPageReferenceToExistingProjectImage()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::black);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing.png")),
+                                                          {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("page.jpg"), replacementPath, {}});
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        QVERIFY(!plan.isValid());
+        QVERIFY(!plan.items.first().error.isEmpty());
+    }
+
+    void projectImageRenameServiceMergePreservesMissingReferenceErrors()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::black);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-a.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-a.png")),
+                                                          {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-b.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-b.png")),
+                                                          {}});
+
+        const labelqt::services::ProjectImageRenamePlan validPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        const labelqt::services::ProjectImageRenamePlan invalidPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("absent"), 1, {1}));
+        QVERIFY(validPlan.isValid());
+        QVERIFY(!invalidPlan.isValid());
+        QVERIFY(!invalidPlan.items.at(1).error.isEmpty());
+
+        const labelqt::services::ProjectImageRenamePlan mergedPlan =
+            labelqt::services::ProjectImageRenameService::mergePlans(validPlan, invalidPlan);
+        QVERIFY(!mergedPlan.isValid());
+        QVERIFY(!mergedPlan.items.at(1).error.isEmpty());
     }
 
     void projectImageRenameServiceRenamesOnlySelectedOrderedImages()

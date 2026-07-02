@@ -23,6 +23,7 @@ struct ProjectImageRenameItem {
     QString newPath;
     QString error;
     bool included{false};
+    bool referenceOnly{false};
 
     bool isChanged() const noexcept;
     bool isValid() const noexcept;

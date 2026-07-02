@@ -1007,11 +1007,9 @@ void MainWindow::reorderPages()
     }
 
     PageOrderDialog dialog(project(), m_preferences, this, true);
+    dialog.setPendingImageRenameHandler(
+        [this](const labelqt::services::ProjectImageRenamePlan& plan) { return executeImageRenamePlan(plan); });
     if (dialog.exec() != QDialog::Accepted) {
-        return;
-    }
-
-    if (dialog.hasPendingImageRenamePlan() && !executeImageRenamePlan(dialog.pendingImageRenamePlan())) {
         return;
     }
 
@@ -1040,7 +1038,7 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
 
     const QMessageBox::StandardButton answer = showMainWindowMessageBox(
         this, QMessageBox::Warning, tr("Rename Images"),
-        tr("This will rename image files on disk and update the project to point to the new file names.\n\nThe project will be saved before renaming, then saved again after the image files are renamed.\n\nThis operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.\n\nContinue?"),
+        tr("This will rename existing image files on disk and update missing page references when the rendered target image already exists.\n\nThe project will be saved before applying the changes, then saved again after the operation finishes.\n\nThis operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.\n\nContinue?"),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (answer != QMessageBox::Yes) {
         return false;
@@ -1065,7 +1063,7 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
     catch (const std::exception& error) {
         showMainWindowCritical(
             this, tr("Save failed"),
-            tr("Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.\n\nLast error: %1")
+            tr("Image files or references were updated, but the project file could not be saved. Please save the project before closing LabelQt.\n\nLast error: %1")
                 .arg(QString::fromUtf8(error.what())));
         return false;
     }
@@ -1078,7 +1076,7 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
             m_imagePageViewController->restoreViewAfterCurrentImageDisplayed(oldZoomPercent, oldCenter);
         }
     }
-    statusBar()->showMessage(tr("Renamed image files by page order."), 4000);
+    statusBar()->showMessage(tr("Updated image files and page references by page order."), 4000);
     return true;
 }
 

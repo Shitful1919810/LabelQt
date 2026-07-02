@@ -8,6 +8,8 @@
 #include <QDialog>
 #include <QVector>
 
+#include <functional>
+
 class ImageCanvas;
 class QTableView;
 class QModelIndex;
@@ -26,13 +28,17 @@ public:
     QVector<int> pageOrder() const;
     bool hasPendingImageRenamePlan() const noexcept;
     labelqt::services::ProjectImageRenamePlan pendingImageRenamePlan() const;
+    void setPendingImageRenameHandler(
+        std::function<bool(const labelqt::services::ProjectImageRenamePlan&)> handler);
 
 public slots:
     void done(int result) override;
 
 private:
     void buildUi();
+    void acceptRequested();
     void updatePreview(const QModelIndex& currentIndex);
+    labelqt::core::ImageEntry previewImageForSourceIndex(int sourceIndex) const;
     void updateImageRenamePreview();
     void updatePageActionButtons();
     void restoreTableColumnWidths();
@@ -53,5 +59,7 @@ private:
     QToolButton* m_removePageButton{nullptr};
     ImageRenamePreviewWidget* m_imageRenameWidget{nullptr};
     labelqt::services::ProjectImageRenamePlan m_pendingImageRenamePlan;
+    labelqt::services::ProjectImageRenamePlan m_visibleImageRenamePlan;
+    std::function<bool(const labelqt::services::ProjectImageRenamePlan&)> m_pendingImageRenameHandler;
     bool m_hasPendingImageRenamePlan{false};
 };

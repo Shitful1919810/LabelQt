@@ -8,9 +8,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QImageReader>
 #include <QRegularExpression>
 #include <QSet>
 #include <QUuid>
+#include <QtGlobal>
 
 #include <algorithm>
 #include <ranges>
@@ -23,6 +25,33 @@ QString serviceText(const char* text)
 {
     return QCoreApplication::translate("ProjectImageRenameService", text);
 }
+
+[[maybe_unused]] constexpr const char* projectImageRenameServiceTranslationSources[] = {
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Pattern cannot be empty."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Unexpected '}' in pattern."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Missing '}' in pattern."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Only {index:03}-style zero padding is supported."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Unknown token {%1}."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Rendered file name cannot be empty."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Duplicate target file name."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Target file already exists."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Fix invalid file names before renaming."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "The pattern does not change any file name."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Multiple readable image files match the rendered name."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Target image does not exist."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Target image is not a file."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Target image cannot be read."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Source image does not exist."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Source image is not a file."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "File name pattern cannot change the image directory."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "File name cannot start or end with whitespace."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "File name cannot be empty or end with a dot."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "File name contains characters that are not portable."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "File name uses a Windows reserved device name."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "There are no image files to rename."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Failed to rename %1 to a temporary file."),
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Failed to rename %1 to %2."),
+};
 
 QString fileStem(const QFileInfo& fileInfo)
 {
@@ -120,6 +149,36 @@ bool samePath(const QString& lhs, const QString& rhs)
     return QFileInfo(lhs).absoluteFilePath() == QFileInfo(rhs).absoluteFilePath();
 }
 
+bool isTargetValidationError(const QString& error)
+{
+    return error == serviceText("Duplicate target file name.") || error == serviceText("Target file already exists.");
+}
+
+bool canReadImage(const QString& path)
+{
+    return QImageReader(path).canRead();
+}
+
+QString finalImagePathForConflictCheck(const ProjectImageRenameItem& item)
+{
+    if (item.included && item.error.isEmpty() && item.isChanged()) {
+        return item.newPath;
+    }
+    return item.oldPath;
+}
+
+QVector<QFileInfo> readableImageStemMatches(const QDir& directory, const QString& stem)
+{
+    QVector<QFileInfo> matches;
+    const QFileInfoList entries = directory.entryInfoList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot);
+    for (const QFileInfo& entry : entries) {
+        if (entry.completeBaseName() == stem && canReadImage(entry.absoluteFilePath())) {
+            matches.append(entry);
+        }
+    }
+    return matches;
+}
+
 QHash<QString, QString> renamedImageNamesByOldName(const ProjectImageRenamePlan& plan)
 {
     QHash<QString, QString> names;
@@ -190,11 +249,17 @@ void rollbackRenames(const QVector<RenameStep>& steps, const QSet<int>& movedToT
 void validatePlanTargets(ProjectImageRenamePlan& plan)
 {
     plan.error.clear();
+    for (ProjectImageRenameItem& item : plan.items) {
+        if (isTargetValidationError(item.error)) {
+            item.error.clear();
+        }
+    }
 
     QHash<QString, int> targetPathCounts;
     for (const ProjectImageRenameItem& item : plan.items) {
-        if (item.included && item.error.isEmpty() && !item.newPath.isEmpty()) {
-            targetPathCounts[item.newPath] += 1;
+        const QString finalPath = finalImagePathForConflictCheck(item);
+        if (!finalPath.isEmpty()) {
+            targetPathCounts[finalPath] += 1;
         }
     }
 
@@ -206,10 +271,10 @@ void validatePlanTargets(ProjectImageRenamePlan& plan)
             item.error = serviceText("Duplicate target file name.");
             continue;
         }
-        if (item.isChanged() && QFileInfo::exists(item.newPath)) {
+        if (item.isChanged() && !item.referenceOnly && QFileInfo::exists(item.newPath)) {
             const bool targetIsOneOfMovingSources =
                 std::ranges::any_of(plan.items, [&item](const ProjectImageRenameItem& other) {
-                    return other.isChanged() && samePath(other.oldPath, item.newPath);
+                    return other.isChanged() && !other.referenceOnly && samePath(other.oldPath, item.newPath);
                 });
             if (!targetIsOneOfMovingSources) {
                 item.error = serviceText("Target file already exists.");
@@ -302,13 +367,39 @@ ProjectImageRenamePlan ProjectImageRenameService::createPlan(const labelqt::core
 
         item.included = true;
         const QString stem = fileStem(oldFileInfo);
-        const QString suffix = fileSuffixWithDot(oldFileInfo);
+        QString suffix = fileSuffixWithDot(oldFileInfo);
         const QString relativeDirectory = QFileInfo(item.oldName).path();
         const std::expected<QString, QString> renderedStem =
             renderPattern(options.pattern, options.startIndex + *orderIt, stem);
         if (!renderedStem) {
             item.error = renderedStem.error();
         } else {
+            if (!oldFileInfo.exists()) {
+                item.referenceOnly = true;
+                const QDir directory(oldFileInfo.absolutePath());
+                QFileInfo targetInfo(directory.absoluteFilePath(*renderedStem + suffix));
+                if (!targetInfo.exists()) {
+                    const QVector<QFileInfo> matches = readableImageStemMatches(directory, *renderedStem);
+                    if (matches.size() == 1) {
+                        targetInfo = matches.first();
+                        suffix = fileSuffixWithDot(targetInfo);
+                    } else if (matches.size() > 1) {
+                        item.error = serviceText("Multiple readable image files match the rendered name.");
+                    }
+                }
+                if (item.error.isEmpty() && !targetInfo.exists()) {
+                    item.error = serviceText("Target image does not exist.");
+                }
+                if (item.error.isEmpty() && !targetInfo.isFile()) {
+                    item.error = serviceText("Target image is not a file.");
+                }
+                if (item.error.isEmpty() && !canReadImage(targetInfo.absoluteFilePath())) {
+                    item.error = serviceText("Target image cannot be read.");
+                }
+                if (item.error.isEmpty()) {
+                    suffix = fileSuffixWithDot(targetInfo);
+                }
+            }
             const QString targetFileName = *renderedStem + suffix;
             item.newName = relativeDirectory.isEmpty() || relativeDirectory == QStringLiteral(".")
                                ? targetFileName
@@ -316,10 +407,10 @@ ProjectImageRenamePlan ProjectImageRenameService::createPlan(const labelqt::core
             item.newPath = QDir(oldFileInfo.absolutePath()).absoluteFilePath(targetFileName);
         }
 
-        if (item.error.isEmpty() && !oldFileInfo.exists()) {
+        if (item.error.isEmpty() && !item.referenceOnly && !oldFileInfo.exists()) {
             item.error = serviceText("Source image does not exist.");
         }
-        if (item.error.isEmpty() && !oldFileInfo.isFile()) {
+        if (item.error.isEmpty() && !item.referenceOnly && !oldFileInfo.isFile()) {
             item.error = serviceText("Source image is not a file.");
         }
         if (item.error.isEmpty() && QFileInfo(item.newPath).absolutePath() != oldFileInfo.absolutePath()) {
@@ -374,11 +465,6 @@ ProjectImageRenamePlan ProjectImageRenameService::mergePlans(ProjectImageRenameP
         }
     }
 
-    for (ProjectImageRenameItem& item : currentPlan.items) {
-        if (item.included) {
-            item.error.clear();
-        }
-    }
     validatePlanTargets(currentPlan);
     return currentPlan;
 }
@@ -397,7 +483,7 @@ std::expected<void, QString> ProjectImageRenameService::applyPlan(labelqt::core:
     steps.reserve(plan.items.size());
     for (int i = 0; i < plan.items.size(); ++i) {
         const ProjectImageRenameItem& item = plan.items.at(i);
-        if (!item.included || !item.isChanged()) {
+        if (!item.included || !item.isChanged() || item.referenceOnly) {
             continue;
         }
 

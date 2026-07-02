@@ -167,7 +167,8 @@ void ImageRenamePreviewWidget::buildUi()
     rootLayout->setSpacing(8);
 
     auto* hintLabel = new QLabel(
-        tr("Rename image files according to the current page order. The extension is always preserved."), this);
+        tr("Rename existing image files according to the current page order. Missing pages will be linked to a matching existing image file, using that file's extension."),
+        this);
     hintLabel->setWordWrap(true);
     rootLayout->addWidget(hintLabel);
 
@@ -229,7 +230,7 @@ void ImageRenamePreviewWidget::updateStatus()
     if (m_plan.isValid()) {
         const int changedCount = static_cast<int>(std::count_if(m_plan.items.cbegin(), m_plan.items.cend(),
                                                                 [](const auto& item) { return item.isChanged(); }));
-        QString status = tr("%n image file(s) will be renamed.", nullptr, changedCount);
+        QString status = tr("%n image item(s) will be updated.", nullptr, changedCount);
         if (m_isRenameQueued) {
             status += QLatin1Char(' ');
             status += tr("Queued until you click OK.");

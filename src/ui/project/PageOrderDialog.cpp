@@ -79,6 +79,12 @@ labelqt::services::ProjectImageRenamePlan PageOrderDialog::pendingImageRenamePla
     return m_pendingImageRenamePlan;
 }
 
+void PageOrderDialog::setPendingImageRenameHandler(
+    std::function<bool(const labelqt::services::ProjectImageRenamePlan&)> handler)
+{
+    m_pendingImageRenameHandler = std::move(handler);
+}
+
 void PageOrderDialog::done(int result)
 {
     saveTableColumnWidths();
@@ -174,17 +180,25 @@ void PageOrderDialog::buildUi()
                 [this](const labelqt::services::ProjectImageRenamePlan& plan) {
                     m_pendingImageRenamePlan =
                         labelqt::services::ProjectImageRenameService::mergePlans(m_pendingImageRenamePlan, plan);
+                    m_visibleImageRenamePlan = m_pendingImageRenamePlan;
                     m_hasPendingImageRenamePlan = m_pendingImageRenamePlan.hasChanges();
                     if (m_pageOrderModel != nullptr) {
                         m_pageOrderModel->setPendingRenamePlan(m_pendingImageRenamePlan);
                         m_pageOrderModel->setRenamePlan(m_pendingImageRenamePlan);
                     }
+                    if (m_pageTable != nullptr) {
+                        updatePreview(m_pageTable->currentIndex());
+                    }
                 });
         connect(m_imageRenameWidget, &ImageRenamePreviewWidget::previewChanged, this,
                 [this](const labelqt::services::ProjectImageRenamePlan& plan) {
+                    m_visibleImageRenamePlan =
+                        labelqt::services::ProjectImageRenameService::mergePlans(m_pendingImageRenamePlan, plan);
                     if (m_pageOrderModel != nullptr) {
-                        m_pageOrderModel->setRenamePlan(
-                            labelqt::services::ProjectImageRenameService::mergePlans(m_pendingImageRenamePlan, plan));
+                        m_pageOrderModel->setRenamePlan(m_visibleImageRenamePlan);
+                    }
+                    if (m_pageTable != nullptr) {
+                        updatePreview(m_pageTable->currentIndex());
                     }
                 });
         renameLayout->addWidget(m_imageRenameWidget);
@@ -262,9 +276,22 @@ void PageOrderDialog::buildUi()
     updateImageRenamePreview();
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::accepted, this, &PageOrderDialog::acceptRequested);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     rootLayout->addWidget(buttons);
+}
+
+void PageOrderDialog::acceptRequested()
+{
+    if (hasPendingImageRenamePlan() && m_pendingImageRenameHandler) {
+        if (!m_pendingImageRenameHandler(m_pendingImageRenamePlan)) {
+            return;
+        }
+        m_pendingImageRenamePlan = {};
+        m_visibleImageRenamePlan = {};
+        m_hasPendingImageRenamePlan = false;
+    }
+    accept();
 }
 
 void PageOrderDialog::updatePreview(const QModelIndex& currentIndex)
@@ -278,8 +305,23 @@ void PageOrderDialog::updatePreview(const QModelIndex& currentIndex)
         return;
     }
 
-    const labelqt::core::ImageEntry& image = m_project.images().at(sourceIndex);
+    const labelqt::core::ImageEntry image = previewImageForSourceIndex(sourceIndex);
     m_canvas->setImage(image.path, image.labels);
+}
+
+labelqt::core::ImageEntry PageOrderDialog::previewImageForSourceIndex(int sourceIndex) const
+{
+    labelqt::core::ImageEntry image = m_project.images().at(sourceIndex);
+    const auto pendingIt =
+        std::ranges::find_if(m_visibleImageRenamePlan.items, [sourceIndex](const auto& item) {
+            return item.imageIndex == sourceIndex && item.included && item.referenceOnly && item.isChanged() &&
+                   item.error.isEmpty();
+        });
+    if (pendingIt != m_visibleImageRenamePlan.items.cend()) {
+        image.name = pendingIt->newName;
+        image.path = pendingIt->newPath;
+    }
+    return image;
 }
 
 void PageOrderDialog::updateImageRenamePreview()
