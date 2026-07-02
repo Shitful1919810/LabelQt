@@ -872,6 +872,7 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
 {
     QStringList lines;
     QSet<int> seenLabels;
+    int hoveredLabelIndex = -1;
     const QList<QGraphicsItem*> hoveredItems = items(viewportPosition);
     for (QGraphicsItem* item : hoveredItems) {
         while (item != nullptr && item->type() != canvasLabelMarkerItemType()) {
@@ -883,14 +884,19 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
 
         const auto* marker = static_cast<CanvasLabelMarkerItem*>(item);
         const int labelIndex = marker->labelIndex();
-        if (seenLabels.contains(labelIndex) || m_selectedLabels.contains(labelIndex) || labelIndex < 0 ||
-            labelIndex >= m_labels.size()) {
+        if (seenLabels.contains(labelIndex) || labelIndex < 0 || labelIndex >= m_labels.size()) {
             continue;
         }
 
         seenLabels.insert(labelIndex);
         const labelqt::core::Label& label = m_labels.at(labelIndex);
         if (!isLabelVisible(label)) {
+            continue;
+        }
+        if (hoveredLabelIndex < 0) {
+            hoveredLabelIndex = labelIndex;
+        }
+        if (m_selectedLabels.contains(labelIndex)) {
             continue;
         }
 
@@ -902,6 +908,7 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
         }
         lines.append(canvasLabelBubbleHtml(displayNumber, displayTextForLabel(labelIndex), color));
     }
+    setHoveredLabelIndex(hoveredLabelIndex);
 
     if (lines.isEmpty()) {
         hideHoveredLabelToolTip();
@@ -921,9 +928,19 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
 
 void ImageCanvas::hideHoveredLabelToolTip()
 {
+    setHoveredLabelIndex(-1);
     if (m_hoverToolTip != nullptr) {
         m_hoverToolTip->hide();
     }
+}
+
+void ImageCanvas::setHoveredLabelIndex(int index)
+{
+    if (m_hoveredLabelIndex == index) {
+        return;
+    }
+    m_hoveredLabelIndex = index;
+    emit labelHovered(index);
 }
 
 QRectF ImageCanvas::imageClampedSceneRect(QPointF firstScenePosition, QPointF secondScenePosition) const

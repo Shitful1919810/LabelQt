@@ -58,6 +58,7 @@
 #include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QScopedValueRollback>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QSlider>
@@ -749,6 +750,7 @@ void MainWindow::createCentralWidget()
     connect(m_canvas, &ImageCanvas::emptyAreaClicked, this, &MainWindow::clearCurrentLabelSelection);
     connect(m_canvas, &ImageCanvas::labelTextEditRequested, this, &MainWindow::openCanvasLabelTextEditor);
     connect(m_canvas, &ImageCanvas::labelDeleteRequested, this, &MainWindow::deleteSingleLabelFromCanvas);
+    connect(m_canvas, &ImageCanvas::labelHovered, this, &MainWindow::selectLabelFromCanvasHover);
     connect(m_canvas, &ImageCanvas::zoomPercentChanged, m_zoomSlider, &QSlider::setValue);
     connect(m_zoomSlider, &QSlider::valueChanged, m_canvas, &ImageCanvas::setZoomPercent);
     connect(m_imageComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::selectImage);
@@ -760,7 +762,11 @@ void MainWindow::createCentralWidget()
                     return;
                 }
                 if (current.isValid()) {
-                    updateCurrentLabelDetails(m_labelModel->sourceIndexForRow(current.row()));
+                    const int sourceIndex = m_labelModel->sourceIndexForRow(current.row());
+                    updateCurrentLabelDetails(sourceIndex);
+                    if (shouldCenterCanvasForTableSelection()) {
+                        m_canvas->centerOnLabel(sourceIndex);
+                    }
                 }
             });
     connect(m_labelView->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this]() {
@@ -1568,11 +1574,10 @@ void MainWindow::selectImage(int index)
 
 void MainWindow::selectLabel(int index)
 {
-    const bool wasUpdatingUi = m_isUpdatingUi;
-    m_isUpdatingUi = true;
+    const QScopedValueRollback programmaticSelection(m_isProgrammaticLabelSelection, true);
+    const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
     const bool selected = m_labelSelectionController != nullptr && m_labelSelectionController->selectSingle(index);
     setEditorEnabled(selected && !m_isAutomationRunning);
-    m_isUpdatingUi = wasUpdatingUi;
 }
 
 void MainWindow::selectLabelFromCanvas(int index, Qt::KeyboardModifiers modifiers)
@@ -1612,6 +1617,28 @@ void MainWindow::selectLabelFromCanvas(int index, Qt::KeyboardModifiers modifier
     const int lastRow = std::max(anchorRow, targetRow);
     const QVector<int> sourceIndexes = m_labelModel->labelContext().sourceIndexesInVisibleRowRange(firstRow, lastRow);
     selectLabelIndexes(sourceIndexes, index);
+}
+
+void MainWindow::selectLabelFromCanvasHover(int index)
+{
+    if (!isProofreadingModeActive() || index < 0 || m_labelSelectionController == nullptr) {
+        return;
+    }
+    const Qt::KeyboardModifiers modifiers = QApplication::keyboardModifiers();
+    if ((modifiers & (Qt::ControlModifier | Qt::ShiftModifier)) != Qt::NoModifier ||
+        selectedLabelIndexes().size() >= 2) {
+        return;
+    }
+
+    const labelqt::core::ImageEntry* image = currentImage();
+    if (image == nullptr || index >= image->labels.size() || !isLabelVisibleByGroupFilter(image->labels.at(index))) {
+        return;
+    }
+
+    const QScopedValueRollback programmaticSelection(m_isProgrammaticLabelSelection, true);
+    const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
+    const bool selected = m_labelSelectionController->selectSingle(index, false);
+    setEditorEnabled(selected && !m_isAutomationRunning);
 }
 
 void MainWindow::addLabel(QPointF normalizedPosition)
@@ -2569,10 +2596,9 @@ void MainWindow::selectLabelIndexes(const QVector<int>& sourceIndexes, int prima
         return;
     }
 
-    const bool wasUpdatingUi = m_isUpdatingUi;
-    m_isUpdatingUi = true;
+    const QScopedValueRollback programmaticSelection(m_isProgrammaticLabelSelection, true);
+    const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
     m_labelSelectionController->selectIndexes(sourceIndexes, primarySourceIndex);
-    m_isUpdatingUi = wasUpdatingUi;
 }
 
 void MainWindow::refreshProjectUi()
@@ -3204,6 +3230,16 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
 QStringList MainWindow::defaultProjectGroups() const
 {
     return {tr("Dialogue"), tr("Outside text")};
+}
+
+bool MainWindow::isProofreadingModeActive() const
+{
+    return labelqt::services::ReviewMetadataService::projectHasBaseline(project());
+}
+
+bool MainWindow::shouldCenterCanvasForTableSelection() const
+{
+    return isProofreadingModeActive() && !m_isProgrammaticLabelSelection && m_canvas != nullptr;
 }
 
 void MainWindow::markDirty()

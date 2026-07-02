@@ -19,7 +19,7 @@ public:
                       SimpleCallback focusTable);
 
     QVector<int> selectedLabelIndexes() const;
-    bool selectSingle(int sourceIndex);
+    bool selectSingle(int sourceIndex, bool focusTable = true);
     bool selectIndexes(QVector<int> sourceIndexes, int primarySourceIndex);
     void clearSelection();
 

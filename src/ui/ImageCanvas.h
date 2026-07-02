@@ -80,6 +80,7 @@ signals:
     void emptyAreaClicked();
     void labelTextEditRequested(int index, QPoint globalPosition);
     void labelDeleteRequested(int index);
+    void labelHovered(int index);
     void zoomPercentChanged(int percent);
     void viewportStateChanged(int zoomPercent, QPointF normalizedCenter);
     void selectionChanged(QRectF normalizedRect);
@@ -110,6 +111,7 @@ private:
     QString displayTextForLabel(int index) const;
     void updateHoveredLabelToolTip(const QPoint& viewportPosition, const QPoint& globalPosition);
     void hideHoveredLabelToolTip();
+    void setHoveredLabelIndex(int index);
     labelqt::core::LabelGroupStyle styleForGroup(const QString& group) const;
     QPointF normalizedPositionFromScene(QPointF scenePosition) const;
     QRectF imageClampedSceneRect(QPointF firstScenePosition, QPointF secondScenePosition) const;
@@ -149,6 +151,7 @@ private:
     bool m_readOnly{false};
     PointerInteractionState m_pointerState{PointerInteractionState::Idle};
     int m_pendingLabelSelectIndex{-1};
+    int m_hoveredLabelIndex{-1};
     int m_movingLabelIndex{-1};
     int m_pendingLabelMoveIndex{-1};
     Qt::KeyboardModifiers m_pendingLabelSelectModifiers{Qt::NoModifier};

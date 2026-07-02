@@ -48,7 +48,7 @@ QVector<int> LabelSelectionController::selectedLabelIndexes() const
     return labelIndexes;
 }
 
-bool LabelSelectionController::selectSingle(int sourceIndex)
+bool LabelSelectionController::selectSingle(int sourceIndex, bool focusTable)
 {
     if (m_model == nullptr || m_tableView == nullptr || m_canvas == nullptr || !m_updateDetails ||
         !m_updateDetails(sourceIndex)) {
@@ -70,7 +70,7 @@ bool LabelSelectionController::selectSingle(int sourceIndex)
         if (m_capRowHeight) {
             m_capRowHeight(visibleRow);
         }
-        if (m_focusTable) {
+        if (focusTable && m_focusTable) {
             m_focusTable();
         }
     }

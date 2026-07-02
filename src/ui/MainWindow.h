@@ -95,6 +95,7 @@ private:
     void selectImage(int index);
     void selectLabel(int index);
     void selectLabelFromCanvas(int index, Qt::KeyboardModifiers modifiers);
+    void selectLabelFromCanvasHover(int index);
     void addLabel(QPointF normalizedPosition);
     labelqt::services::ClipboardLabels selectedVisibleClipboardLabels() const;
     void copyToClipboard();
@@ -176,6 +177,8 @@ private:
     void applyPreferences(labelqt::core::AppPreferencesLoadResult result);
     QString preferenceWarningText(const labelqt::core::AppPreferenceWarning& warning) const;
     QStringList defaultProjectGroups() const;
+    bool isProofreadingModeActive() const;
+    bool shouldCenterCanvasForTableSelection() const;
     void markDirty();
     void setDirty(bool dirty);
     bool promptToSaveIfDirty();
@@ -252,6 +255,7 @@ private:
     int m_currentLabelIndex{-1};
     bool m_isUpdatingUi{false};
     bool m_isTableEditorShortcutNavigation{false};
+    bool m_isProgrammaticLabelSelection{false};
     int m_suppressedTableCommitSelectionSourceIndex{-1};
     int m_pendingTextEditImageIndex{-1};
     int m_pendingTextEditLabelIndex{-1};
