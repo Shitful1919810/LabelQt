@@ -3,6 +3,7 @@
 #include "core/Project.h"
 #include "core/UndoStack.h"
 #include "services/project/ProjectMergeService.h"
+#include "services/project/ProjectImageRenameService.h"
 
 #include <QPointF>
 #include <QString>
@@ -10,6 +11,7 @@
 #include <QVector>
 
 #include <functional>
+#include <expected>
 #include <optional>
 
 namespace labelqt::services {
@@ -40,6 +42,7 @@ public:
                                                 const QVector<int>& selectedCandidateIndexes) const;
     void saveProject(const labelqt::core::Project& project, const QString& path) const;
     bool applyPageOrder(const QVector<int>& order, const ProjectViewState& viewState);
+    std::expected<void, QString> applyImageRename(const ProjectImageRenamePlan& plan);
 
 private:
     labelqt::core::Project& m_project;

@@ -1,14 +1,18 @@
 #pragma once
 
 #include "core/Project.h"
+#include "services/project/ProjectImageRenameService.h"
 
 #include <QAbstractTableModel>
+#include <QHash>
 #include <QVector>
 
 class PageOrderListModel final : public QAbstractTableModel {
 public:
     enum Column {
         ImageNameColumn = 0,
+        RenamePreviewColumn,
+        RenameStatusColumn,
         OriginalIndexColumn,
         ColumnCount,
     };
@@ -19,6 +23,10 @@ public:
     QVector<int> lastMovedSourceIndexes() const;
     int sourceIndexForRow(int row) const;
     int rowForSourceIndex(int sourceIndex) const;
+    void refreshAllRows();
+    void setRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan);
+    void setPendingRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan);
+    void clearPendingRenamePlan();
     void moveSourceIndexes(QVector<int> sourceIndexes, int delta);
     void removeSourceIndexes(QVector<int> sourceIndexes);
 
@@ -39,4 +47,6 @@ private:
     const labelqt::core::Project& m_project;
     QVector<int> m_order;
     QVector<int> m_lastMovedSourceIndexes;
+    QHash<int, labelqt::services::ProjectImageRenameItem> m_renameItemsBySourceIndex;
+    QHash<int, labelqt::services::ProjectImageRenameItem> m_pendingRenameItemsBySourceIndex;
 };

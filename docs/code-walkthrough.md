@@ -148,8 +148,27 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 - 生成合并预览工程。
 - 保存合并后工程。
 - 应用页面顺序调整并注册撤销命令。
+- 执行图片文件重命名工作流，成功后清空普通撤销历史并标记工程已修改。
 
 `MainWindow` 在这里的职责是弹出 `ProjectMergeDialog` / `PageOrderDialog`，然后把用户选择交给控制器。
+
+### `ProjectImageRenameService` / `ImageRenamePreviewWidget`
+
+文件：
+
+- `src/services/project/ProjectImageRenameService.h`
+- `src/services/project/ProjectImageRenameService.cpp`
+- `src/ui/project/ImageRenamePreviewWidget.cpp`
+
+“按页面顺序重命名图片”会真实修改磁盘图片文件，因此不属于普通可撤销编辑。`ImageRenamePreviewWidget` 负责收集格式串、起始序号和生成待执行的重命名计划；`ProjectImageRenameService` 负责生成计划、校验非法文件名、用临时文件执行两阶段重命名，并在成功后更新 `ImageEntry::name` / `ImageEntry::path`。当前第一版格式串只支持：
+
+- `{index}`
+- `{index:03}` 这类补零序号
+- `{stem}`
+
+扩展名和原图片所在目录始终保留，不允许通过格式串修改。操作成功后会清空普通撤销栈，并迁移合并来源和校对基线元数据。
+
+重命名预览被合并进 `PageOrderDialog` 的页面表格：表格同时展示当前文件名、新文件名、重命名状态和原顺序。用户可以一边拖动页面顺序，一边看到按当前顺序生成的新文件名。默认只选中一页时按全部页面重命名；当用户多选若干页时，只按这些选中页在当前表格中的顺序生成重命名计划。点击“加入待重命名”只记录当前重命名计划，不立即修改磁盘；点击页面管理窗口的“确定”时才会提示确认并执行文件重命名，然后应用页面顺序调整。取消页面管理窗口不会修改磁盘文件。
 
 ### `ProjectMergeService`
 

@@ -724,18 +724,18 @@ Last error: %2</source>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="337"/>
-        <source>Reorder &amp;Pages...</source>
-        <translation>调整页面顺序(&amp;P)...</translation>
+        <source>Manage &amp;Pages...</source>
+        <translation>页面管理(&amp;P)...</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>Reorder Pages</source>
-        <translation>调整页面顺序</translation>
+        <source>Manage Pages</source>
+        <translation>页面管理</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>There are no pages to reorder.</source>
-        <translation>没有可调整顺序的页面。</translation>
+        <source>There are no pages to manage.</source>
+        <translation>没有可管理的页面。</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="1615"/>
@@ -1212,8 +1212,8 @@ Last error: %2</source>
     <name>PageOrderDialog</name>
     <message>
         <location filename="../src/ui/PageOrderDialog.cpp" line="51"/>
-        <source>Reorder Pages</source>
-        <translation>调整页面顺序</translation>
+        <source>Manage Pages</source>
+        <translation>页面管理</translation>
     </message>
     <message>
         <location filename="../src/ui/PageOrderDialog.cpp" line="55"/>
@@ -1235,6 +1235,10 @@ Last error: %2</source>
         <source>Remove selected pages from the project</source>
         <translation>从工程中移除选中页面</translation>
     </message>
+    <message>
+        <source>Rename Images</source>
+        <translation>重命名图片</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderListModel</name>
@@ -1245,6 +1249,26 @@ Last error: %2</source>
     </message>
     <message>
         <location filename="../src/ui/PageOrderListModel.cpp" line="169"/>
+        <source>New file</source>
+        <translation>新文件</translation>
+    </message>
+    <message>
+        <source>Rename status</source>
+        <translation>重命名状态</translation>
+    </message>
+    <message>
+        <source>Not selected</source>
+        <translation>未选中</translation>
+    </message>
+    <message>
+        <source>Will be renamed to %1</source>
+        <translation>将命名为 %1</translation>
+    </message>
+    <message>
+        <source>Unchanged</source>
+        <translation>不变</translation>
+    </message>
+    <message>
         <source>Original #</source>
         <translation>原顺序</translation>
     </message>
@@ -2103,6 +2127,169 @@ Last error: %2</source>
     <message>
         <source>Clear</source>
         <translation>清空</translation>
+    </message>
+</context>
+<context>
+    <name>ImageRenamePreviewWidget</name>
+    <message>
+        <source>Rename image files according to the current page order. The extension is always preserved.</source>
+        <translation>按照当前页面顺序重命名图片文件。扩展名会始终保留。</translation>
+    </message>
+    <message>
+        <source>Supported: {index}, {index:03}, {stem}</source>
+        <translation>支持：{index}、{index:03}、{stem}</translation>
+    </message>
+    <message>
+        <source>File name pattern</source>
+        <translation>文件名格式</translation>
+    </message>
+    <message>
+        <source>Start index</source>
+        <translation>起始序号</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n image file(s) will be renamed.</source>
+        <translation>
+            <numerusform>%n 个图片文件将被重命名。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Queue Rename...</source>
+        <translation>加入待重命名...</translation>
+    </message>
+    <message>
+        <source>Queued until you click OK.</source>
+        <translation>点击确定后执行。</translation>
+    </message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message>
+        <source>Rename Images</source>
+        <translation>重命名图片</translation>
+    </message>
+    <message>
+        <source>There are no image files to rename.</source>
+        <translation>没有可重命名的图片文件。</translation>
+    </message>
+    <message>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>请先修正无效文件名再重命名。</translation>
+    </message>
+    <message>
+        <source>This will rename image files on disk and update the project to point to the new file names.
+
+The project will be saved before renaming, then saved again after the image files are renamed.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</source>
+        <translation>这会重命名磁盘上的图片文件，并更新工程使其指向新的文件名。
+
+工程会在重命名前保存一次，并在图片文件重命名后再次保存。
+
+此操作不属于普通撤销栈。如果操作成功，当前撤销历史会被清空。
+
+是否继续？</translation>
+    </message>
+    <message>
+        <source>Rename failed</source>
+        <translation>重命名失败</translation>
+    </message>
+    <message>
+        <source>Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</source>
+        <translation>图片文件已被重命名，但更新后的工程文件未能保存。请在关闭 LabelQt 前保存工程。
+
+最后错误：%1</translation>
+    </message>
+    <message>
+        <source>Renamed image files by page order.</source>
+        <translation>已按页面顺序重命名图片文件。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectImageRenameService</name>
+    <message>
+        <source>Pattern cannot be empty.</source>
+        <translation>格式不能为空。</translation>
+    </message>
+    <message>
+        <source>Unexpected &#x27;}&#x27; in pattern.</source>
+        <translation>格式中存在意外的 &#x27;}&#x27;。</translation>
+    </message>
+    <message>
+        <source>Missing &#x27;}&#x27; in pattern.</source>
+        <translation>格式中缺少 &#x27;}&#x27;。</translation>
+    </message>
+    <message>
+        <source>Only {index:03}-style zero padding is supported.</source>
+        <translation>仅支持 {index:03} 这种补零格式。</translation>
+    </message>
+    <message>
+        <source>Unknown token {%1}.</source>
+        <translation>未知占位符 {%1}。</translation>
+    </message>
+    <message>
+        <source>Rendered file name cannot be empty.</source>
+        <translation>生成的文件名不能为空。</translation>
+    </message>
+    <message>
+        <source>Source image does not exist.</source>
+        <translation>源图片不存在。</translation>
+    </message>
+    <message>
+        <source>Source image is not a file.</source>
+        <translation>源图片不是文件。</translation>
+    </message>
+    <message>
+        <source>File name cannot start or end with whitespace.</source>
+        <translation>文件名不能以空白字符开头或结尾。</translation>
+    </message>
+    <message>
+        <source>File name cannot be empty or end with a dot.</source>
+        <translation>文件名不能为空，也不能以点号结尾。</translation>
+    </message>
+    <message>
+        <source>File name contains characters that are not portable.</source>
+        <translation>文件名包含不便跨平台使用的字符。</translation>
+    </message>
+    <message>
+        <source>File name uses a Windows reserved device name.</source>
+        <translation>文件名使用了 Windows 保留设备名。</translation>
+    </message>
+    <message>
+        <source>Duplicate target file name.</source>
+        <translation>目标文件名重复。</translation>
+    </message>
+    <message>
+        <source>Target file already exists.</source>
+        <translation>目标文件已存在。</translation>
+    </message>
+    <message>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>请先修正无效文件名再重命名。</translation>
+    </message>
+    <message>
+        <source>The pattern does not change any file name.</source>
+        <translation>当前格式不会改变任何文件名。</translation>
+    </message>
+    <message>
+        <source>There are no image files to rename.</source>
+        <translation>没有可重命名的图片文件。</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to a temporary file.</source>
+        <translation>无法将 %1 重命名为临时文件。</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to %2.</source>
+        <translation>无法将 %1 重命名为 %2。</translation>
+    </message>
+    <message>
+        <source>File name pattern cannot change the image directory.</source>
+        <translation>文件名格式不能改变图片目录。</translation>
     </message>
 </context>
 </TS>

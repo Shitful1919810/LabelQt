@@ -77,6 +77,7 @@
 #include <QtConcurrent/QtConcurrent>
 
 #include <algorithm>
+#include <expected>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -477,7 +478,7 @@ void MainWindow::createActions()
     m_mergeProjectsAction = new QAction(tr("&Merge Projects..."), this);
     connect(m_mergeProjectsAction, &QAction::triggered, this, &MainWindow::mergeProjects);
 
-    m_reorderPagesAction = new QAction(tr("Reorder &Pages..."), this);
+    m_reorderPagesAction = new QAction(tr("Manage &Pages..."), this);
     connect(m_reorderPagesAction, &QAction::triggered, this, &MainWindow::reorderPages);
 
     m_startProofreadingAction = new QAction(tr("Start Proofreading Baseline"), this);
@@ -1001,12 +1002,16 @@ void MainWindow::reorderPages()
 
     commitActiveTextInput();
     if (project().images().isEmpty()) {
-        showMainWindowInformation(this, tr("Reorder Pages"), tr("There are no pages to reorder."));
+        showMainWindowInformation(this, tr("Manage Pages"), tr("There are no pages to manage."));
         return;
     }
 
-    PageOrderDialog dialog(project(), m_preferences, this);
+    PageOrderDialog dialog(project(), m_preferences, this, true);
     if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    if (dialog.hasPendingImageRenamePlan() && !executeImageRenamePlan(dialog.pendingImageRenamePlan())) {
         return;
     }
 
@@ -1019,6 +1024,62 @@ void MainWindow::reorderPages()
         m_canvas == nullptr ? QPointF(0.5, 0.5) : m_canvas->normalizedViewCenter(),
     };
     m_projectWorkflowController->applyPageOrder(dialog.pageOrder(), viewState);
+}
+
+bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan)
+{
+    if (!plan.isValid()) {
+        showMainWindowWarning(this, tr("Rename Images"),
+                              plan.error.isEmpty() ? tr("Fix invalid file names before renaming.") : plan.error);
+        return false;
+    }
+    if (!plan.hasChanges()) {
+        showMainWindowWarning(this, tr("Rename Images"), tr("There are no image files to rename."));
+        return false;
+    }
+
+    const QMessageBox::StandardButton answer = showMainWindowMessageBox(
+        this, QMessageBox::Warning, tr("Rename Images"),
+        tr("This will rename image files on disk and update the project to point to the new file names.\n\nThe project will be saved before renaming, then saved again after the image files are renamed.\n\nThis operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.\n\nContinue?"),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return false;
+    }
+
+    if (!saveProject()) {
+        return false;
+    }
+
+    const int oldImageIndex = m_currentImageIndex;
+    const int oldZoomPercent = m_canvas == nullptr ? 100 : m_canvas->zoomPercent();
+    const QPointF oldCenter = m_canvas == nullptr ? QPointF(0.5, 0.5) : m_canvas->normalizedViewCenter();
+    const std::expected<void, QString> result = m_projectWorkflowController->applyImageRename(plan);
+    if (!result) {
+        showMainWindowCritical(this, tr("Rename failed"), result.error());
+        return false;
+    }
+
+    try {
+        m_projectController.save();
+    }
+    catch (const std::exception& error) {
+        showMainWindowCritical(
+            this, tr("Save failed"),
+            tr("Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.\n\nLast error: %1")
+                .arg(QString::fromUtf8(error.what())));
+        return false;
+    }
+
+    refreshProjectUi();
+    if (oldImageIndex >= 0 && oldImageIndex < project().images().size()) {
+        m_currentImageIndex = oldImageIndex;
+        refreshImageUi();
+        if (m_imagePageViewController != nullptr) {
+            m_imagePageViewController->restoreViewAfterCurrentImageDisplayed(oldZoomPercent, oldCenter);
+        }
+    }
+    statusBar()->showMessage(tr("Renamed image files by page order."), 4000);
+    return true;
 }
 
 void MainWindow::startProofreadingBaseline()

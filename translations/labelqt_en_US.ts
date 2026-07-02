@@ -732,18 +732,18 @@ Last error: %2</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="337"/>
-        <source>Reorder &amp;Pages...</source>
-        <translation>Reorder &amp;Pages...</translation>
+        <source>Manage &amp;Pages...</source>
+        <translation>Manage &amp;Pages...</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>Reorder Pages</source>
-        <translation>Reorder Pages</translation>
+        <source>Manage Pages</source>
+        <translation>Manage Pages</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>There are no pages to reorder.</source>
-        <translation>There are no pages to reorder.</translation>
+        <source>There are no pages to manage.</source>
+        <translation>There are no pages to manage.</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="1615"/>
@@ -1220,8 +1220,8 @@ Last error: %2</translation>
     <name>PageOrderDialog</name>
     <message>
         <location filename="../src/ui/PageOrderDialog.cpp" line="51"/>
-        <source>Reorder Pages</source>
-        <translation>Reorder Pages</translation>
+        <source>Manage Pages</source>
+        <translation>Manage Pages</translation>
     </message>
     <message>
         <location filename="../src/ui/PageOrderDialog.cpp" line="55"/>
@@ -1243,6 +1243,10 @@ Last error: %2</translation>
         <source>Remove selected pages from the project</source>
         <translation>Remove selected pages from the project</translation>
     </message>
+    <message>
+        <source>Rename Images</source>
+        <translation>Rename Images</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderListModel</name>
@@ -1253,6 +1257,26 @@ Last error: %2</translation>
     </message>
     <message>
         <location filename="../src/ui/PageOrderListModel.cpp" line="169"/>
+        <source>New file</source>
+        <translation>New file</translation>
+    </message>
+    <message>
+        <source>Rename status</source>
+        <translation>Rename status</translation>
+    </message>
+    <message>
+        <source>Not selected</source>
+        <translation>Not selected</translation>
+    </message>
+    <message>
+        <source>Will be renamed to %1</source>
+        <translation>Will be renamed to %1</translation>
+    </message>
+    <message>
+        <source>Unchanged</source>
+        <translation>Unchanged</translation>
+    </message>
+    <message>
         <source>Original #</source>
         <translation>Original #</translation>
     </message>
@@ -2114,6 +2138,169 @@ Last error: %2</translation>
     <message>
         <source>Clear</source>
         <translation>Clear</translation>
+    </message>
+</context>
+<context>
+    <name>ImageRenamePreviewWidget</name>
+    <message>
+        <source>Rename image files according to the current page order. The extension is always preserved.</source>
+        <translation>Rename image files according to the current page order. The extension is always preserved.</translation>
+    </message>
+    <message>
+        <source>Supported: {index}, {index:03}, {stem}</source>
+        <translation>Supported: {index}, {index:03}, {stem}</translation>
+    </message>
+    <message>
+        <source>File name pattern</source>
+        <translation>File name pattern</translation>
+    </message>
+    <message>
+        <source>Start index</source>
+        <translation>Start index</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n image file(s) will be renamed.</source>
+        <translation>
+            <numerusform>%n image file(s) will be renamed.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Queue Rename...</source>
+        <translation>Queue Rename...</translation>
+    </message>
+    <message>
+        <source>Queued until you click OK.</source>
+        <translation>Queued until you click OK.</translation>
+    </message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message>
+        <source>Rename Images</source>
+        <translation>Rename Images</translation>
+    </message>
+    <message>
+        <source>There are no image files to rename.</source>
+        <translation>There are no image files to rename.</translation>
+    </message>
+    <message>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>Fix invalid file names before renaming.</translation>
+    </message>
+    <message>
+        <source>This will rename image files on disk and update the project to point to the new file names.
+
+The project will be saved before renaming, then saved again after the image files are renamed.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</source>
+        <translation>This will rename image files on disk and update the project to point to the new file names.
+
+The project will be saved before renaming, then saved again after the image files are renamed.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</translation>
+    </message>
+    <message>
+        <source>Rename failed</source>
+        <translation>Rename failed</translation>
+    </message>
+    <message>
+        <source>Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</source>
+        <translation>Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</translation>
+    </message>
+    <message>
+        <source>Renamed image files by page order.</source>
+        <translation>Renamed image files by page order.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectImageRenameService</name>
+    <message>
+        <source>Pattern cannot be empty.</source>
+        <translation>Pattern cannot be empty.</translation>
+    </message>
+    <message>
+        <source>Unexpected &#x27;}&#x27; in pattern.</source>
+        <translation>Unexpected &#x27;}&#x27; in pattern.</translation>
+    </message>
+    <message>
+        <source>Missing &#x27;}&#x27; in pattern.</source>
+        <translation>Missing &#x27;}&#x27; in pattern.</translation>
+    </message>
+    <message>
+        <source>Only {index:03}-style zero padding is supported.</source>
+        <translation>Only {index:03}-style zero padding is supported.</translation>
+    </message>
+    <message>
+        <source>Unknown token {%1}.</source>
+        <translation>Unknown token {%1}.</translation>
+    </message>
+    <message>
+        <source>Rendered file name cannot be empty.</source>
+        <translation>Rendered file name cannot be empty.</translation>
+    </message>
+    <message>
+        <source>Source image does not exist.</source>
+        <translation>Source image does not exist.</translation>
+    </message>
+    <message>
+        <source>Source image is not a file.</source>
+        <translation>Source image is not a file.</translation>
+    </message>
+    <message>
+        <source>File name cannot start or end with whitespace.</source>
+        <translation>File name cannot start or end with whitespace.</translation>
+    </message>
+    <message>
+        <source>File name cannot be empty or end with a dot.</source>
+        <translation>File name cannot be empty or end with a dot.</translation>
+    </message>
+    <message>
+        <source>File name contains characters that are not portable.</source>
+        <translation>File name contains characters that are not portable.</translation>
+    </message>
+    <message>
+        <source>File name uses a Windows reserved device name.</source>
+        <translation>File name uses a Windows reserved device name.</translation>
+    </message>
+    <message>
+        <source>Duplicate target file name.</source>
+        <translation>Duplicate target file name.</translation>
+    </message>
+    <message>
+        <source>Target file already exists.</source>
+        <translation>Target file already exists.</translation>
+    </message>
+    <message>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>Fix invalid file names before renaming.</translation>
+    </message>
+    <message>
+        <source>The pattern does not change any file name.</source>
+        <translation>The pattern does not change any file name.</translation>
+    </message>
+    <message>
+        <source>There are no image files to rename.</source>
+        <translation>There are no image files to rename.</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to a temporary file.</source>
+        <translation>Failed to rename %1 to a temporary file.</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to %2.</source>
+        <translation>Failed to rename %1 to %2.</translation>
+    </message>
+    <message>
+        <source>File name pattern cannot change the image directory.</source>
+        <translation>File name pattern cannot change the image directory.</translation>
     </message>
 </context>
 </TS>

@@ -2,19 +2,25 @@
 
 #include "ui/widgets/DialogWindowUtils.h"
 #include "ui/canvas/ImageCanvas.h"
+#include "ui/project/ImageRenamePreviewWidget.h"
 #include "ui/project/PageOrderListModel.h"
 #include "ui/labeltable/ViewportFittedTableColumns.h"
 
 #include <QAbstractItemView>
 #include <QDialogButtonBox>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QIcon>
 #include <QItemSelection>
 #include <QLabel>
+#include <QPainter>
+#include <QSet>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QSplitter>
 #include <QStyle>
+#include <QStyledItemDelegate>
 #include <QTableView>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -23,15 +29,37 @@
 #include <utility>
 
 namespace {
-constexpr int defaultPageOrderImageNameColumnWidth = 220;
+constexpr int defaultPageOrderImageNameColumnWidth = 340;
+constexpr int defaultPageOrderRenamePreviewColumnWidth = 300;
+constexpr int defaultPageOrderRenameStatusColumnWidth = 300;
 constexpr int defaultPageOrderOriginalIndexColumnWidth = 80;
 constexpr int minimumPageOrderImageNameColumnWidth = 160;
+constexpr int minimumPageOrderRenamePreviewColumnWidth = 160;
+constexpr int minimumPageOrderRenameStatusColumnWidth = 100;
 constexpr int minimumPageOrderOriginalIndexColumnWidth = 60;
+
+class RenameStatusDelegate final : public QStyledItemDelegate {
+public:
+    explicit RenameStatusDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        QStyleOptionViewItem adjustedOption(option);
+        initStyleOption(&adjustedOption, index);
+        const QVariant foreground = index.data(Qt::ForegroundRole);
+        if (foreground.canConvert<QColor>()) {
+            const QColor color = foreground.value<QColor>();
+            adjustedOption.palette.setColor(QPalette::Text, color);
+            adjustedOption.palette.setColor(QPalette::HighlightedText, color.lighter(145));
+        }
+        QStyledItemDelegate::paint(painter, adjustedOption, index);
+    }
+};
 } // namespace
 
 PageOrderDialog::PageOrderDialog(const labelqt::core::Project& project, labelqt::core::AppPreferences preferences,
-                                 QWidget* parent)
-    : QDialog(parent), m_project(project), m_preferences(std::move(preferences))
+                                 QWidget* parent, bool enableImageRename)
+    : QDialog(parent), m_project(project), m_preferences(std::move(preferences)), m_enableImageRename(enableImageRename)
 {
     buildUi();
 }
@@ -39,6 +67,16 @@ PageOrderDialog::PageOrderDialog(const labelqt::core::Project& project, labelqt:
 QVector<int> PageOrderDialog::pageOrder() const
 {
     return m_pageOrderModel == nullptr ? QVector<int>{} : m_pageOrderModel->pageOrder();
+}
+
+bool PageOrderDialog::hasPendingImageRenamePlan() const noexcept
+{
+    return m_hasPendingImageRenamePlan && m_pendingImageRenamePlan.hasChanges();
+}
+
+labelqt::services::ProjectImageRenamePlan PageOrderDialog::pendingImageRenamePlan() const
+{
+    return m_pendingImageRenamePlan;
 }
 
 void PageOrderDialog::done(int result)
@@ -49,7 +87,7 @@ void PageOrderDialog::done(int result)
 
 void PageOrderDialog::buildUi()
 {
-    setWindowTitle(tr("Reorder Pages"));
+    setWindowTitle(tr("Manage Pages"));
     labelqt::ui::configureLargeDialogWindow(*this, QSize(1100, 760));
 
     auto* rootLayout = new QVBoxLayout(this);
@@ -106,30 +144,66 @@ void PageOrderDialog::buildUi()
     m_pageTable->setDefaultDropAction(Qt::MoveAction);
     m_pageTable->setDragDropOverwriteMode(false);
     m_pageTable->verticalHeader()->setVisible(false);
-    m_pageTable->setColumnWidth(PageOrderListModel::ImageNameColumn, defaultPageOrderImageNameColumnWidth);
-    m_pageTable->setColumnWidth(PageOrderListModel::OriginalIndexColumn, defaultPageOrderOriginalIndexColumnWidth);
+    m_pageTable->setItemDelegateForColumn(PageOrderListModel::RenameStatusColumn,
+                                          new RenameStatusDelegate(m_pageTable));
     restoreTableColumnWidths();
-    m_pageTableColumns = new ViewportFittedTableColumns(
-        m_pageTable,
-        {
-            {PageOrderListModel::ImageNameColumn, defaultPageOrderImageNameColumnWidth,
-             minimumPageOrderImageNameColumnWidth, true},
-            {PageOrderListModel::OriginalIndexColumn, defaultPageOrderOriginalIndexColumnWidth,
-             minimumPageOrderOriginalIndexColumnWidth, false},
-        },
-        this);
+    m_pageTable->setColumnHidden(PageOrderListModel::RenamePreviewColumn, !m_enableImageRename);
+    m_pageTable->setColumnHidden(PageOrderListModel::RenameStatusColumn, !m_enableImageRename);
+    QVector<ViewportFittedTableColumns::Column> columnSpecs = {
+        {PageOrderListModel::ImageNameColumn, defaultPageOrderImageNameColumnWidth,
+         minimumPageOrderImageNameColumnWidth, true},
+        {PageOrderListModel::OriginalIndexColumn, defaultPageOrderOriginalIndexColumnWidth,
+         minimumPageOrderOriginalIndexColumnWidth, false},
+    };
+    if (m_enableImageRename) {
+        columnSpecs.insert(1, {PageOrderListModel::RenameStatusColumn, defaultPageOrderRenameStatusColumnWidth,
+                               minimumPageOrderRenameStatusColumnWidth, true});
+        columnSpecs.insert(1, {PageOrderListModel::RenamePreviewColumn, defaultPageOrderRenamePreviewColumnWidth,
+                               minimumPageOrderRenamePreviewColumnWidth, true});
+    }
+    m_pageTableColumns = new ViewportFittedTableColumns(m_pageTable, std::move(columnSpecs), this);
     m_pageTableColumns->fitToViewport();
-    pageListLayout->addWidget(m_pageTable, 1);
+    pageListLayout->addWidget(m_pageTable, 3);
+
+    if (m_enableImageRename) {
+        auto* renameGroupBox = new QGroupBox(tr("Rename Images"), pageListPanel);
+        auto* renameLayout = new QVBoxLayout(renameGroupBox);
+        m_imageRenameWidget = new ImageRenamePreviewWidget(renameGroupBox);
+        m_imageRenameWidget->setProject(m_project);
+        connect(m_imageRenameWidget, &ImageRenamePreviewWidget::renameQueued, this,
+                [this](const labelqt::services::ProjectImageRenamePlan& plan) {
+                    m_pendingImageRenamePlan =
+                        labelqt::services::ProjectImageRenameService::mergePlans(m_pendingImageRenamePlan, plan);
+                    m_hasPendingImageRenamePlan = m_pendingImageRenamePlan.hasChanges();
+                    if (m_pageOrderModel != nullptr) {
+                        m_pageOrderModel->setPendingRenamePlan(m_pendingImageRenamePlan);
+                        m_pageOrderModel->setRenamePlan(m_pendingImageRenamePlan);
+                    }
+                });
+        connect(m_imageRenameWidget, &ImageRenamePreviewWidget::previewChanged, this,
+                [this](const labelqt::services::ProjectImageRenamePlan& plan) {
+                    if (m_pageOrderModel != nullptr) {
+                        m_pageOrderModel->setRenamePlan(
+                            labelqt::services::ProjectImageRenameService::mergePlans(m_pendingImageRenamePlan, plan));
+                    }
+                });
+        renameLayout->addWidget(m_imageRenameWidget);
+        renameGroupBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+        pageListLayout->addWidget(renameGroupBox);
+    }
 
     splitter->addWidget(pageListPanel);
-    splitter->setStretchFactor(0, 1);
-    splitter->setStretchFactor(1, 0);
+    splitter->setStretchFactor(0, 3);
+    splitter->setStretchFactor(1, 4);
     rootLayout->addWidget(splitter, 1);
 
     connect(m_pageTable->selectionModel(), &QItemSelectionModel::currentChanged, this,
             [this](const QModelIndex& current) { updatePreview(current); });
     connect(m_pageTable->selectionModel(), &QItemSelectionModel::selectionChanged, this,
-            [this]() { updatePageActionButtons(); });
+            [this]() {
+                updatePageActionButtons();
+                updateImageRenamePreview();
+            });
     connect(m_pageTable->horizontalHeader(), &QHeaderView::sectionResized, m_pageTableColumns,
             &ViewportFittedTableColumns::rebalanceFromSectionResize);
     connect(m_movePageUpButton, &QToolButton::clicked, this, [this]() {
@@ -170,6 +244,7 @@ void PageOrderDialog::buildUi()
                     m_pageTable->setCurrentIndex(m_pageOrderModel->index(currentRow, 0));
                 }
                 updatePageActionButtons();
+                updateImageRenamePreview();
                 return;
             }
         }
@@ -178,11 +253,13 @@ void PageOrderDialog::buildUi()
             m_pageTable->setCurrentIndex(m_pageOrderModel->index(0, 0));
         }
         updatePageActionButtons();
+        updateImageRenamePreview();
     });
     if (m_pageOrderModel->rowCount() > 0) {
         m_pageTable->setCurrentIndex(m_pageOrderModel->index(0, 0));
     }
     updatePageActionButtons();
+    updateImageRenamePreview();
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
@@ -203,6 +280,14 @@ void PageOrderDialog::updatePreview(const QModelIndex& currentIndex)
 
     const labelqt::core::ImageEntry& image = m_project.images().at(sourceIndex);
     m_canvas->setImage(image.path, image.labels);
+}
+
+void PageOrderDialog::updateImageRenamePreview()
+{
+    if (m_imageRenameWidget == nullptr) {
+        return;
+    }
+    m_imageRenameWidget->setTargetImageIndexes(renameTargetSourceIndexes());
 }
 
 void PageOrderDialog::updatePageActionButtons()
@@ -244,17 +329,34 @@ void PageOrderDialog::restoreTableColumnWidths()
 
     QHeaderView* header = m_pageTable->horizontalHeader();
     const QSignalBlocker blocker(header);
-    header->resizeSection(
-        PageOrderListModel::OriginalIndexColumn,
-        std::max(minimumPageOrderOriginalIndexColumnWidth,
-                 m_sessionStateStore.pageOrderOriginalIndexColumnWidth(defaultPageOrderOriginalIndexColumnWidth)));
+    const QVector<int> defaultWidths = {
+        defaultPageOrderImageNameColumnWidth,
+        defaultPageOrderRenamePreviewColumnWidth,
+        defaultPageOrderRenameStatusColumnWidth,
+        defaultPageOrderOriginalIndexColumnWidth,
+    };
+    const QVector<int> minimumWidths = {
+        minimumPageOrderImageNameColumnWidth,
+        minimumPageOrderRenamePreviewColumnWidth,
+        minimumPageOrderRenameStatusColumnWidth,
+        minimumPageOrderOriginalIndexColumnWidth,
+    };
+    const QVector<int> widths = m_sessionStateStore.pageOrderColumnWidths(defaultWidths);
+    const int columnCount = std::min(static_cast<int>(widths.size()), static_cast<int>(PageOrderListModel::ColumnCount));
+    for (int column = 0; column < columnCount; ++column) {
+        header->resizeSection(column, std::max(minimumWidths.at(column), widths.at(column)));
+    }
 }
 
 void PageOrderDialog::saveTableColumnWidths() const
 {
     if (m_pageTable != nullptr && m_pageTable->horizontalHeader() != nullptr) {
-        m_sessionStateStore.savePageOrderOriginalIndexColumnWidth(
-            m_pageTable->columnWidth(PageOrderListModel::OriginalIndexColumn));
+        QVector<int> widths;
+        widths.reserve(PageOrderListModel::ColumnCount);
+        for (int column = 0; column < PageOrderListModel::ColumnCount; ++column) {
+            widths.append(m_pageTable->columnWidth(column));
+        }
+        m_sessionStateStore.savePageOrderColumnWidths(widths);
     }
 }
 
@@ -274,4 +376,30 @@ QVector<int> PageOrderDialog::selectedPageSourceIndexes() const
         }
     }
     return sourceIndexes;
+}
+
+QVector<int> PageOrderDialog::renameTargetSourceIndexes() const
+{
+    if (m_pageOrderModel == nullptr) {
+        return {};
+    }
+
+    const QVector<int> selectedSourceIndexes = selectedPageSourceIndexes();
+    if (selectedSourceIndexes.isEmpty()) {
+        return m_pageOrderModel->pageOrder();
+    }
+
+    QSet<int> selectedSet;
+    selectedSet.reserve(selectedSourceIndexes.size());
+    for (int sourceIndex : selectedSourceIndexes) {
+        selectedSet.insert(sourceIndex);
+    }
+
+    QVector<int> orderedSelection;
+    for (int sourceIndex : m_pageOrderModel->pageOrder()) {
+        if (selectedSet.contains(sourceIndex)) {
+            orderedSelection.append(sourceIndex);
+        }
+    }
+    return orderedSelection;
 }

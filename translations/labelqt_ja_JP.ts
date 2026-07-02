@@ -724,18 +724,18 @@ Last error: %2</source>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="337"/>
-        <source>Reorder &amp;Pages...</source>
-        <translation>ページを並べ替え(&amp;P)...</translation>
+        <source>Manage &amp;Pages...</source>
+        <translation>ページ管理(&amp;P)...</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>Reorder Pages</source>
-        <translation>ページの並べ替え</translation>
+        <source>Manage Pages</source>
+        <translation>ページ管理</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>There are no pages to reorder.</source>
-        <translation>並べ替えるページがありません。</translation>
+        <source>There are no pages to manage.</source>
+        <translation>管理できるページはありません。</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="1615"/>
@@ -1212,8 +1212,8 @@ Last error: %2</source>
     <name>PageOrderDialog</name>
     <message>
         <location filename="../src/ui/PageOrderDialog.cpp" line="51"/>
-        <source>Reorder Pages</source>
-        <translation>ページの並べ替え</translation>
+        <source>Manage Pages</source>
+        <translation>ページ管理</translation>
     </message>
     <message>
         <location filename="../src/ui/PageOrderDialog.cpp" line="55"/>
@@ -1235,6 +1235,10 @@ Last error: %2</source>
         <source>Remove selected pages from the project</source>
         <translation>選択中のページをプロジェクトから除外</translation>
     </message>
+    <message>
+        <source>Rename Images</source>
+        <translation>画像名を変更</translation>
+    </message>
 </context>
 <context>
     <name>PageOrderListModel</name>
@@ -1245,6 +1249,26 @@ Last error: %2</source>
     </message>
     <message>
         <location filename="../src/ui/PageOrderListModel.cpp" line="169"/>
+        <source>New file</source>
+        <translation>新しいファイル名</translation>
+    </message>
+    <message>
+        <source>Rename status</source>
+        <translation>名前変更の状態</translation>
+    </message>
+    <message>
+        <source>Not selected</source>
+        <translation>未選択</translation>
+    </message>
+    <message>
+        <source>Will be renamed to %1</source>
+        <translation>%1 に名前を変更します</translation>
+    </message>
+    <message>
+        <source>Unchanged</source>
+        <translation>変更なし</translation>
+    </message>
+    <message>
         <source>Original #</source>
         <translation>元の順序</translation>
     </message>
@@ -2103,6 +2127,169 @@ Last error: %2</source>
     <message>
         <source>Clear</source>
         <translation>クリア</translation>
+    </message>
+</context>
+<context>
+    <name>ImageRenamePreviewWidget</name>
+    <message>
+        <source>Rename image files according to the current page order. The extension is always preserved.</source>
+        <translation>現在のページ順に画像ファイル名を変更します。拡張子は常に保持されます。</translation>
+    </message>
+    <message>
+        <source>Supported: {index}, {index:03}, {stem}</source>
+        <translation>対応：{index}、{index:03}、{stem}</translation>
+    </message>
+    <message>
+        <source>File name pattern</source>
+        <translation>ファイル名パターン</translation>
+    </message>
+    <message>
+        <source>Start index</source>
+        <translation>開始番号</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n image file(s) will be renamed.</source>
+        <translation>
+            <numerusform>%n 個の画像ファイル名を変更します。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Queue Rename...</source>
+        <translation>名前変更を予約...</translation>
+    </message>
+    <message>
+        <source>Queued until you click OK.</source>
+        <translation>OK をクリックすると実行されます。</translation>
+    </message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message>
+        <source>Rename Images</source>
+        <translation>画像名を変更</translation>
+    </message>
+    <message>
+        <source>There are no image files to rename.</source>
+        <translation>名前を変更できる画像ファイルがありません。</translation>
+    </message>
+    <message>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>名前を変更する前に無効なファイル名を修正してください。</translation>
+    </message>
+    <message>
+        <source>This will rename image files on disk and update the project to point to the new file names.
+
+The project will be saved before renaming, then saved again after the image files are renamed.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</source>
+        <translation>ディスク上の画像ファイル名を変更し、プロジェクトが新しいファイル名を参照するよう更新します。
+
+名前を変更する前にプロジェクトを保存し、画像ファイル名の変更後にもう一度保存します。
+
+この操作は通常の元に戻す履歴には含まれません。成功すると現在の元に戻す履歴は消去されます。
+
+続行しますか？</translation>
+    </message>
+    <message>
+        <source>Rename failed</source>
+        <translation>名前の変更に失敗しました</translation>
+    </message>
+    <message>
+        <source>Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</source>
+        <translation>画像ファイル名は変更されましたが、更新後のプロジェクトファイルを保存できませんでした。LabelQt を閉じる前にプロジェクトを保存してください。
+
+最後のエラー：%1</translation>
+    </message>
+    <message>
+        <source>Renamed image files by page order.</source>
+        <translation>ページ順に画像ファイル名を変更しました。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectImageRenameService</name>
+    <message>
+        <source>Pattern cannot be empty.</source>
+        <translation>パターンを空にすることはできません。</translation>
+    </message>
+    <message>
+        <source>Unexpected &#x27;}&#x27; in pattern.</source>
+        <translation>パターン内に予期しない &#x27;}&#x27; があります。</translation>
+    </message>
+    <message>
+        <source>Missing &#x27;}&#x27; in pattern.</source>
+        <translation>パターン内に &#x27;}&#x27; がありません。</translation>
+    </message>
+    <message>
+        <source>Only {index:03}-style zero padding is supported.</source>
+        <translation>{index:03} 形式のゼロ埋めのみ対応しています。</translation>
+    </message>
+    <message>
+        <source>Unknown token {%1}.</source>
+        <translation>不明なトークン {%1} です。</translation>
+    </message>
+    <message>
+        <source>Rendered file name cannot be empty.</source>
+        <translation>生成されるファイル名を空にすることはできません。</translation>
+    </message>
+    <message>
+        <source>Source image does not exist.</source>
+        <translation>元画像が存在しません。</translation>
+    </message>
+    <message>
+        <source>Source image is not a file.</source>
+        <translation>元画像はファイルではありません。</translation>
+    </message>
+    <message>
+        <source>File name cannot start or end with whitespace.</source>
+        <translation>ファイル名の先頭または末尾に空白は使えません。</translation>
+    </message>
+    <message>
+        <source>File name cannot be empty or end with a dot.</source>
+        <translation>ファイル名を空にしたり、ドットで終えたりすることはできません。</translation>
+    </message>
+    <message>
+        <source>File name contains characters that are not portable.</source>
+        <translation>ファイル名に移植性の低い文字が含まれています。</translation>
+    </message>
+    <message>
+        <source>File name uses a Windows reserved device name.</source>
+        <translation>ファイル名に Windows の予約デバイス名が使われています。</translation>
+    </message>
+    <message>
+        <source>Duplicate target file name.</source>
+        <translation>変更先ファイル名が重複しています。</translation>
+    </message>
+    <message>
+        <source>Target file already exists.</source>
+        <translation>変更先ファイルが既に存在します。</translation>
+    </message>
+    <message>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>名前を変更する前に無効なファイル名を修正してください。</translation>
+    </message>
+    <message>
+        <source>The pattern does not change any file name.</source>
+        <translation>このパターンではファイル名が変更されません。</translation>
+    </message>
+    <message>
+        <source>There are no image files to rename.</source>
+        <translation>名前を変更できる画像ファイルがありません。</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to a temporary file.</source>
+        <translation>%1 を一時ファイルへ変更できませんでした。</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to %2.</source>
+        <translation>%1 を %2 へ変更できませんでした。</translation>
+    </message>
+    <message>
+        <source>File name pattern cannot change the image directory.</source>
+        <translation>ファイル名パターンで画像ディレクトリを変更することはできません。</translation>
     </message>
 </context>
 </TS>

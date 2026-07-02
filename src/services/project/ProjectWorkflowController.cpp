@@ -1,6 +1,7 @@
 #include "services/project/ProjectWorkflowController.h"
 
 #include "core/LabelPlusDocument.h"
+#include "services/project/ProjectImageRenameService.h"
 #include "services/project/ProjectPageOrderService.h"
 
 #include <utility>
@@ -90,6 +91,20 @@ bool ProjectWorkflowController::applyPageOrder(const QVector<int>& order, const 
         m_dirty();
     }
     return true;
+}
+
+std::expected<void, QString> ProjectWorkflowController::applyImageRename(const ProjectImageRenamePlan& plan)
+{
+    const std::expected<void, QString> result = ProjectImageRenameService::applyPlan(m_project, plan);
+    if (!result) {
+        return result;
+    }
+
+    m_undoStack.clear();
+    if (m_dirty) {
+        m_dirty();
+    }
+    return {};
 }
 
 } // namespace labelqt::services

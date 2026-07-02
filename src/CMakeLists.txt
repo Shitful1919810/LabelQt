@@ -32,6 +32,7 @@ set(LABELQT_SERVICE_SOURCES
     services/label/LabelPastePlanner.h
     services/project/PageSourceInfoService.cpp
     services/project/ProjectController.cpp
+    services/project/ProjectImageRenameService.cpp
     services/project/ProjectImageValidator.cpp
     services/project/ProjectMergeService.cpp
     services/project/ProjectPageOrderService.cpp
@@ -81,6 +82,7 @@ set(LABELQT_UI_SOURCES
     ui/preferences/GroupStyleEditorWidget.cpp
     ui/preferences/PreferenceDialog.cpp
     ui/preferences/PreferenceDialogWidgets.cpp
+    ui/project/ImageRenamePreviewWidget.cpp
     ui/project/PageOrderDialog.cpp
     ui/project/PageOrderListModel.cpp
     ui/project/PageSelectorComboBox.cpp

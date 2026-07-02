@@ -8,6 +8,7 @@
 #include <QTimer>
 
 #include <algorithm>
+#include <numeric>
 #include <utility>
 
 namespace {
@@ -52,20 +53,47 @@ void ViewportFittedTableColumns::fitToViewport()
         widths.append(currentColumnWidth(column));
     }
 
-    const int stretchIndex = stretchColumnConfigIndex();
     const int minimumTotal = minimumWidthExcept(-1);
-    if (viewportWidth >= minimumTotal && stretchIndex >= 0) {
+    if (viewportWidth >= minimumTotal) {
+        QVector<int> stretchIndexes;
+        stretchIndexes.reserve(m_columns.size());
+        for (int i = 0; i < m_columns.size(); ++i) {
+            if (m_columns.at(i).stretch) {
+                stretchIndexes.append(i);
+            }
+        }
+        if (stretchIndexes.isEmpty()) {
+            stretchIndexes.append(static_cast<int>(m_columns.size()) - 1);
+        }
+
         int remainingWidth = viewportWidth;
         for (int i = 0; i < m_columns.size(); ++i) {
-            if (i == stretchIndex) {
+            if (stretchIndexes.contains(i)) {
                 continue;
             }
 
-            const int maximumWidth = remainingWidth - minimumWidthExcept(i) + m_columns.at(i).minimumWidth;
+            const int maximumWidth = std::max(m_columns.at(i).minimumWidth,
+                                              remainingWidth - minimumWidthExcept(i) + m_columns.at(i).minimumWidth);
             widths[i] = std::clamp(widths.at(i), m_columns.at(i).minimumWidth, maximumWidth);
             remainingWidth -= widths.at(i);
         }
-        widths[stretchIndex] = std::max(m_columns.at(stretchIndex).minimumWidth, remainingWidth);
+
+        const int stretchDefaultTotal = std::max(
+            1, std::accumulate(stretchIndexes.cbegin(), stretchIndexes.cend(), 0,
+                               [this](int total, int index) { return total + m_columns.at(index).defaultWidth; }));
+        int assignedStretchWidth = 0;
+        for (int i = 0; i < stretchIndexes.size(); ++i) {
+            const int stretchIndex = stretchIndexes.at(i);
+            widths[stretchIndex] = std::max(m_columns.at(stretchIndex).minimumWidth,
+                                            remainingWidth * m_columns.at(stretchIndex).defaultWidth /
+                                                stretchDefaultTotal);
+            assignedStretchWidth += widths.at(stretchIndex);
+        }
+        const int leftover = remainingWidth - assignedStretchWidth;
+        if (!stretchIndexes.isEmpty()) {
+            const int stretchIndex = stretchIndexes.first();
+            widths[stretchIndex] = std::max(m_columns.at(stretchIndex).minimumWidth, widths.at(stretchIndex) + leftover);
+        }
     }
     else {
         const int defaultsTotal = std::max(1, defaultWidthSum());
@@ -75,10 +103,7 @@ void ViewportFittedTableColumns::fitToViewport()
                 std::max(narrowViewportMinimumWidth, viewportWidth * m_columns.at(i).defaultWidth / defaultsTotal);
             assignedWidth += widths.at(i);
         }
-        if (stretchIndex >= 0) {
-            widths[stretchIndex] =
-                std::max(narrowViewportMinimumWidth, widths.at(stretchIndex) + viewportWidth - assignedWidth);
-        }
+        widths[0] = std::max(narrowViewportMinimumWidth, widths.at(0) + viewportWidth - assignedWidth);
     }
 
     const QSignalBlocker blocker(header);
@@ -125,7 +150,10 @@ void ViewportFittedTableColumns::rebalanceFromSectionResize(int logicalIndex, in
     header->resizeSection(currentColumn.logicalIndex, currentSize);
     header->resizeSection(neighborColumn.logicalIndex, neighborSize);
     m_isBalancing = false;
-    fitToViewport();
+
+    if (m_columnsChangedCallback) {
+        m_columnsChangedCallback();
+    }
 }
 
 void ViewportFittedTableColumns::setColumnsChangedCallback(std::function<void()> callback)
@@ -190,16 +218,6 @@ int ViewportFittedTableColumns::columnConfigIndex(int logicalIndex) const
 {
     for (int i = 0; i < m_columns.size(); ++i) {
         if (m_columns.at(i).logicalIndex == logicalIndex) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-int ViewportFittedTableColumns::stretchColumnConfigIndex() const
-{
-    for (int i = 0; i < m_columns.size(); ++i) {
-        if (m_columns.at(i).stretch) {
             return i;
         }
     }
