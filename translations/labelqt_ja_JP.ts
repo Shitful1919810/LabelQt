@@ -1470,6 +1470,11 @@ Last error: %2</source>
         <translation>ラベルテキストを確定</translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="310"/>
+        <source>Delete label</source>
+        <translation>ラベルを削除</translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="188"/>
         <source>Key mappings</source>
         <translation>キー割り当て</translation>

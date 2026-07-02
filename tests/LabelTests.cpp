@@ -1440,6 +1440,7 @@ private slots:
                << "    \"nextPageShortcut\": \"Alt+Right\",\n"
                << "    \"editLabelTextShortcut\": \"Return\",\n"
                << "    \"commitLabelTextShortcut\": \"Ctrl+Return\",\n"
+               << "    \"deleteLabelShortcut\": \"Ctrl+D\",\n"
                << "    \"undoShortcut\": \"Ctrl+Z\",\n"
                << "    \"redoShortcut\": \"Ctrl+Shift+Z\"\n"
                << "  },\n"
@@ -1500,6 +1501,8 @@ private slots:
                  QStringLiteral("Return"));
         QCOMPARE(result.preferences.commitLabelTextShortcut().toString(QKeySequence::PortableText),
                  QStringLiteral("Ctrl+Return"));
+        QCOMPARE(result.preferences.deleteLabelShortcut().toString(QKeySequence::PortableText),
+                 QStringLiteral("Ctrl+D"));
         QCOMPARE(result.preferences.backupPath(), QStringLiteral("custom-bak"));
         QCOMPARE(result.preferences.backupIntervalSeconds(), 30);
         QCOMPARE(result.preferences.groupStyles().size(), 2);

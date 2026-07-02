@@ -219,6 +219,7 @@ MainWindow::MainWindow(QWidget* parent)
         [this]() { copyToClipboard(); },
         [this]() { cutSelectedLabelsToClipboard(); },
         [this]() { pasteLabelsFromClipboard(); },
+        [this]() { deleteSelectedLabels(); },
     });
     m_automationController = new AutomationController(this, this);
     m_automationController->setPreferences(m_preferences);
@@ -747,7 +748,7 @@ void MainWindow::createCentralWidget()
     connect(m_canvas, &ImageCanvas::labelClicked, this, &MainWindow::selectLabelFromCanvas);
     connect(m_canvas, &ImageCanvas::emptyAreaClicked, this, &MainWindow::clearCurrentLabelSelection);
     connect(m_canvas, &ImageCanvas::labelTextEditRequested, this, &MainWindow::openCanvasLabelTextEditor);
-    connect(m_canvas, &ImageCanvas::deleteRequested, this, &MainWindow::deleteSelectedLabels);
+    connect(m_canvas, &ImageCanvas::labelDeleteRequested, this, &MainWindow::deleteSingleLabelFromCanvas);
     connect(m_canvas, &ImageCanvas::zoomPercentChanged, m_zoomSlider, &QSlider::setValue);
     connect(m_zoomSlider, &QSlider::valueChanged, m_canvas, &ImageCanvas::setZoomPercent);
     connect(m_imageComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::selectImage);
@@ -775,11 +776,6 @@ void MainWindow::createCentralWidget()
             updateCurrentLabelDetails(labelIndexes.last());
         }
     });
-    auto* deleteLabelShortcut = new QAction(m_labelView);
-    deleteLabelShortcut->setShortcut(QKeySequence::Delete);
-    deleteLabelShortcut->setShortcutContext(Qt::WidgetShortcut);
-    m_labelView->addAction(deleteLabelShortcut);
-    connect(deleteLabelShortcut, &QAction::triggered, this, &MainWindow::deleteSelectedLabels);
     connect(m_labelView, &QTableView::customContextMenuRequested, this, &MainWindow::showLabelContextMenu);
     connect(m_textEdit, &QPlainTextEdit::textChanged, this, &MainWindow::updateCurrentLabelText);
     connect(m_labelModel, &LabelTableModel::labelEditRequested, this, &MainWindow::updateLabelFromTable,
@@ -1788,6 +1784,37 @@ void MainWindow::deleteSelectedLabels()
 
     refreshLabelViews();
     clearCurrentLabelSelection();
+}
+
+void MainWindow::deleteSingleLabelFromCanvas(int index)
+{
+    if (isProjectEditingBlocked() || currentImage() == nullptr || m_labelEditController == nullptr) {
+        return;
+    }
+    if (index < 0 || index >= currentImage()->labels.size() || currentImage()->labels.at(index).isDeleted()) {
+        return;
+    }
+
+    QVector<int> preservedSelection = selectedLabelIndexes();
+    preservedSelection.erase(std::remove(preservedSelection.begin(), preservedSelection.end(), index),
+                             preservedSelection.end());
+    const int primarySelection = preservedSelection.contains(m_currentLabelIndex)
+                                     ? m_currentLabelIndex
+                                     : (preservedSelection.isEmpty() ? -1 : preservedSelection.last());
+
+    const labelqt::services::LabelEditResult result =
+        m_labelEditController->deleteLabels(m_currentImageIndex, QVector<int>{index});
+    if (!result.changed) {
+        return;
+    }
+
+    refreshLabelViews();
+    if (preservedSelection.isEmpty()) {
+        clearCurrentLabelSelection();
+    }
+    else {
+        selectLabelIndexes(preservedSelection, primarySelection);
+    }
 }
 
 void MainWindow::changeSelectedLabelsGroup(const QString& group)
@@ -3161,6 +3188,7 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
     case AppPreferenceWarningType::NextPageShortcutInvalid:
     case AppPreferenceWarningType::EditLabelTextShortcutInvalid:
     case AppPreferenceWarningType::CommitLabelTextShortcutInvalid:
+    case AppPreferenceWarningType::DeleteLabelShortcutInvalid:
         return tr("%1 must be a valid key sequence; using the default value.").arg(warning.key);
     case AppPreferenceWarningType::BackupPathWrongType:
         return tr("%1 must be a non-empty string; using the default value.").arg(warning.key);

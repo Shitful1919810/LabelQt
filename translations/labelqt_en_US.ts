@@ -1478,6 +1478,11 @@ Last error: %2</translation>
         <translation>Commit label text</translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="310"/>
+        <source>Delete label</source>
+        <translation>Delete label</translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="188"/>
         <source>Key mappings</source>
         <translation>Key mappings</translation>

@@ -45,6 +45,7 @@
         "alternateNextLabelShortcut": "Ctrl+Down",
         "alternatePreviousLabelShortcut": "Ctrl+Up",
         "commitLabelTextShortcut": "Ctrl+Return",
+        "deleteLabelShortcut": "Del",
         "editLabelTextShortcut": "Return",
         "moveLabelModifier": "ctrl",
         "nextLabelShortcut": "Tab",

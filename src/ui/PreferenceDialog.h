@@ -115,6 +115,7 @@ private:
     QKeySequenceEdit* m_nextPageShortcutEdit{nullptr};
     QKeySequenceEdit* m_editLabelTextShortcutEdit{nullptr};
     QKeySequenceEdit* m_commitLabelTextShortcutEdit{nullptr};
+    QKeySequenceEdit* m_deleteLabelShortcutEdit{nullptr};
     AutomationShortcutEditorWidget* m_automationShortcutEditor{nullptr};
     QLineEdit* m_backupPathEdit{nullptr};
     QSpinBox* m_backupIntervalSpinBox{nullptr};

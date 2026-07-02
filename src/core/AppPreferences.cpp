@@ -749,6 +749,9 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 input.value(QStringLiteral("commitLabelTextShortcut")), QStringLiteral("input.commitLabelTextShortcut"),
                 preferences.m_commitLabelTextShortcut, AppPreferenceWarningType::CommitLabelTextShortcutInvalid,
                 warnings);
+            preferences.m_deleteLabelShortcut = keySequenceFromJsonValue(
+                input.value(QStringLiteral("deleteLabelShortcut")), QStringLiteral("input.deleteLabelShortcut"),
+                preferences.m_deleteLabelShortcut, AppPreferenceWarningType::DeleteLabelShortcutInvalid, warnings);
         }
     }
 
@@ -891,6 +894,8 @@ QJsonDocument AppPreferences::toJsonDocument() const
     input.insert(QStringLiteral("editLabelTextShortcut"), m_editLabelTextShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("commitLabelTextShortcut"),
                  m_commitLabelTextShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("deleteLabelShortcut"),
+                 m_deleteLabelShortcut.toString(QKeySequence::PortableText));
 
     QJsonObject root;
     root.insert(QStringLiteral("appearance"), appearance);
@@ -1066,6 +1071,11 @@ QKeySequence AppPreferences::editLabelTextShortcut() const
 QKeySequence AppPreferences::commitLabelTextShortcut() const
 {
     return m_commitLabelTextShortcut;
+}
+
+QKeySequence AppPreferences::deleteLabelShortcut() const
+{
+    return m_deleteLabelShortcut;
 }
 
 QString AppPreferences::backupPath() const

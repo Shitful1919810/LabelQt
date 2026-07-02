@@ -79,7 +79,7 @@ signals:
     void labelClicked(int index, Qt::KeyboardModifiers modifiers);
     void emptyAreaClicked();
     void labelTextEditRequested(int index, QPoint globalPosition);
-    void deleteRequested();
+    void labelDeleteRequested(int index);
     void zoomPercentChanged(int percent);
     void viewportStateChanged(int zoomPercent, QPointF normalizedCenter);
     void selectionChanged(QRectF normalizedRect);
@@ -104,6 +104,7 @@ private:
     void setZoomPercentAt(int percent, QPointF sceneAnchor, QPointF globalAnchor);
     void notifyViewportStateChanged();
     bool isLabelVisible(const labelqt::core::Label& label) const;
+    int labelIndexAt(QPoint viewportPosition) const;
     bool hasMoveLabelModifiers(Qt::KeyboardModifiers modifiers) const;
     int displayNumberForLabel(int index) const;
     QString displayTextForLabel(int index) const;

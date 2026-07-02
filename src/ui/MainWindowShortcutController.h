@@ -22,6 +22,7 @@ public:
         std::function<void()> copySelectedLabels;
         std::function<void()> cutSelectedLabels;
         std::function<void()> pasteLabels;
+        std::function<void()> deleteSelectedLabels;
     };
 
     explicit MainWindowShortcutController(QWidget* window, QObject* parent = nullptr);

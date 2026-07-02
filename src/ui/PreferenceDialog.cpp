@@ -396,11 +396,13 @@ QWidget* PreferenceDialog::createKeyMappingPage(QWidget* parent)
     m_editLabelTextShortcutEdit = new QKeySequenceEdit(defaultPreferences().editLabelTextShortcut(), keyMappingPage);
     m_commitLabelTextShortcutEdit =
         new QKeySequenceEdit(defaultPreferences().commitLabelTextShortcut(), keyMappingPage);
+    m_deleteLabelShortcutEdit = new QKeySequenceEdit(defaultPreferences().deleteLabelShortcut(), keyMappingPage);
 
     leftLayout->addRow(tr("Move-label modifier"), m_moveModifierComboBox);
     leftLayout->addRow(tr("Previous label modifier"), m_previousLabelModifierComboBox);
     leftLayout->addRow(tr("Undo"), m_undoShortcutEdit);
     leftLayout->addRow(tr("Redo"), m_redoShortcutEdit);
+    leftLayout->addRow(tr("Delete label"), m_deleteLabelShortcutEdit);
     leftLayout->addRow(tr("Edit label text"), m_editLabelTextShortcutEdit);
     leftLayout->addRow(tr("Commit label text"), m_commitLabelTextShortcutEdit);
 
@@ -496,6 +498,8 @@ void PreferenceDialog::connectPreferenceChangeSignals()
     connect(m_editLabelTextShortcutEdit, &QKeySequenceEdit::keySequenceChanged, this,
             &PreferenceDialog::updateJsonPreview);
     connect(m_commitLabelTextShortcutEdit, &QKeySequenceEdit::keySequenceChanged, this,
+            &PreferenceDialog::updateJsonPreview);
+    connect(m_deleteLabelShortcutEdit, &QKeySequenceEdit::keySequenceChanged, this,
             &PreferenceDialog::updateJsonPreview);
     connect(m_backupPathEdit, &QLineEdit::textChanged, this, &PreferenceDialog::updateJsonPreview);
     connect(m_backupIntervalSpinBox, &QSpinBox::valueChanged, this, &PreferenceDialog::updateJsonPreview);
@@ -673,6 +677,10 @@ void PreferenceDialog::loadDocument(const QJsonDocument& document)
         input.value(QStringLiteral("commitLabelTextShortcut"))
             .toString(defaultPreferences().commitLabelTextShortcut().toString(QKeySequence::PortableText)),
         QKeySequence::PortableText);
+    const QKeySequence deleteLabelShortcut = QKeySequence::fromString(
+        input.value(QStringLiteral("deleteLabelShortcut"))
+            .toString(defaultPreferences().deleteLabelShortcut().toString(QKeySequence::PortableText)),
+        QKeySequence::PortableText);
     m_undoShortcutEdit->setKeySequence(undoShortcut.isEmpty() ? defaultPreferences().undoShortcut() : undoShortcut);
     m_redoShortcutEdit->setKeySequence(redoShortcut.isEmpty() ? defaultPreferences().redoShortcut() : redoShortcut);
     m_nextLabelShortcutEdit->setKeySequence(nextLabelShortcut.isEmpty() ? defaultPreferences().nextLabelShortcut()
@@ -691,6 +699,8 @@ void PreferenceDialog::loadDocument(const QJsonDocument& document)
         editLabelTextShortcut.isEmpty() ? defaultPreferences().editLabelTextShortcut() : editLabelTextShortcut);
     m_commitLabelTextShortcutEdit->setKeySequence(
         commitLabelTextShortcut.isEmpty() ? defaultPreferences().commitLabelTextShortcut() : commitLabelTextShortcut);
+    m_deleteLabelShortcutEdit->setKeySequence(deleteLabelShortcut.isEmpty() ? defaultPreferences().deleteLabelShortcut()
+                                                                            : deleteLabelShortcut);
     m_backupPathEdit->setText(root.value(QStringLiteral("backupPath")).toString(defaultPreferences().backupPath()));
     m_backupIntervalSpinBox->setValue(
         root.value(QStringLiteral("backupIntervalSeconds")).toInt(defaultPreferences().backupIntervalSeconds()));
@@ -778,6 +788,8 @@ QJsonDocument PreferenceDialog::documentFromUi() const
                  m_editLabelTextShortcutEdit->keySequence().toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("commitLabelTextShortcut"),
                  m_commitLabelTextShortcutEdit->keySequence().toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("deleteLabelShortcut"),
+                 m_deleteLabelShortcutEdit->keySequence().toString(QKeySequence::PortableText));
 
     const QJsonArray groupStyles = m_groupStyleEditor->styles();
 

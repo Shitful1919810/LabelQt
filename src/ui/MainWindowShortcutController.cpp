@@ -97,6 +97,14 @@ bool MainWindowShortcutController::handleGlobalShortcut(QObject* watched, QEvent
             event->accept();
             return true;
         }
+
+        if (keySequence.matches(m_preferences.deleteLabelShortcut()) == QKeySequence::ExactMatch) {
+            if (!isShortcutOverride && !keyEvent->isAutoRepeat() && m_callbacks.deleteSelectedLabels) {
+                m_callbacks.deleteSelectedLabels();
+            }
+            event->accept();
+            return true;
+        }
     }
 
     const QKeyCombination nextLabelKey = firstKeyCombination(m_preferences.nextLabelShortcut());

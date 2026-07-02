@@ -101,6 +101,7 @@ private:
     void copySelectedLabelsToClipboard();
     void cutSelectedLabelsToClipboard();
     void pasteLabelsFromClipboard();
+    void deleteSingleLabelFromCanvas(int index);
     void deleteSelectedLabels();
     void changeSelectedLabelsGroup(const QString& group);
     void showLabelContextMenu(const QPoint& position);

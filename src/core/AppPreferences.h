@@ -58,6 +58,7 @@ enum class AppPreferenceWarningType {
     NextPageShortcutInvalid,
     EditLabelTextShortcutInvalid,
     CommitLabelTextShortcutInvalid,
+    DeleteLabelShortcutInvalid,
     BackupPathWrongType,
     BackupIntervalWrongType,
     BackupIntervalOutOfRange,
@@ -142,6 +143,7 @@ public:
     QKeySequence nextPageShortcut() const;
     QKeySequence editLabelTextShortcut() const;
     QKeySequence commitLabelTextShortcut() const;
+    QKeySequence deleteLabelShortcut() const;
     QString backupPath() const;
     int backupIntervalSeconds() const noexcept;
     const QVector<LabelGroupStyle>& groupStyles() const noexcept;
@@ -182,6 +184,7 @@ private:
     QKeySequence m_nextPageShortcut{QStringLiteral("Alt+Right")};
     QKeySequence m_editLabelTextShortcut{QStringLiteral("Return")};
     QKeySequence m_commitLabelTextShortcut{QStringLiteral("Ctrl+Return")};
+    QKeySequence m_deleteLabelShortcut{QStringLiteral("Del")};
     QString m_backupPath{QStringLiteral("bak")};
     int m_backupIntervalSeconds{60};
     QVector<LabelGroupStyle> m_groupStyles{defaultGroupStyles()};

@@ -1470,6 +1470,11 @@ Last error: %2</source>
         <translation>提交标签文本</translation>
     </message>
     <message>
+        <location filename="../src/ui/PreferenceDialog.cpp" line="310"/>
+        <source>Delete label</source>
+        <translation>删除标签</translation>
+    </message>
+    <message>
         <location filename="../src/ui/PreferenceDialog.cpp" line="188"/>
         <source>Key mappings</source>
         <translation>按键映射</translation>

@@ -421,13 +421,6 @@ void ImageCanvas::keyPressEvent(QKeyEvent* event)
         event->accept();
         return;
     }
-    if (m_interactionMode == InteractionMode::Label && event->key() == Qt::Key_Delete &&
-        event->modifiers() == Qt::NoModifier && !m_readOnly) {
-        emit deleteRequested();
-        event->accept();
-        return;
-    }
-
     QGraphicsView::keyPressEvent(event);
 }
 
@@ -451,32 +444,38 @@ void ImageCanvas::mousePressEvent(QMouseEvent* event)
         return;
     }
 
+    if (m_interactionMode == InteractionMode::Label && event->button() == Qt::RightButton && !m_readOnly) {
+        const int labelIndex = labelIndexAt(event->pos());
+        if (labelIndex >= 0 && labelIndex < m_labels.size() && isLabelVisible(m_labels.at(labelIndex))) {
+            setFocus();
+            resetPointerInteraction();
+            hideHoveredLabelToolTip();
+            emit labelDeleteRequested(labelIndex);
+            event->accept();
+            return;
+        }
+    }
+
     if (event->button() == Qt::LeftButton) {
         setFocus();
         resetPointerInteraction();
-        bool pressedMarker = false;
 
-        QGraphicsItem* item = itemAt(event->pos());
-        while (item != nullptr) {
-            if (item->type() == canvasLabelMarkerItemType()) {
-                auto* marker = static_cast<CanvasLabelMarkerItem*>(item);
-                pressedMarker = true;
-                const int labelIndex = marker->labelIndex();
-                m_pendingLabelSelectIndex = labelIndex;
-                m_pendingLabelSelectModifiers = event->modifiers();
-                m_labelSelectPressPosition = event->pos();
-                if (!m_readOnly && hasMoveLabelModifiers(event->modifiers())) {
-                    m_pointerState = PointerInteractionState::PendingLabelMove;
-                    m_pendingLabelMoveIndex = labelIndex;
-                    event->accept();
-                    return;
-                }
-                else {
-                    m_pointerState = PointerInteractionState::PendingLabelSelect;
-                }
-                break;
+        const int labelIndex = labelIndexAt(event->pos());
+        const bool pressedMarker =
+            labelIndex >= 0 && labelIndex < m_labels.size() && isLabelVisible(m_labels.at(labelIndex));
+        if (pressedMarker) {
+            m_pendingLabelSelectIndex = labelIndex;
+            m_pendingLabelSelectModifiers = event->modifiers();
+            m_labelSelectPressPosition = event->pos();
+            if (!m_readOnly && hasMoveLabelModifiers(event->modifiers())) {
+                m_pointerState = PointerInteractionState::PendingLabelMove;
+                m_pendingLabelMoveIndex = labelIndex;
+                event->accept();
+                return;
             }
-            item = item->parentItem();
+            else {
+                m_pointerState = PointerInteractionState::PendingLabelSelect;
+            }
         }
 
         if (!pressedMarker) {
@@ -503,18 +502,13 @@ void ImageCanvas::mouseDoubleClickEvent(QMouseEvent* event)
         setFocus();
         resetPointerInteraction();
 
-        QGraphicsItem* item = itemAt(event->pos());
-        while (item != nullptr) {
-            if (item->type() == canvasLabelMarkerItemType()) {
-                auto* marker = static_cast<CanvasLabelMarkerItem*>(item);
-                const int labelIndex = marker->labelIndex();
-                emit labelSelected(labelIndex);
-                emit labelTextEditRequested(labelIndex, event->globalPosition().toPoint());
-                hideHoveredLabelToolTip();
-                event->accept();
-                return;
-            }
-            item = item->parentItem();
+        const int labelIndex = labelIndexAt(event->pos());
+        if (labelIndex >= 0 && labelIndex < m_labels.size() && isLabelVisible(m_labels.at(labelIndex))) {
+            emit labelSelected(labelIndex);
+            emit labelTextEditRequested(labelIndex, event->globalPosition().toPoint());
+            hideHoveredLabelToolTip();
+            event->accept();
+            return;
         }
     }
 
@@ -824,6 +818,19 @@ void ImageCanvas::notifyViewportStateChanged()
 bool ImageCanvas::isLabelVisible(const labelqt::core::Label& label) const
 {
     return !label.isDeleted() && m_visibleGroups.contains(label.group());
+}
+
+int ImageCanvas::labelIndexAt(QPoint viewportPosition) const
+{
+    QGraphicsItem* item = itemAt(viewportPosition);
+    while (item != nullptr) {
+        if (item->type() == canvasLabelMarkerItemType()) {
+            auto* marker = static_cast<CanvasLabelMarkerItem*>(item);
+            return marker->labelIndex();
+        }
+        item = item->parentItem();
+    }
+    return -1;
 }
 
 bool ImageCanvas::hasMoveLabelModifiers(Qt::KeyboardModifiers modifiers) const
