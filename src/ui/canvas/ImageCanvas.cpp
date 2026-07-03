@@ -17,6 +17,7 @@
 #include <QPen>
 #include <QPixmap>
 #include <QScrollBar>
+#include <QSignalBlocker>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -713,11 +714,24 @@ void ImageCanvas::wheelEvent(QWheelEvent* event)
 
 void ImageCanvas::resizeEvent(QResizeEvent* event)
 {
+    const std::optional<QPointF> centerBeforeResize =
+        m_hasUserZoom && m_pixmapItem != nullptr ? std::optional<QPointF>(normalizedViewCenter()) : std::nullopt;
+    const QSignalBlocker horizontalBlocker(horizontalScrollBar());
+    const QSignalBlocker verticalBlocker(verticalScrollBar());
+
     QGraphicsView::resizeEvent(event);
     if (!m_hasUserZoom && m_pixmapItem != nullptr) {
         fitInView(m_pixmapItem->boundingRect(), Qt::KeepAspectRatio);
     }
     updateScenePadding();
+
+    if (centerBeforeResize.has_value() && m_pixmapItem != nullptr) {
+        const QRectF rect = m_pixmapItem->boundingRect();
+        const QPointF center(rect.left() + centerBeforeResize->x() * rect.width(),
+                             rect.top() + centerBeforeResize->y() * rect.height());
+        centerOn(center);
+    }
+    notifyViewportStateChanged();
 }
 
 void ImageCanvas::leaveEvent(QEvent* event)

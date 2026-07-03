@@ -67,6 +67,7 @@ set(LABELQT_UI_SOURCES
     ui/automation/AutomationRunDialog.cpp
     ui/automation/AutomationShortcutController.cpp
     ui/automation/AutomationShortcutEditorWidget.cpp
+    ui/canvas/CanvasBottomBar.cpp
     ui/canvas/CanvasLabelItems.cpp
     ui/canvas/CanvasLabelTextEditController.cpp
     ui/canvas/CanvasLabelTextEditor.cpp

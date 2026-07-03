@@ -100,7 +100,8 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 主要类：
 
 - `MainWindow`：菜单、主布局、信号连接、状态栏提示和控制器编排。它可以调用服务，但不应该新增文件格式、脚本解析、标签编辑规则或图片加载状态机。
-- `ImageCanvas`：左侧图像预览、标签标记绘制、悬停气泡、选区模式、缩放/拖动视图，以及点击/拖动标签标记时发出的用户意图信号。它不直接修改 `Project`。
+- `ImageCanvas`：左侧图像预览、标签标记绘制、悬停气泡、选区模式、缩放/拖动视图，以及点击/拖动标签标记时发出的用户意图信号。它不直接修改 `Project`。手动缩放后窗口尺寸变化时，应保持当前归一化视图中心，避免布局变化把画面焦点写成中间态。
+- `CanvasBottomBar`：左侧图像区域下边栏。它负责缩放滑条、标签/选区模式按钮、插入分组控件、翻页控件、页码下拉框、来源提示，以及窄宽度下的“更多工具”紧凑菜单。响应式布局、紧凑菜单同步和底栏最小宽度推导都应留在这里；`MainWindow` 只连接它暴露的控件和 `addGroupRequested()` / `removeGroupRequested()` 信号。
 - `CanvasLabelItems`：标签标记与气泡等 `QGraphicsItem` 绘制细节。
 - `CanvasLabelTextEditController` / `CanvasLabelTextEditor`：双击标签标记后出现的临时文本编辑框生命周期。
 - `ImagePageViewController`：当前页图片显示协调。缓存命中、异步加载 request id、过期结果丢弃、相邻页预加载和延迟恢复视图都属于它。

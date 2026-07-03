@@ -87,6 +87,49 @@
     </message>
 </context>
 <context>
+    <name>CanvasBottomBar</name>
+    <message>
+        <source>Zoom</source>
+        <translation>缩放</translation>
+    </message>
+    <message>
+        <source>Label mode</source>
+        <translation>标签模式</translation>
+    </message>
+    <message>
+        <source>Selection mode</source>
+        <translation>选区模式</translation>
+    </message>
+    <message>
+        <source>Insert group</source>
+        <translation>插入分组</translation>
+    </message>
+    <message>
+        <source>Add group</source>
+        <translation>新增分组</translation>
+    </message>
+    <message>
+        <source>Remove selected group</source>
+        <translation>删除选中分组</translation>
+    </message>
+    <message>
+        <source>Previous</source>
+        <translation>上一页</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>下一页</translation>
+    </message>
+    <message>
+        <source>More tools</source>
+        <translation>更多工具</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>页面</translation>
+    </message>
+</context>
+<context>
     <name>AutomationParameterDialog</name>
     <message>
         <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="47"/>
@@ -566,36 +609,6 @@ Last error: %1</source>
         <location filename="../src/ui/MainWindow.cpp" line="535"/>
         <source>Recent Projects</source>
         <translation>最近打开的工程</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="585"/>
-        <source>Zoom</source>
-        <translation>缩放</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="622"/>
-        <source>Insert group</source>
-        <translation>插入分组</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="593"/>
-        <source>Label mode</source>
-        <translation>标签模式</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="594"/>
-        <source>Selection mode</source>
-        <translation>选区模式</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="628"/>
-        <source>Previous</source>
-        <translation>上一页</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="629"/>
-        <source>Next</source>
-        <translation>下一页</translation>
     </message>
     <message>
         <source>source #%1</source>
@@ -1592,13 +1605,13 @@ Last error: %1</source>
     <name>PageOrderListModel</name>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="247"/>
-        <source>Image</source>
-        <translation>图片文件名</translation>
+        <source>Current image</source>
+        <translation>当前图片</translation>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="249"/>
-        <source>New file</source>
-        <translation>新文件</translation>
+        <source>Target image</source>
+        <translation>目标图片</translation>
     </message>
     <message>
         <source>Rename status</source>
@@ -1632,8 +1645,8 @@ Last error: %1</source>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="251"/>
-        <source>File status</source>
-        <translation>文件状态</translation>
+        <source>Image action</source>
+        <translation>处理动作</translation>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="253"/>

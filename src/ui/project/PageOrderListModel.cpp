@@ -244,11 +244,11 @@ QVariant PageOrderListModel::headerData(int section, Qt::Orientation orientation
 
     switch (section) {
     case ImageNameColumn:
-        return QCoreApplication::translate("PageOrderListModel", "Image");
+        return QCoreApplication::translate("PageOrderListModel", "Current image");
     case RenamePreviewColumn:
-        return QCoreApplication::translate("PageOrderListModel", "New file");
+        return QCoreApplication::translate("PageOrderListModel", "Target image");
     case RenameStatusColumn:
-        return QCoreApplication::translate("PageOrderListModel", "File status");
+        return QCoreApplication::translate("PageOrderListModel", "Image action");
     case OriginalIndexColumn:
         return QCoreApplication::translate("PageOrderListModel", "Original #");
     default:

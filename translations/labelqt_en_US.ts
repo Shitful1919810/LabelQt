@@ -87,6 +87,49 @@
     </message>
 </context>
 <context>
+    <name>CanvasBottomBar</name>
+    <message>
+        <source>Zoom</source>
+        <translation>Zoom</translation>
+    </message>
+    <message>
+        <source>Label mode</source>
+        <translation>Label mode</translation>
+    </message>
+    <message>
+        <source>Selection mode</source>
+        <translation>Selection mode</translation>
+    </message>
+    <message>
+        <source>Insert group</source>
+        <translation>Insert group</translation>
+    </message>
+    <message>
+        <source>Add group</source>
+        <translation>Add group</translation>
+    </message>
+    <message>
+        <source>Remove selected group</source>
+        <translation>Remove selected group</translation>
+    </message>
+    <message>
+        <source>Previous</source>
+        <translation>Previous</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Next</translation>
+    </message>
+    <message>
+        <source>More tools</source>
+        <translation>More tools</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>Page</translation>
+    </message>
+</context>
+<context>
     <name>AutomationParameterDialog</name>
     <message>
         <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="47"/>
@@ -570,36 +613,6 @@ Last error: %1</translation>
         <location filename="../src/ui/MainWindow.cpp" line="535"/>
         <source>Recent Projects</source>
         <translation>Recent Projects</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="585"/>
-        <source>Zoom</source>
-        <translation>Zoom</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="622"/>
-        <source>Insert group</source>
-        <translation>Insert group</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="593"/>
-        <source>Label mode</source>
-        <translation>Label mode</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="594"/>
-        <source>Selection mode</source>
-        <translation>Selection mode</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="628"/>
-        <source>Previous</source>
-        <translation>Previous</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="629"/>
-        <source>Next</source>
-        <translation>Next</translation>
     </message>
     <message>
         <source>source #%1</source>
@@ -1601,13 +1614,13 @@ Last error: %1</translation>
     <name>PageOrderListModel</name>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="247"/>
-        <source>Image</source>
-        <translation>Image</translation>
+        <source>Current image</source>
+        <translation>Current image</translation>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="249"/>
-        <source>New file</source>
-        <translation>New file</translation>
+        <source>Target image</source>
+        <translation>Target image</translation>
     </message>
     <message>
         <source>Rename status</source>
@@ -1641,8 +1654,8 @@ Last error: %1</translation>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="251"/>
-        <source>File status</source>
-        <translation>File status</translation>
+        <source>Image action</source>
+        <translation>Image action</translation>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="253"/>

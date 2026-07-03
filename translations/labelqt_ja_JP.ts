@@ -87,6 +87,49 @@
     </message>
 </context>
 <context>
+    <name>CanvasBottomBar</name>
+    <message>
+        <source>Zoom</source>
+        <translation>ズーム</translation>
+    </message>
+    <message>
+        <source>Label mode</source>
+        <translation>ラベルモード</translation>
+    </message>
+    <message>
+        <source>Selection mode</source>
+        <translation>範囲選択モード</translation>
+    </message>
+    <message>
+        <source>Insert group</source>
+        <translation>挿入先グループ</translation>
+    </message>
+    <message>
+        <source>Add group</source>
+        <translation>グループを追加</translation>
+    </message>
+    <message>
+        <source>Remove selected group</source>
+        <translation>選択中のグループを削除</translation>
+    </message>
+    <message>
+        <source>Previous</source>
+        <translation>前のページ</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>次のページ</translation>
+    </message>
+    <message>
+        <source>More tools</source>
+        <translation>その他のツール</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>ページ</translation>
+    </message>
+</context>
+<context>
     <name>AutomationParameterDialog</name>
     <message>
         <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="173"/>
@@ -566,36 +609,6 @@ Last error: %1</source>
         <location filename="../src/ui/MainWindow.cpp" line="535"/>
         <source>Recent Projects</source>
         <translation>最近使用したプロジェクト</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="585"/>
-        <source>Zoom</source>
-        <translation>ズーム</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="622"/>
-        <source>Insert group</source>
-        <translation>挿入先グループ</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="593"/>
-        <source>Label mode</source>
-        <translation>ラベルモード</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="594"/>
-        <source>Selection mode</source>
-        <translation>範囲選択モード</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="628"/>
-        <source>Previous</source>
-        <translation>前のページ</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="629"/>
-        <source>Next</source>
-        <translation>次のページ</translation>
     </message>
     <message>
         <source>source #%1</source>
@@ -1592,13 +1605,13 @@ Last error: %1</source>
     <name>PageOrderListModel</name>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="247"/>
-        <source>Image</source>
-        <translation>画像ファイル</translation>
+        <source>Current image</source>
+        <translation>現在の画像</translation>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="249"/>
-        <source>New file</source>
-        <translation>新しいファイル名</translation>
+        <source>Target image</source>
+        <translation>変更先の画像</translation>
     </message>
     <message>
         <source>Rename status</source>
@@ -1632,8 +1645,8 @@ Last error: %1</source>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="251"/>
-        <source>File status</source>
-        <translation>ファイル状態</translation>
+        <source>Image action</source>
+        <translation>処理内容</translation>
     </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="253"/>

@@ -13,6 +13,7 @@
 #include "services/proofread/TextDiffService.h"
 #include "ui/automation/AutomationController.h"
 #include "ui/automation/AutomationShortcutController.h"
+#include "ui/canvas/CanvasBottomBar.h"
 #include "ui/canvas/CanvasLabelTextEditController.h"
 #include "ui/widgets/DialogWindowUtils.h"
 #include "ui/EditorStateController.h"
@@ -34,7 +35,6 @@
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
-#include <QButtonGroup>
 #include <QCloseEvent>
 #include <QClipboard>
 #include <QComboBox>
@@ -46,7 +46,6 @@
 #include <QFutureWatcher>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QIcon>
 #include <QInputDialog>
 #include <QItemSelectionModel>
 #include <QKeySequence>
@@ -66,7 +65,6 @@
 #include <QStatusBar>
 #include <QStringList>
 #include <QStringView>
-#include <QStyle>
 #include <QStyleFactory>
 #include <QTableView>
 #include <QTextCursor>
@@ -573,70 +571,16 @@ void MainWindow::createCentralWidget()
     m_imagePageViewController->setCanvas(m_canvas);
     leftLayout->addWidget(m_canvas, 1);
 
-    auto* bottomBar = new QWidget(leftPanel);
-    auto* bottomLayout = new QHBoxLayout(bottomBar);
-    bottomLayout->setContentsMargins(0, 0, 0, 0);
-    bottomLayout->setSpacing(6);
-
-    m_zoomSlider = new QSlider(Qt::Horizontal, bottomBar);
-    m_zoomSlider->setRange(10, 400);
-    m_zoomSlider->setValue(100);
-    m_zoomSlider->setFixedWidth(180);
-    bottomLayout->addWidget(new QLabel(tr("Zoom"), bottomBar));
-    bottomLayout->addWidget(m_zoomSlider);
-    bottomLayout->addStretch();
-
-    auto* interactionModeGroup = new QButtonGroup(bottomBar);
-    interactionModeGroup->setExclusive(true);
-    m_labelModeButton = new QToolButton(bottomBar);
-    m_selectionModeButton = new QToolButton(bottomBar);
-    m_labelModeButton->setText(tr("Label mode"));
-    m_selectionModeButton->setText(tr("Selection mode"));
-    m_labelModeButton->setCheckable(true);
-    m_selectionModeButton->setCheckable(true);
-    m_labelModeButton->setChecked(true);
-    m_labelModeButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    m_selectionModeButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    interactionModeGroup->addButton(m_labelModeButton);
-    interactionModeGroup->addButton(m_selectionModeButton);
-    bottomLayout->addWidget(m_labelModeButton);
-    bottomLayout->addWidget(m_selectionModeButton);
-    bottomLayout->addStretch();
-
-    m_insertGroupComboBox = new QComboBox(bottomBar);
-    m_insertGroupComboBox->setMinimumWidth(120);
-    auto* addGroupButton = new QToolButton(bottomBar);
-    auto* removeGroupButton = new QToolButton(bottomBar);
-    addGroupButton->setIcon(
-        QIcon::fromTheme(QStringLiteral("document-new"), style()->standardIcon(QStyle::SP_FileIcon)));
-    removeGroupButton->setIcon(
-        QIcon::fromTheme(QStringLiteral("user-trash"), style()->standardIcon(QStyle::SP_TrashIcon)));
-    addGroupButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    removeGroupButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    addGroupButton->setToolTip(tr("Add group"));
-    removeGroupButton->setToolTip(tr("Remove selected group"));
-    addGroupButton->setAutoRaise(true);
-    removeGroupButton->setAutoRaise(true);
-    addGroupButton->setFixedSize(24, 24);
-    removeGroupButton->setFixedSize(24, 24);
-    bottomLayout->addWidget(new QLabel(tr("Insert group"), bottomBar));
-    bottomLayout->addWidget(m_insertGroupComboBox);
-    bottomLayout->addWidget(addGroupButton);
-    bottomLayout->addWidget(removeGroupButton);
-    bottomLayout->addStretch();
-
-    m_previousButton = new QPushButton(tr("Previous"), bottomBar);
-    m_nextButton = new QPushButton(tr("Next"), bottomBar);
-    m_imageComboBox = new PageSelectorComboBox(bottomBar);
-    m_imageComboBox->setMinimumWidth(160);
-    m_pageSourceLabel = new QLabel(bottomBar);
-    m_pageSourceLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_pageSourceLabel->setVisible(false);
+    auto* bottomBar = new CanvasBottomBar(leftPanel);
+    m_zoomSlider = bottomBar->zoomSlider();
+    m_labelModeButton = bottomBar->labelModeButton();
+    m_selectionModeButton = bottomBar->selectionModeButton();
+    m_insertGroupComboBox = bottomBar->insertGroupComboBox();
+    m_previousButton = bottomBar->previousButton();
+    m_nextButton = bottomBar->nextButton();
+    m_imageComboBox = bottomBar->imageComboBox();
+    m_pageSourceLabel = bottomBar->pageSourceLabel();
     m_projectViewController->setWidgets(m_imageComboBox, m_previousButton, m_nextButton, m_pageSourceLabel);
-    bottomLayout->addWidget(m_pageSourceLabel);
-    bottomLayout->addWidget(m_previousButton);
-    bottomLayout->addWidget(m_imageComboBox);
-    bottomLayout->addWidget(m_nextButton);
     leftLayout->addWidget(bottomBar);
 
     auto* rightPanel = new QWidget(m_rootSplitter);
@@ -821,8 +765,8 @@ void MainWindow::createCentralWidget()
     connect(m_groupFilterComboBox, &GroupFilterComboBox::selectedGroupsChanged, this, &MainWindow::updateGroupFilter);
     connect(m_labelGroupComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::updateCurrentLabelGroup);
     connect(m_insertGroupComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::updateInsertGroupTextColor);
-    connect(addGroupButton, &QToolButton::clicked, this, &MainWindow::addGroup);
-    connect(removeGroupButton, &QToolButton::clicked, this, &MainWindow::removeGroup);
+    connect(bottomBar, &CanvasBottomBar::addGroupRequested, this, &MainWindow::addGroup);
+    connect(bottomBar, &CanvasBottomBar::removeGroupRequested, this, &MainWindow::removeGroup);
 }
 
 void MainWindow::newProject()

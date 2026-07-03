@@ -265,6 +265,22 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 它持有当前页标签的绘制快照，不直接修改 `Project`。
 
+手动缩放后，`ImageCanvas` 在尺寸变化时会保留当前归一化视图中心，避免主窗口分割线拖动或布局变化让画面焦点突然跳动。
+
+### `CanvasBottomBar`
+
+文件：`src/ui/canvas/CanvasBottomBar.h`、`src/ui/canvas/CanvasBottomBar.cpp`
+
+负责左侧图像区域下方工具条：
+
+- 缩放滑条。
+- 标签模式 / 选区模式切换。
+- 插入分组下拉框与新增/删除分组入口。
+- 上一页 / 下一页按钮、页码下拉框和页面来源提示。
+- 窄宽度下的“更多工具”紧凑菜单。
+
+`MainWindow` 只从它取出需要连接的控件，并监听新增/删除分组信号。底栏紧凑模式、控件最小宽度计算和菜单同步逻辑都应留在这个组件里。
+
 ### `ImagePageCache`
 
 文件：`src/services/io/ImagePageCache.h`、`src/services/io/ImagePageCache.cpp`
