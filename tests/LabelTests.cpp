@@ -279,6 +279,9 @@ private slots:
     {
         const QString html = canvasLabelBubbleHtml(3, QStringLiteral("abcdef\nxyz"), QColor(Qt::red), 3);
 
+        QVERIFY(html.contains(QStringLiteral("<table")));
+        QVERIFY(html.contains(QStringLiteral("#3:</td>")));
+        QVERIFY(!html.contains(QStringLiteral("#3</span> :")));
         QVERIFY(html.contains(QStringLiteral("abc<br/>def")));
         QVERIFY(html.contains(QStringLiteral("↵")));
         QVERIFY(html.contains(QStringLiteral("xyz")));

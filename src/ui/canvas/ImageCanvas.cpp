@@ -9,6 +9,7 @@
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMouseEvent>
@@ -17,6 +18,7 @@
 #include <QPen>
 #include <QPixmap>
 #include <QScrollBar>
+#include <QScreen>
 #include <QSignalBlocker>
 #include <QTimer>
 #include <QWheelEvent>
@@ -31,6 +33,30 @@ constexpr int resizeCenterAnchorClearDelayMs = 180;
 QPointF clampedNormalizedPosition(QPointF position)
 {
     return {std::clamp(position.x(), 0.0, 1.0), std::clamp(position.y(), 0.0, 1.0)};
+}
+
+QPoint clampedToolTipGlobalPosition(QPoint preferredPosition, QSize toolTipSize, QPoint anchorPosition)
+{
+    const QScreen* screen = QGuiApplication::screenAt(anchorPosition);
+    if (screen == nullptr) {
+        screen = QGuiApplication::primaryScreen();
+    }
+    if (screen == nullptr) {
+        return preferredPosition;
+    }
+
+    constexpr int screenMargin = 4;
+    const QRect available = screen->availableGeometry().adjusted(screenMargin, screenMargin, -screenMargin, -screenMargin);
+    QPoint position = preferredPosition;
+    if (position.x() + toolTipSize.width() > available.right()) {
+        position.setX(available.right() - toolTipSize.width() + 1);
+    }
+    if (position.y() + toolTipSize.height() > available.bottom()) {
+        position.setY(available.bottom() - toolTipSize.height() + 1);
+    }
+    position.setX(std::max(available.left(), position.x()));
+    position.setY(std::max(available.top(), position.y()));
+    return position;
 }
 
 } // namespace
@@ -52,8 +78,11 @@ ImageCanvas::ImageCanvas(QWidget* parent) : QGraphicsView(parent)
     connect(horizontalScrollBar(), &QScrollBar::valueChanged, this, &ImageCanvas::notifyViewportStateChanged);
     connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &ImageCanvas::notifyViewportStateChanged);
 
-    m_hoverToolTip = new QLabel(this);
+    // Keep the bubble as a top-level, mouse-transparent tooltip so it can cross the
+    // canvas edge without stealing events from the label table or scroll bars.
+    m_hoverToolTip = new QLabel(this, Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus);
     m_hoverToolTip->setAttribute(Qt::WA_TransparentForMouseEvents);
+    m_hoverToolTip->setAttribute(Qt::WA_ShowWithoutActivating);
     m_hoverToolTip->setTextFormat(Qt::RichText);
     m_hoverToolTip->setMargin(6);
     m_hoverToolTip->setStyleSheet(QStringLiteral("QLabel {"
@@ -994,7 +1023,9 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
         m_hoverOpacityEffect->setOpacity(std::clamp(m_textBubbleOpacity, 0.0, 1.0));
     }
     m_hoverToolTip->adjustSize();
-    m_hoverToolTip->move(mapFromGlobal(globalPosition + QPoint(12, 18)));
+    m_hoverToolTip->move(clampedToolTipGlobalPosition(globalPosition + QPoint(12, 18),
+                                                      m_hoverToolTip->size(),
+                                                      globalPosition));
     m_hoverToolTip->show();
     m_hoverToolTip->raise();
 }

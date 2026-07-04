@@ -77,7 +77,13 @@ int canvasLabelMarkerItemType()
 
 QString canvasLabelBubbleHtml(int displayNumber, const QString& text, const QColor& color, int maxLineCharacters)
 {
-    return QStringLiteral("<span style=\"color:%1; font-weight:600;\">#%2</span> : %3")
+    return QStringLiteral("<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"border-collapse:collapse;\">"
+                          "<tr>"
+                          "<td valign=\"top\" style=\"white-space:nowrap;padding-right:6px;"
+                          "color:%1;font-weight:600;\">#%2:</td>"
+                          "<td valign=\"top\">%3</td>"
+                          "</tr>"
+                          "</table>")
         .arg(color.name(), QString::number(displayNumber),
              htmlEscapedWithSoftWrapAndNewlineMarkers(text, maxLineCharacters));
 }
