@@ -10,16 +10,13 @@
 #include <QPointer>
 #include <QStyle>
 #include <QTextCursor>
-#include <QTextDocument>
 #include <QTimer>
 
 #include <algorithm>
-#include <cmath>
 #include <utility>
 
 namespace {
 constexpr int groupPopupDelayMs = 120;
-constexpr int maximumPreviewTextLines = 4;
 constexpr int textCellVerticalPadding = 8;
 constexpr char textEditorCommittedProperty[] = "labelqt.textEditorCommitted";
 
@@ -32,18 +29,12 @@ bool markEditorCommitted(QPlainTextEdit* editor)
     return true;
 }
 
-int textEditorHeightHint(QPlainTextEdit* editor)
+int fixedTextEditorHeightHint(const QPlainTextEdit* editor, int maximumTextRows)
 {
     if (editor == nullptr) {
         return 0;
     }
-
-    QTextDocument* document = editor->document();
-    document->setTextWidth(std::max(1, editor->viewport()->width()));
-    const int documentHeight = static_cast<int>(std::ceil(document->size().height()));
-    const int explicitLineHeight = editor->fontMetrics().lineSpacing() * std::max(1, document->blockCount());
-    return std::max(editor->fontMetrics().lineSpacing() + textCellVerticalPadding,
-                    std::max(documentHeight, explicitLineHeight) + textCellVerticalPadding);
+    return editor->fontMetrics().lineSpacing() * std::max(1, maximumTextRows) + textCellVerticalPadding;
 }
 } // namespace
 
@@ -54,6 +45,11 @@ void LabelTextDelegate::setCommitShortcut(QKeySequence shortcut)
     if (!shortcut.isEmpty()) {
         m_commitShortcut = std::move(shortcut);
     }
+}
+
+void LabelTextDelegate::setMaximumTextRows(int rows)
+{
+    m_maximumTextRows = std::max(1, rows);
 }
 
 QWidget* LabelTextDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem&, const QModelIndex& index) const
@@ -67,7 +63,8 @@ QWidget* LabelTextDelegate::createEditor(QWidget* parent, const QStyleOptionView
              persistentIndex = QPersistentModelIndex(index)]() {
                 if (guardedEditor != nullptr && persistentIndex.isValid()) {
                     emit delegate->editorHeightHintChanged(persistentIndex, guardedEditor,
-                                                           textEditorHeightHint(guardedEditor));
+                                                           fixedTextEditorHeightHint(guardedEditor,
+                                                                                     delegate->m_maximumTextRows));
                     emit delegate->editorTextChanged(persistentIndex, guardedEditor->toPlainText());
                 }
             });
@@ -114,7 +111,7 @@ void LabelTextDelegate::setModelData(QWidget* editor, QAbstractItemModel* model,
 QSize LabelTextDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     QSize size = QStyledItemDelegate::sizeHint(option, index);
-    const int maximumHeight = option.fontMetrics.lineSpacing() * maximumPreviewTextLines + textCellVerticalPadding;
+    const int maximumHeight = option.fontMetrics.lineSpacing() * std::max(1, m_maximumTextRows) + textCellVerticalPadding;
     size.setHeight(std::min(size.height(), maximumHeight));
     return size;
 }
@@ -139,7 +136,9 @@ void LabelTextDelegate::scheduleEditorHeightHint(QPlainTextEdit* editor, QPersis
         }
 
         emit const_cast<LabelTextDelegate*>(delegate)->editorHeightHintChanged(index, guardedEditor,
-                                                                               textEditorHeightHint(guardedEditor));
+                                                                               fixedTextEditorHeightHint(
+                                                                                   guardedEditor,
+                                                                                   delegate->m_maximumTextRows));
     });
 }
 

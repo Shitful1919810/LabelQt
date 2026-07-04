@@ -1795,6 +1795,11 @@ Last error: %1</source>
     </message>
     <message>
         <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="324"/>
+        <source>Marker text bubble line wrap threshold</source>
+        <translation>マーカー吹き出しの折り返し文字数</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="324"/>
         <source>Marker text bubble opacity</source>
         <translation>マーカー吹き出しの不透明度</translation>
     </message>

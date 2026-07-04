@@ -135,8 +135,8 @@ void CanvasBottomBar::buildUi()
     m_nextButton->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
     m_previousButton->setToolTip(tr("Previous"));
     m_nextButton->setToolTip(tr("Next"));
-    m_previousButton->setFixedSize(28, 24);
-    m_nextButton->setFixedSize(28, 24);
+    m_previousButton->setFixedSize(40, 32);
+    m_nextButton->setFixedSize(40, 32);
     m_imageComboBox = new PageSelectorComboBox(this);
     m_pageModel = new QStandardItemModel(this);
     m_imageComboBox->setModel(m_pageModel);

@@ -100,7 +100,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 主要类：
 
 - `MainWindow`：菜单、主布局、信号连接、状态栏提示和控制器编排。它可以调用服务，但不应该新增文件格式、脚本解析、标签编辑规则或图片加载状态机。
-- `ImageCanvas`：左侧图像预览、标签标记绘制、悬停气泡、选区模式、缩放/拖动视图，以及点击/拖动标签标记时发出的用户意图信号。它不直接修改 `Project`。手动缩放后窗口尺寸变化时，应保持当前归一化视图中心，避免布局变化把画面焦点写成中间态。
+- `ImageCanvas`：左侧图像预览、标签标记绘制、悬停气泡、选区模式、缩放/拖动视图，以及点击/拖动标签标记时发出的用户意图信号。它不直接修改 `Project`。手动缩放后窗口尺寸变化时，应以当前视口中心对应的 scene 点作为锚点，resize 后把它恢复到新的视口中心，避免布局变化造成视觉焦点跳动。
 - `CanvasBottomBar`：左侧图像区域下边栏。它负责缩放滑条、标签/选区模式按钮、插入分组控件、翻页控件、页码下拉框、来源提示，以及窄宽度下的“更多工具”紧凑菜单。响应式布局、紧凑菜单同步和底栏最小宽度推导都应留在这里；`MainWindow` 只连接它暴露的控件和 `addGroupRequested()` / `removeGroupRequested()` 信号。
 - `CanvasLabelItems`：标签标记与气泡等 `QGraphicsItem` 绘制细节。
 - `CanvasLabelTextEditController` / `CanvasLabelTextEditor`：双击标签标记后出现的临时文本编辑框生命周期。
@@ -263,7 +263,7 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 - `automation.python.command` / `arguments` / `autoInstallRequirements` / `pipIndexUrl`：自动化 Python 解释器和依赖安装设置。
 - `automation.shortcuts`：用户给自动化脚本绑定的快捷键。
 - `labelMarker`、`groupStyles`：标签标记默认样式和按分组覆盖的样式。
-- `labelTable`、`labelTextEditor`、`markerTextBubble`、`canvasLabelTextEditor`：表格、文本框、气泡和临时编辑框的字体/透明度。
+- `labelTable`、`labelTextEditor`、`markerTextBubble`、`canvasLabelTextEditor`：表格、文本框、气泡和临时编辑框的字体、透明度和显示细节。`markerTextBubble.maxLineCharacters` 控制气泡单行软换行阈值；真实换行应保留可见换行标记。
 - `input`：主窗口快捷键和修饰键。
 - `backupPath`、`backupIntervalSeconds`：自动备份配置。
 

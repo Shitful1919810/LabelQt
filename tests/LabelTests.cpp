@@ -25,7 +25,9 @@
 #include "services/project/SessionStateStore.h"
 #include "services/proofread/TextDiffService.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
+#include "ui/canvas/CanvasLabelItems.h"
 #include "ui/canvas/ImageCanvas.h"
+#include "ui/labeltable/LabelEditDelegates.h"
 #include "ui/labeltable/LabelSelectionController.h"
 #include "ui/labeltable/LabelTableModel.h"
 #include "ui/project/PageOrderListModel.h"
@@ -40,9 +42,11 @@
 #include <QKeySequence>
 #include <QMimeData>
 #include <QPainter>
+#include <QPlainTextEdit>
 #include <QSettings>
 #include <QSet>
 #include <QSignalSpy>
+#include <QStandardItemModel>
 #include <QTableView>
 #include <QTextStream>
 #include <QTemporaryDir>
@@ -105,6 +109,20 @@ labelqt::services::ProjectImageRenameOptions imageRenameOptions(const QString& p
                                                                  QVector<int> orderedImageIndexes = {})
 {
     return {pattern, startIndex, std::move(orderedImageIndexes)};
+}
+
+bool showCanvasWithLabels(ImageCanvas& canvas, QVector<Label> labels, QSize imageSize = QSize(200, 200))
+{
+    canvas.resize(640, 480);
+    canvas.show();
+    if (!QTest::qWaitForWindowExposed(&canvas)) {
+        return false;
+    }
+
+    canvas.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+    canvas.setVisibleGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+    canvas.setImage(QStringLiteral("test.png"), QImage(imageSize, QImage::Format_ARGB32_Premultiplied), labels);
+    return true;
 }
 
 } // namespace
@@ -215,6 +233,60 @@ private slots:
         QCOMPARE(SaveChangesDecision::actionForChoice(SaveChangesChoice::Discard),
                  SaveChangesAction::ContinueWithoutSaving);
         QCOMPARE(SaveChangesDecision::actionForChoice(SaveChangesChoice::Cancel), SaveChangesAction::Cancel);
+    }
+
+    void labelTextEditorHeightUsesConfiguredMaximumRows()
+    {
+        LabelTextDelegate delegate;
+        delegate.setMaximumTextRows(5);
+
+        QStandardItemModel model(1, 1);
+        const QModelIndex index = model.index(0, 0);
+        model.setData(index, QStringLiteral("one line"), Qt::EditRole);
+
+        QWidget parent;
+        int lastHeight = 0;
+        QWidget* lastEditor = nullptr;
+        connect(&delegate, &LabelTextDelegate::editorHeightHintChanged, &parent,
+                [&](const QPersistentModelIndex&, QWidget* editor, int height) {
+                    lastEditor = editor;
+                    lastHeight = height;
+                });
+
+        QStyleOptionViewItem option;
+        option.rect = QRect(0, 0, 240, 24);
+        auto* editor = qobject_cast<QPlainTextEdit*>(delegate.createEditor(&parent, option, index));
+        QVERIFY(editor != nullptr);
+        delegate.setEditorData(editor, index);
+
+        const auto expectedHeightForRows = [editor](int rows) {
+            constexpr int verticalPadding = 8;
+            return editor->fontMetrics().lineSpacing() * rows + verticalPadding;
+        };
+
+        QTRY_COMPARE(lastEditor, static_cast<QWidget*>(editor));
+        QCOMPARE(lastHeight, expectedHeightForRows(5));
+
+        editor->setPlainText(QStringLiteral("1\n2\n3\n4\n5\n6\n7\n8"));
+        QCOMPARE(lastHeight, expectedHeightForRows(5));
+
+        delegate.setMaximumTextRows(2);
+        delegate.updateEditorGeometry(editor, option, index);
+        QTRY_COMPARE(lastHeight, expectedHeightForRows(2));
+    }
+
+    void canvasLabelBubbleHtmlWrapsLongLinesAndMarksRealNewlines()
+    {
+        const QString html = canvasLabelBubbleHtml(3, QStringLiteral("abcdef\nxyz"), QColor(Qt::red), 3);
+
+        QVERIFY(html.contains(QStringLiteral("abc<br/>def")));
+        QVERIFY(html.contains(QStringLiteral("↵")));
+        QVERIFY(html.contains(QStringLiteral("xyz")));
+
+        const QString emoji = QString::fromUcs4(U"😀");
+        const QString emojiHtml = canvasLabelBubbleHtml(3, QStringLiteral("a") + emoji + QStringLiteral("b"),
+                                                        QColor(Qt::red), 1);
+        QVERIFY(emojiHtml.contains(emoji));
     }
 
     void labelClipboardRoundTripsLabels()
@@ -1020,14 +1092,8 @@ private slots:
     void imageCanvasCtrlDragMarkerMovesLabelWithoutStartingViewPan()
     {
         ImageCanvas canvas;
-        canvas.resize(640, 480);
-        canvas.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&canvas));
-
         QVector<Label> labels{Label(QStringLiteral("first"), QStringLiteral("框内"), {0.5, 0.5})};
-        canvas.setGroups({QStringLiteral("框内")});
-        canvas.setVisibleGroups({QStringLiteral("框内")});
-        canvas.setImage(QStringLiteral("test.png"), QImage(200, 200, QImage::Format_ARGB32_Premultiplied), labels);
+        QVERIFY(showCanvasWithLabels(canvas, labels));
 
         const QPoint markerPosition = canvas.mapFromGlobal(canvas.globalPositionForLabel(0));
         const QPoint dragPosition = markerPosition + QPoint(QApplication::startDragDistance() + 30, 0);
@@ -1043,6 +1109,31 @@ private slots:
         QCOMPARE(moveSpy.first().at(0).toInt(), 0);
         const QPointF movedPosition = moveSpy.first().at(1).toPointF();
         QVERIFY(movedPosition.x() > 0.5);
+    }
+
+    void imageCanvasCtrlDragMarkerWorksThroughSelectedTextBubble()
+    {
+        ImageCanvas canvas;
+        QVector<Label> labels{
+            Label(QStringLiteral("long selected text bubble that overlaps nearby markers"), QStringLiteral("框内"),
+                  {0.42, 0.5}),
+            Label(QStringLiteral("covered marker"), QStringLiteral("框内"), {0.52, 0.5}),
+        };
+        QVERIFY(showCanvasWithLabels(canvas, labels));
+        canvas.setSelectedLabels({0});
+
+        const QPoint markerPosition = canvas.mapFromGlobal(canvas.globalPositionForLabel(1));
+        const QPoint dragPosition = markerPosition + QPoint(QApplication::startDragDistance() + 30, 0);
+        QSignalSpy moveSpy(&canvas, &ImageCanvas::labelMoveRequested);
+
+        QTest::mousePress(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, markerPosition);
+        QTest::mouseMove(canvas.viewport(), dragPosition);
+        QTest::mouseRelease(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, dragPosition);
+
+        QCOMPARE(moveSpy.count(), 1);
+        QCOMPARE(moveSpy.first().at(0).toInt(), 1);
+        const QPointF movedPosition = moveSpy.first().at(1).toPointF();
+        QVERIFY(movedPosition.x() > 0.52);
     }
 
     void imageCanvasCtrlDragSelectedMarkersMovesSelectionTogether()
@@ -1162,6 +1253,41 @@ private slots:
                                     .arg(sceneAfter.y())));
             QCOMPARE(canvas.zoomPercent(), 280);
         }
+    }
+
+    void imageCanvasResizeKeepsVisualCenterAfterManualZoom()
+    {
+        ImageCanvas canvas;
+        canvas.resize(640, 480);
+        canvas.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&canvas));
+
+        canvas.setGroups({QStringLiteral("框内")});
+        canvas.setVisibleGroups({QStringLiteral("框内")});
+        canvas.setImage(QStringLiteral("test.png"), QImage(1200, 1200, QImage::Format_ARGB32_Premultiplied), {});
+        canvas.setZoomPercent(160);
+
+        const QPoint oldViewportCenter = canvas.viewport()->rect().center();
+        const QPointF sceneBefore = canvas.mapToScene(oldViewportCenter);
+
+        for (int width = 660; width <= 840; width += 20) {
+            canvas.resize(width, 480);
+            QApplication::processEvents();
+        }
+
+        const QPoint newViewportCenter = canvas.viewport()->rect().center();
+        const QPointF sceneAfter = canvas.mapToScene(newViewportCenter);
+        const QPointF drift = sceneAfter - sceneBefore;
+        QVERIFY2(std::abs(drift.x()) < 1.0,
+                 qPrintable(QStringLiteral("x drift: %1, before: %2, after: %3")
+                                .arg(drift.x())
+                                .arg(sceneBefore.x())
+                                .arg(sceneAfter.x())));
+        QVERIFY2(std::abs(drift.y()) < 1.0,
+                 qPrintable(QStringLiteral("y drift: %1, before: %2, after: %3")
+                                .arg(drift.y())
+                                .arg(sceneBefore.y())
+                                .arg(sceneAfter.y())));
     }
 
     void projectMergeUsesSingleInvolvedPageAutomatically()
@@ -1914,6 +2040,7 @@ private slots:
                << "  \"markerTextBubble\": {\n"
                << "    \"fontFamily\": \"Noto Sans CJK SC\",\n"
                << "    \"fontPointSize\": 9.5,\n"
+               << "    \"maxLineCharacters\": 24,\n"
                << "    \"opacity\": 0.75\n"
                << "  },\n"
                << "  \"canvasLabelTextEditor\": {\n"
@@ -1965,11 +2092,13 @@ private slots:
         QCOMPARE(result.preferences.labelTextEditorFontPointSize(), 12.5);
         QCOMPARE(result.preferences.markerTextBubbleFontFamily(), QStringLiteral("Noto Sans CJK SC"));
         QCOMPARE(result.preferences.markerTextBubbleFontPointSize(), 9.5);
+        QCOMPARE(result.preferences.markerTextBubbleMaxLineCharacters(), 24);
         QCOMPARE(result.preferences.markerTextBubbleOpacity(), 0.75);
         QCOMPARE(result.preferences.canvasLabelTextEditorOpacity(), 0.6);
         const labelqt::core::AppPreferencesLoadResult serializedResult =
             labelqt::core::AppPreferences::loadFromJson(result.preferences.toJsonDocument().toJson());
         QVERIFY(serializedResult.warnings.isEmpty());
+        QCOMPARE(serializedResult.preferences.markerTextBubbleMaxLineCharacters(), 24);
         QCOMPARE(serializedResult.preferences.markerTextBubbleOpacity(), 0.75);
         QCOMPARE(serializedResult.preferences.canvasLabelTextEditorOpacity(), 0.6);
         QCOMPARE(serializedResult.preferences.alternateNextLabelShortcut().toString(QKeySequence::PortableText),
@@ -2053,6 +2182,8 @@ private slots:
         QCOMPARE(result.preferences.labelTextEditorFontPointSize(), 0.0);
         QCOMPARE(result.preferences.markerTextBubbleFontFamily(), QString());
         QCOMPARE(result.preferences.markerTextBubbleFontPointSize(), 0.0);
+        QCOMPARE(result.preferences.markerTextBubbleMaxLineCharacters(),
+                 labelqt::core::defaultMarkerTextBubbleMaxLineCharacters);
         QCOMPARE(result.preferences.applicationStyle(), QString());
         QCOMPARE(result.preferences.applicationTheme(), QString());
         QCOMPARE(result.preferences.moveLabelModifiers(), Qt::ControlModifier);

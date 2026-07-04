@@ -1795,6 +1795,11 @@ Last error: %1</source>
     </message>
     <message>
         <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="324"/>
+        <source>Marker text bubble line wrap threshold</source>
+        <translation>標記文字氣泡換行閾值</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="324"/>
         <source>Marker text bubble opacity</source>
         <translation>標記文字氣泡不透明度</translation>
     </message>

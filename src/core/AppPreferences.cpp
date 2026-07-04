@@ -667,6 +667,11 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 preferences.m_markerTextBubbleOpacity, 0.0, 1.0,
                 AppPreferenceWarningType::MarkerTextBubbleOpacityWrongType,
                 AppPreferenceWarningType::MarkerTextBubbleOpacityOutOfRange, warnings);
+            preferences.m_markerTextBubbleMaxLineCharacters = positiveIntegerFromJsonValue(
+                markerTextBubble, QStringLiteral("maxLineCharacters"),
+                QStringLiteral("markerTextBubble.maxLineCharacters"), preferences.m_markerTextBubbleMaxLineCharacters,
+                1, 200, AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersWrongType,
+                AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersOutOfRange, warnings);
         }
     }
 
@@ -872,6 +877,7 @@ QJsonDocument AppPreferences::toJsonDocument() const
     markerTextBubble.insert(QStringLiteral("fontFamily"), m_markerTextBubbleFontFamily);
     markerTextBubble.insert(QStringLiteral("fontPointSize"), m_markerTextBubbleFontPointSize);
     markerTextBubble.insert(QStringLiteral("opacity"), m_markerTextBubbleOpacity);
+    markerTextBubble.insert(QStringLiteral("maxLineCharacters"), m_markerTextBubbleMaxLineCharacters);
 
     QJsonObject canvasLabelTextEditor;
     canvasLabelTextEditor.insert(QStringLiteral("opacity"), m_canvasLabelTextEditorOpacity);
@@ -961,6 +967,11 @@ double AppPreferences::markerTextBubbleFontPointSize() const noexcept
 double AppPreferences::markerTextBubbleOpacity() const noexcept
 {
     return m_markerTextBubbleOpacity;
+}
+
+int AppPreferences::markerTextBubbleMaxLineCharacters() const noexcept
+{
+    return m_markerTextBubbleMaxLineCharacters;
 }
 
 double AppPreferences::canvasLabelTextEditorOpacity() const noexcept

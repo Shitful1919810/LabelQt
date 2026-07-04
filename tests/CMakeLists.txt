@@ -38,6 +38,7 @@ qt_add_executable(LabelQtTests
     ../src/ui/canvas/CanvasLabelItems.cpp
     ../src/ui/labeltable/CurrentPageLabelContext.cpp
     ../src/ui/canvas/ImageCanvas.cpp
+    ../src/ui/labeltable/LabelEditDelegates.cpp
     ../src/ui/labeltable/LabelSelectionController.cpp
     ../src/ui/labeltable/LabelTableModel.cpp
     ../src/ui/project/PageOrderListModel.cpp

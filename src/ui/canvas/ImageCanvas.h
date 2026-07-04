@@ -10,6 +10,7 @@
 #include <QImage>
 #include <QRectF>
 #include <QSet>
+#include <QSize>
 #include <QStringList>
 #include <QVector>
 
@@ -103,6 +104,10 @@ private:
     void applyZoom();
     void updateScenePadding();
     void setZoomPercentAt(int percent, QPointF sceneAnchor, QPointF globalAnchor);
+    void scrollScenePointToViewportPosition(QPointF scenePoint, QPointF viewportPosition);
+    void scheduleResizeCenterRestore(QPointF sceneCenter);
+    void restorePendingResizeCenter();
+    void scheduleResizeCenterAnchorClear();
     void notifyViewportStateChanged();
     bool isLabelVisible(const labelqt::core::Label& label) const;
     int labelIndexAt(QPoint viewportPosition) const;
@@ -140,6 +145,7 @@ private:
     double m_markerDiameterPixels{20.0};
     double m_markerFontPointSize{10.0};
     double m_textBubbleOpacity{1.0};
+    int m_textBubbleMaxLineCharacters{labelqt::core::defaultMarkerTextBubbleMaxLineCharacters};
     QFont m_textBubbleFont;
     QHash<int, QString> m_labelTextPreviews;
     Qt::KeyboardModifiers m_moveLabelModifiers{Qt::ControlModifier};
@@ -160,6 +166,11 @@ private:
     QPointF m_movingLabelAnchorStartPosition;
     std::optional<QPointF> m_wheelZoomSceneAnchor;
     QPointF m_wheelZoomGlobalAnchor;
+    std::optional<QPointF> m_resizeSceneCenterAnchor;
+    std::optional<QPointF> m_pendingResizeSceneCenter;
+    QSize m_lastViewportSize;
+    quint64 m_resizeAnchorClearGeneration{0};
+    bool m_resizeCenterRestoreScheduled{false};
     QPoint m_labelCreatePressPosition;
     QPoint m_labelSelectPressPosition;
     QPoint m_emptyClickPressPosition;

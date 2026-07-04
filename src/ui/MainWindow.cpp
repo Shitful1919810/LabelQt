@@ -327,6 +327,7 @@ MainWindow::MainWindow(QWidget* parent)
             });
     m_labelTableMaxTextRows = m_preferences.labelTableMaxTextRows();
     m_labelTextDelegate->setCommitShortcut(m_preferences.commitLabelTextShortcut());
+    m_labelTextDelegate->setMaximumTextRows(m_labelTableMaxTextRows);
     m_undoStack.setChangedCallback([this]() { updateUndoRedoActions(); });
     m_projectWorkflowController =
         std::make_unique<labelqt::services::ProjectWorkflowController>(project(), m_undoStack, tr("Reorder pages"));
@@ -3054,6 +3055,7 @@ void MainWindow::applyPreferences(labelqt::core::AppPreferencesLoadResult result
     labelqt::services::TextDiffService::setCleanupMode(m_preferences.textDiffCleanupMode());
     m_labelTableMaxTextRows = m_preferences.labelTableMaxTextRows();
     m_labelTextDelegate->setCommitShortcut(m_preferences.commitLabelTextShortcut());
+    m_labelTextDelegate->setMaximumTextRows(m_labelTableMaxTextRows);
     if (m_shortcutController != nullptr) {
         m_shortcutController->setPreferences(m_preferences);
     }
@@ -3183,6 +3185,9 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
         return tr("%1 must be a number between 0 and 1; using the default value.").arg(warning.key);
     case AppPreferenceWarningType::MarkerTextBubbleOpacityOutOfRange:
         return tr("%1 must be a number between 0 and 1; using the default value.").arg(warning.key);
+    case AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersWrongType:
+    case AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersOutOfRange:
+        return tr("%1 must be a positive integer; using the default value.").arg(warning.key);
     case AppPreferenceWarningType::CanvasLabelTextEditorNotObject:
         return tr("canvasLabelTextEditor must be a JSON object; using default canvas label editor preferences.");
     case AppPreferenceWarningType::CanvasLabelTextEditorOpacityWrongType:
