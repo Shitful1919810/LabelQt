@@ -55,4 +55,3 @@
 #include "chapters/automation.typ"
 #include "chapters/preferences.typ"
 #include "chapters/faq.typ"
-#include "chapters/assets-needed.typ"
