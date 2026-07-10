@@ -144,12 +144,15 @@ void CanvasBottomBar::buildUi()
     m_imageComboBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     m_compactToolsButton = new QToolButton(this);
-    m_compactToolsButton->setText(QStringLiteral("⋯"));
+    m_compactToolsButton->setIcon(QIcon::fromTheme(
+        QStringLiteral("view-more-symbolic"), style()->standardIcon(QStyle::SP_ToolBarHorizontalExtensionButton)));
+    m_compactToolsButton->setIconSize(QSize(20, 20));
     m_compactToolsButton->setToolTip(tr("More tools"));
-    m_compactToolsButton->setAutoRaise(true);
+    m_compactToolsButton->setAccessibleName(tr("More tools"));
+    m_compactToolsButton->setAutoRaise(false);
     m_compactToolsButton->setPopupMode(QToolButton::InstantPopup);
-    m_compactToolsButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    m_compactToolsButton->setFixedSize(34, 24);
+    m_compactToolsButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    m_compactToolsButton->setFixedSize(40, 32);
     m_compactToolsButton->setStyleSheet(QStringLiteral("QToolButton::menu-indicator { image: none; width: 0px; }"));
     auto* compactToolsMenu = new QMenu(m_compactToolsButton);
     m_compactToolsButton->setMenu(compactToolsMenu);
