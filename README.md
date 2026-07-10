@@ -31,7 +31,7 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 
 ## 当前状态
 
-项目处于首个公开版本的收尾阶段，基础 LabelPlus 编辑、协作合并、页面顺序调整、自动化脚本、OCR 和 AI 翻译工作流已经具备基础可用形态。后续仍会继续打磨跨平台体验、发布打包和自动化脚本生态。
+当前版本为 LabelQt 的首个正式版本，基础 LabelPlus 编辑、协作合并、页面管理、校对对比、自动化脚本、OCR 和 AI 翻译工作流已经具备可用形态。后续仍会继续打磨跨平台体验、发布打包和自动化脚本生态。
 
 ## 致谢
 
@@ -78,6 +78,25 @@ Qt GRPC、Qt HTTP Server、Qt MQTT、Qt Virtual Keyboard、Qt Wayland Compositor
 ## 构建
 
 推荐使用仓库内置的 CMake Presets。Debug 与 Release 均已提供跨平台 preset。
+
+### 获取源码和子模块
+
+校对文本差异依赖以 Git submodule 形式引入的 `diff-match-patch`。首次获取源码时，推荐直接递归克隆：
+
+```bash
+git clone --recurse-submodules https://github.com/Shitful1919810/LabelQt.git
+cd LabelQt
+```
+
+如果已经克隆了仓库，或者切换到了另一个 tag/分支，请在配置 CMake 前初始化并同步子模块：
+
+```bash
+git submodule update --init --recursive
+```
+
+源码归档或未包含 submodule 内容的工作副本无法直接构建；此时应重新获取完整仓库，或手动将与当前提交匹配的
+`diff-match-patch` 内容放在 `third_party/diff-match-patch`。不要使用任意版本覆盖父仓库记录的 submodule
+提交，否则文本差异行为和回归测试结果可能不一致。
 
 ### Linux
 
