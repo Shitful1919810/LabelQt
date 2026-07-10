@@ -86,6 +86,24 @@ python scripts/devtool.py release-audit /tmp/labelqt-install --kind linux-instal
 
 这个命令只做轻量结构检查。正式发版仍应参考 [release-checklist.md](release-checklist.md)。
 
+## 用户手册构建
+
+用户手册位于 `manual/`，使用 Typst 编写，不参与主程序 CMake 构建。默认构建：
+
+```bash
+python scripts/build_manual.py
+```
+
+发布前使用真实截图并指定版本化输出名：
+
+```bash
+python scripts/build_manual.py --with-screenshots --output dist/LabelQt-v0.1.0-user-manual-zh_CN.pdf
+```
+
+如果本机没有 Typst，脚本会给出安装提示。截图素材放在 `manual/assets/`，当前手册使用
+`main-window.png`、`page-manager.png` 和 `proofread-diff.png`。合并工程章节使用纯文字说明，不需要
+`merge-dialog.png`。
+
 ## Commit Message 初稿
 
 根据当前 diff stat 输出仓库模板格式的初稿：

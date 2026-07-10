@@ -23,6 +23,10 @@ option(LABELQT_ENABLE_EXPERIMENTAL_DEB_PACKAGE
     "Include the experimental DEB generator in the default CPack generator list."
     OFF
 )
+option(LABELQT_INSTALL_OFFICIAL_AUTOMATION_SCRIPTS
+    "Install the bundled official automation scripts in native packages."
+    ON
+)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 

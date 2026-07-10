@@ -76,7 +76,8 @@ def remove_development_automation_scripts(destination: Path) -> None:
         shutil.rmtree(test_scripts)
 
 
-def prepare_windows_release_tree(source: Path, destination: Path, variant: str) -> None:
+def prepare_windows_release_tree(source: Path, destination: Path, variant: str,
+                                 include_automation_scripts: bool = True) -> None:
     validate_deployed_release(source, variant)
     copy_release_tree(source, destination)
 
@@ -89,7 +90,11 @@ def prepare_windows_release_tree(source: Path, destination: Path, variant: str) 
     if selected_executable != "labelqt.exe":
         (destination / selected_executable).replace(destination / "labelqt.exe")
 
-    remove_development_automation_scripts(destination)
+    scripts_root = destination / "scripts"
+    if include_automation_scripts:
+        remove_development_automation_scripts(destination)
+    elif scripts_root.exists():
+        shutil.rmtree(scripts_root)
 
 
 def copy_release_notices(repository_root: Path, destination: Path) -> None:

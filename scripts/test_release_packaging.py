@@ -47,6 +47,19 @@ class ReleasePackagingTests(unittest.TestCase):
             self.assertEqual((destination / "labelqt.exe").read_bytes(), b"static")
             self.assertFalse((destination / "labelqt-static.exe").exists())
 
+    def test_release_tree_can_exclude_all_automation_scripts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            destination = root / "destination"
+            prepare_windows_release_tree(
+                self.create_source_tree(root),
+                destination,
+                "shared",
+                include_automation_scripts=False,
+            )
+
+            self.assertFalse((destination / "scripts").exists())
+
     def test_dependency_licenses_and_static_notice_are_written(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

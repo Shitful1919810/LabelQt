@@ -389,10 +389,6 @@ def release_audit_command(args: argparse.Namespace) -> int:
         for name in required:
             if not (root / name).exists():
                 issues.append(f"Missing {name} in {root}")
-        if not ((root / "scripts" / "official").is_dir()):
-            issues.append("Missing scripts/official directory")
-        if not ((root / "scripts" / "custom").is_dir()):
-            issues.append("Missing scripts/custom directory")
         if (root / "scripts" / "official" / "test").exists():
             issues.append("Development scripts/official/test must not be included")
         native_licenses = root / "licenses" / "native"
@@ -413,8 +409,6 @@ def release_audit_command(args: argparse.Namespace) -> int:
     elif args.kind == "linux-install-root":
         if not (root / "usr" / "bin" / "labelqt").exists():
             issues.append("Missing usr/bin/labelqt")
-        if not (root / "usr" / "share" / "labelqt" / "scripts" / "official").is_dir():
-            issues.append("Missing usr/share/labelqt/scripts/official")
         if (root / "usr" / "share" / "labelqt" / "scripts" / "official" / "test").exists():
             issues.append("Development scripts/official/test must not be included")
         if not (root / "usr" / "share" / "doc" / "labelqt" / "licenses").is_dir():

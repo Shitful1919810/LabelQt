@@ -254,13 +254,15 @@ install(FILES
     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps"
 )
 
-install(DIRECTORY
-    "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/official"
-    DESTINATION "${LABELQT_INSTALL_APPDATADIR}/scripts"
-    USE_SOURCE_PERMISSIONS
-    PATTERN "test" EXCLUDE
-    PATTERN "__pycache__" EXCLUDE
-    PATTERN "*.pyc" EXCLUDE
-    PATTERN "*.pyo" EXCLUDE
-    PATTERN "config.json" EXCLUDE
-)
+if(LABELQT_INSTALL_OFFICIAL_AUTOMATION_SCRIPTS)
+    install(DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/official"
+        DESTINATION "${LABELQT_INSTALL_APPDATADIR}/scripts"
+        USE_SOURCE_PERMISSIONS
+        PATTERN "test" EXCLUDE
+        PATTERN "__pycache__" EXCLUDE
+        PATTERN "*.pyc" EXCLUDE
+        PATTERN "*.pyo" EXCLUDE
+        PATTERN "config.json" EXCLUDE
+    )
+endif()

@@ -208,6 +208,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--qt-version", required=True, help="Exact Qt version distributed by this release.")
     parser.add_argument("--qt-source-url", required=True,
                         help="Project-controlled URL for the corresponding Qt source archive.")
+    parser.add_argument("--exclude-automation-scripts", action="store_true",
+                        help="Exclude the complete scripts directory from this installer.")
     return parser.parse_args()
 
 
@@ -230,7 +232,12 @@ def main() -> int:
         package_root = temporary_root / "LabelQt"
         wxs_path = temporary_root / "LabelQt.wxs"
         license_rtf_path = temporary_root / "LICENSE.rtf"
-        prepare_windows_release_tree(source, package_root, "shared")
+        prepare_windows_release_tree(
+            source,
+            package_root,
+            "shared",
+            include_automation_scripts=not args.exclude_automation_scripts,
+        )
         copy_release_notices(repository_root, package_root)
         copy_native_dependency_licenses(args.dependency_license_dir.resolve(), package_root)
         write_qt_source_offer(package_root, qt_version=args.qt_version, qt_source_url=args.qt_source_url)

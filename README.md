@@ -98,6 +98,16 @@ git submodule update --init --recursive
 `diff-match-patch` 内容放在 `third_party/diff-match-patch`。不要使用任意版本覆盖父仓库记录的 submodule
 提交，否则文本差异行为和回归测试结果可能不一致。
 
+### 用户手册
+
+仓库的 `manual/` 目录是独立的 Typst 用户手册子工程，不参与主程序 CMake 构建。安装 Typst 0.14 或更高版本后，可生成中文 PDF 手册：
+
+```bash
+python scripts/build_manual.py
+```
+
+默认输出到 `dist/LabelQt-user-manual-zh_CN.pdf`。手册截图素材放在 `manual/assets/`，缺少截图时会使用占位框，不影响编译。正式发布时建议把编译好的 PDF 作为独立 release 附件上传。
+
 ### Linux
 
 ```bash
@@ -134,8 +144,9 @@ cpack --config build/linux/release/CPackConfig.cmake -G DEB
 生成实验性 `.deb` 通常需要 Debian/Ubuntu 环境中的 `dpkg-dev` / `fakeroot`，生成正式 `.rpm` 通常需要
 `rpm-build`。安装包会包含
 `labelqt` 可执行文件、桌面入口、图标、许可证和第三方声明。默认偏好设置由程序内置提供；Python、OCR 模型、
-Python 运行时、OCR 模型与自动化脚本依赖不会被打包；官方自动化脚本会安装到
-`/usr/share/labelqt/scripts/official`。Linux 静态构建目前没有受支持的正式目标，后续即使加入也应先作为
+Python 运行时、OCR 模型与自动化脚本依赖不会被打包。默认会把官方自动化脚本安装到
+`/usr/share/labelqt/scripts/official`；配置时传入 `-DLABELQT_INSTALL_OFFICIAL_AUTOMATION_SCRIPTS=OFF`
+可以生成完全不含自动化脚本的原生包。Linux 静态构建目前没有受支持的正式目标，后续即使加入也应先作为
 实验性便携构建验证。
 
 ### Windows
@@ -179,18 +190,20 @@ DLL 和 Qt 插件目录，去掉测试程序 `LabelQtTests.exe` 与 `Qt6Test.dll
 `THIRD_PARTY_NOTICES.md` 以及 `licenses/` 目录中的第三方许可证文本应随包发布。推荐使用统一打包脚本：
 
 ```powershell
-python scripts/package_windows_release.py --source path\to\Release --version v0.1.0-alpha.2 `
+python scripts/package_windows_release.py --source path\to\Release --version v0.1.0 `
   --variant shared --dependency-license-dir path\to\vcpkg\installed\x64-windows\share `
-  --qt-version 6.x.y --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz `
+  --qt-version 6.x.y --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0/qt-everywhere-src-6.x.y.tar.xz `
+  --exclude-automation-scripts `
   --output-dir dist
 ```
 
 如果需要生成带安装向导的 Windows MSI 安装包，可在 Windows 上安装 WiX Toolset v4+ 及其 UI 扩展，然后运行：
 
 ```powershell
-python scripts/package_windows_msi.py --source path\to\Release --version v0.1.0-alpha.2 `
+python scripts/package_windows_msi.py --source path\to\Release --version v0.1.0 `
   --dependency-license-dir path\to\vcpkg\installed\x64-windows\share `
-  --qt-version 6.x.y --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz `
+  --qt-version 6.x.y --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0/qt-everywhere-src-6.x.y.tar.xz `
+  --exclude-automation-scripts `
   --output-dir dist
 ```
 
@@ -212,9 +225,9 @@ cmake --build --preset windows-vs-static-release
 安装包时，CMake 会直接报错，因为动态 Qt 无法生成真正脱离 Qt DLL 的单 exe。即便 Qt 本身是静态构建，
 QtKeychain 等第三方依赖也需要提供静态库，否则最终产物仍可能依赖额外 DLL。Windows 静态版
 计划作为正式 release 产物，但发布前必须完成静态依赖审计、Qt 许可与重链接材料准备，并在干净 Windows
-环境中验证。静态 ZIP 使用 `package_windows_release.py --variant static` 打包，并强制要求依赖许可证目录、
-Qt 精确版本、项目控制的 Qt 对应源码地址和重链接说明地址；详细流程见
-`docs/windows-static-relinking.md`。若使用 Ninja preset，请先进入 “x64 Native Tools Command Prompt for
+环境中验证。静态版既可以使用 `package_windows_release.py --variant static` 生成完整 ZIP，也可以发布单 exe，
+并额外提供包含精确依赖许可证、Qt 对应源码、vcpkg 补丁和重链接说明的合规材料包；不能只发布一个没有
+许可证和对应源码入口的裸 exe。详细流程见 `docs/windows-static-relinking.md`。若使用 Ninja preset，请先进入 “x64 Native Tools Command Prompt for
 VS 2022” 或手动设置 MSVC 编译器环境；VS preset 则会直接使用 Visual Studio 2022 生成器。
 
 ### macOS

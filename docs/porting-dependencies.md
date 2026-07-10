@@ -109,7 +109,8 @@ python scripts/package_windows_release.py --source /path/to/deployed/Release --v
 - 必须使用真正静态构建的 Qt。
 - QtKeychain 等依赖也需要有静态库，否则仍可能出现额外 DLL。
 - 每次发布前必须完成 Qt 与静态依赖的许可证、对应源码、重链接说明和干净环境验证。
-- 静态 ZIP 打包器会强制要求原生依赖许可证、Qt 精确版本、项目控制的对应源码地址和重链接说明地址。
+- 静态 ZIP 打包器会强制要求原生依赖许可证、Qt 精确版本、项目控制的对应源码地址和重链接说明地址。若直接
+  发布单 exe，则必须把同样的信息连同实际 Qt 源码和 vcpkg 补丁放入独立合规材料包，随同 exe 发布。
 
 完整重链接流程见 `docs/windows-static-relinking.md`。动态 ZIP 和 MSI 同样要求传入对应 vcpkg triplet 的
 `share` 目录、Qt 精确版本和项目控制的对应源码 URL，确保随包 DLL 的许可证与源码义务不会遗漏。
@@ -150,9 +151,11 @@ cpack --config build/linux/release/CPackConfig.cmake -G DEB
 - `/usr/share/doc/labelqt/THIRD_PARTY_NOTICES.md`
 - `/usr/share/doc/labelqt/licenses/` 下的内置第三方资源许可证
 
-RPM 和实验性 DEB 不会把默认 `preference.json`、Python 解释器、OCR 模型或自动化脚本依赖打包进去；官方自动化脚本会作为只读资源安装到 `/usr/share/labelqt/scripts/official`。
-自动化脚本依赖仍由用户按脚本目录中的 `requirements.txt` 安装。Linux 原生包也不会捆绑整套 Qt 运行库，实际依赖由目标发行版的包管理器解析和安装。
-开发用 `scripts/official/test` 不进入正式 RPM 或实验性 DEB，其余官方脚本和 SDK 正常安装。
+RPM 和实验性 DEB 不会把默认 `preference.json`、Python 解释器、OCR 模型或自动化脚本依赖打包进去。
+`LABELQT_INSTALL_OFFICIAL_AUTOMATION_SCRIPTS` 决定是否把官方脚本作为只读资源安装到
+`/usr/share/labelqt/scripts/official`；关闭时原生包不包含任何自动化脚本。自动化脚本依赖仍由用户按脚本目录
+中的 `requirements.txt` 安装。Linux 原生包也不会捆绑整套 Qt 运行库，实际依赖由目标发行版的包管理器解析和安装。
+开发用 `scripts/official/test` 在任何发行模式下都不应进入正式 RPM 或实验性 DEB。
 
 Linux 静态构建目前不在正式发布矩阵中。若后续加入，仅作为实验性便携构建；它不应替代动态链接 RPM，
 也不能在未验证 glibc、XCB/Wayland、OpenGL、QtKeychain 和静态插件依赖的情况下宣称为完全静态或跨发行版通用。

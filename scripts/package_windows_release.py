@@ -43,6 +43,8 @@ def parse_args() -> argparse.Namespace:
                         help="Project-controlled URL for the corresponding Qt source archive.")
     parser.add_argument("--relinking-instructions-url",
                         help="URL for LabelQt source and static relinking instructions.")
+    parser.add_argument("--exclude-automation-scripts", action="store_true",
+                        help="Exclude the complete scripts directory from this release.")
     return parser.parse_args()
 
 
@@ -68,7 +70,12 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="labelqt-windows-package-") as temporary_directory:
         package_root = Path(temporary_directory) / package_name
-        prepare_windows_release_tree(source, package_root, args.variant)
+        prepare_windows_release_tree(
+            source,
+            package_root,
+            args.variant,
+            include_automation_scripts=not args.exclude_automation_scripts,
+        )
         copy_release_notices(repository_root, package_root)
         copy_native_dependency_licenses(args.dependency_license_dir.resolve(), package_root)
         write_qt_source_offer(package_root, qt_version=args.qt_version, qt_source_url=args.qt_source_url)

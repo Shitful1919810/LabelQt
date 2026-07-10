@@ -24,6 +24,32 @@
 
 CMake 会把根目录 `preference.json` 和 `scripts/official` 同步到构建出的可执行文件目录，方便开发构建和 Windows 便携包直接使用默认配置与官方脚本。发行打包阶段会排除开发专用的 `scripts/official/test`。运行时找不到 exe 旁边的官方脚本时，会使用安装到 `/usr/share/labelqt/scripts/official` 的只读脚本；用户自定义脚本则回退到用户数据目录。Linux 安装包不安装可编辑的 `preference.json`。翻译 `.qm` 通过 Qt 资源编进程序，不依赖运行目录下的 `i18n` 文件夹。
 
+## 用户手册子工程
+
+`manual/` 是独立的 Typst 用户手册子工程，面向普通使用者，不参与主程序 CMake 构建，也不影响 C++ 测试和发行包生成。
+
+主要文件：
+
+- `manual/main.typ`：手册入口、全局页面和字体设置。
+- `manual/style.typ`：提示框、菜单路径样式和截图 helper。
+- `manual/chapters/`：按主题拆分的手册章节。
+- `manual/assets/`：手册截图素材。
+- `scripts/build_manual.py`：调用 Typst 生成 PDF 的轻量脚本。
+
+默认构建命令：
+
+```bash
+python scripts/build_manual.py
+```
+
+输出为 `dist/LabelQt-user-manual-zh_CN.pdf`。发布版本通常使用带版本号的输出名：
+
+```bash
+python scripts/build_manual.py --with-screenshots --output dist/LabelQt-v0.1.0-user-manual-zh_CN.pdf
+```
+
+`--with-screenshots` 会把 `manual/assets/` 中的截图嵌入 PDF；不传该参数时使用占位框，方便没有截图素材的开发环境也能编译手册。手册默认使用思源宋体作为正文、思源黑体作为标题；若本机缺少这些字体，会回退到 Noto CJK 或系统字体。Typst 对 variable font 的 warning 只影响排版稳定性提示，不代表构建失败。
+
 ## 推荐阅读顺序
 
 如果只想先熟悉主线，建议按这个顺序读：
