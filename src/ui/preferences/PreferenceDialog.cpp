@@ -308,6 +308,9 @@ QWidget* PreferenceDialog::createLabelDisplayPage(QWidget* parent)
     auto* markerTextBubbleFontWidget =
         makeFontSelectorWidget(labelPage, m_markerTextBubbleFontLabel, m_chooseMarkerTextBubbleFontButton,
                                m_resetMarkerTextBubbleFontButton);
+    m_markerTextBubbleMaxLineCharactersSpinBox = new QSpinBox(labelPage);
+    m_markerTextBubbleMaxLineCharactersSpinBox->setRange(1, 200);
+    m_markerTextBubbleMaxLineCharactersSpinBox->setValue(defaultPreferences().markerTextBubbleMaxLineCharacters());
     auto* markerTextBubbleOpacityWidget = makePercentScrollBarWidget(
         labelPage, m_markerTextBubbleOpacityScrollBar, m_markerTextBubbleOpacityLabel,
         static_cast<int>(std::round(defaultPreferences().markerTextBubbleOpacity() * 100.0)));
@@ -321,6 +324,7 @@ QWidget* PreferenceDialog::createLabelDisplayPage(QWidget* parent)
     labelLayout->addRow(tr("Label table font"), labelTableFontWidget);
     labelLayout->addRow(tr("Text editor font"), textEditorFontWidget);
     labelLayout->addRow(tr("Marker text bubble font"), markerTextBubbleFontWidget);
+    labelLayout->addRow(tr("Marker text bubble line wrap threshold"), m_markerTextBubbleMaxLineCharactersSpinBox);
     labelLayout->addRow(tr("Marker text bubble opacity"), markerTextBubbleOpacityWidget);
     labelLayout->addRow(tr("Canvas label editor opacity"), canvasLabelTextEditorOpacityWidget);
     return labelPage;
@@ -474,6 +478,8 @@ void PreferenceDialog::connectPreferenceChangeSignals()
             &PreferenceDialog::chooseMarkerTextBubbleFont);
     connect(m_resetMarkerTextBubbleFontButton, &QPushButton::clicked, this,
             &PreferenceDialog::resetMarkerTextBubbleFont);
+    connect(m_markerTextBubbleMaxLineCharactersSpinBox, &QSpinBox::valueChanged, this,
+            &PreferenceDialog::updateJsonPreview);
     connect(m_markerTextBubbleOpacityScrollBar, &QScrollBar::valueChanged, this, [this](int value) {
         m_markerTextBubbleOpacityLabel->setText(tr("%1%").arg(value));
         updateJsonPreview();
@@ -621,6 +627,9 @@ void PreferenceDialog::loadDocument(const QJsonDocument& document)
         m_markerTextBubbleFont.setPointSizeF(markerTextBubbleFontPointSize);
     }
     updateMarkerTextBubbleFontSummary();
+    m_markerTextBubbleMaxLineCharactersSpinBox->setValue(
+        markerTextBubble.value(QStringLiteral("maxLineCharacters"))
+            .toInt(defaultPreferences().markerTextBubbleMaxLineCharacters()));
     const int markerTextBubbleOpacity = std::clamp(
         static_cast<int>(std::round(
             markerTextBubble.value(QStringLiteral("opacity")).toDouble(defaultPreferences().markerTextBubbleOpacity()) *
@@ -757,6 +766,7 @@ QJsonDocument PreferenceDialog::documentFromUi() const
                             m_usesDefaultMarkerTextBubbleFont ? QString() : m_markerTextBubbleFont.family());
     markerTextBubble.insert(QStringLiteral("fontPointSize"),
                             m_usesDefaultMarkerTextBubbleFont ? 0.0 : m_markerTextBubbleFont.pointSizeF());
+    markerTextBubble.insert(QStringLiteral("maxLineCharacters"), m_markerTextBubbleMaxLineCharactersSpinBox->value());
     markerTextBubble.insert(QStringLiteral("opacity"),
                             static_cast<double>(m_markerTextBubbleOpacityScrollBar->value()) / 100.0);
 

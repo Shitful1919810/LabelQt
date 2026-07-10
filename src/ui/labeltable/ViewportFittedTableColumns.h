@@ -34,7 +34,6 @@ private:
     void attachModel(QAbstractItemModel* model);
     void scheduleFitToViewport();
     int columnConfigIndex(int logicalIndex) const;
-    int stretchColumnConfigIndex() const;
     int minimumWidthExcept(int excludedConfigIndex) const;
     int currentColumnWidth(const Column& column) const;
     int defaultWidthSum() const;

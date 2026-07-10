@@ -13,6 +13,7 @@
 #include "services/project/PageSourceInfoService.h"
 #include "services/proofread/ProjectComparisonService.h"
 #include "services/project/ProjectController.h"
+#include "services/project/ProjectImageRenameService.h"
 #include "services/project/ProjectImageValidator.h"
 #include "core/ProjectMetadataService.h"
 #include "services/project/ProjectMergeService.h"
@@ -24,7 +25,9 @@
 #include "services/project/SessionStateStore.h"
 #include "services/proofread/TextDiffService.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
+#include "ui/canvas/CanvasLabelItems.h"
 #include "ui/canvas/ImageCanvas.h"
+#include "ui/labeltable/LabelEditDelegates.h"
 #include "ui/labeltable/LabelSelectionController.h"
 #include "ui/labeltable/LabelTableModel.h"
 #include "ui/project/PageOrderListModel.h"
@@ -33,14 +36,17 @@
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QKeySequence>
 #include <QMimeData>
 #include <QPainter>
+#include <QPlainTextEdit>
 #include <QSettings>
 #include <QSet>
 #include <QSignalSpy>
+#include <QStandardItemModel>
 #include <QTableView>
 #include <QTextStream>
 #include <QTemporaryDir>
@@ -97,6 +103,26 @@ void saveFingerprintTestImage(const QString& path, QRect blackArea)
     painter.fillRect(blackArea, Qt::black);
     painter.end();
     QVERIFY(image.save(path));
+}
+
+labelqt::services::ProjectImageRenameOptions imageRenameOptions(const QString& pattern, int startIndex,
+                                                                 QVector<int> orderedImageIndexes = {})
+{
+    return {pattern, startIndex, std::move(orderedImageIndexes)};
+}
+
+bool showCanvasWithLabels(ImageCanvas& canvas, QVector<Label> labels, QSize imageSize = QSize(200, 200))
+{
+    canvas.resize(640, 480);
+    canvas.show();
+    if (!QTest::qWaitForWindowExposed(&canvas)) {
+        return false;
+    }
+
+    canvas.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+    canvas.setVisibleGroups({QStringLiteral("框内"), QStringLiteral("框外")});
+    canvas.setImage(QStringLiteral("test.png"), QImage(imageSize, QImage::Format_ARGB32_Premultiplied), labels);
+    return true;
 }
 
 } // namespace
@@ -207,6 +233,63 @@ private slots:
         QCOMPARE(SaveChangesDecision::actionForChoice(SaveChangesChoice::Discard),
                  SaveChangesAction::ContinueWithoutSaving);
         QCOMPARE(SaveChangesDecision::actionForChoice(SaveChangesChoice::Cancel), SaveChangesAction::Cancel);
+    }
+
+    void labelTextEditorHeightUsesConfiguredMaximumRows()
+    {
+        LabelTextDelegate delegate;
+        delegate.setMaximumTextRows(5);
+
+        QStandardItemModel model(1, 1);
+        const QModelIndex index = model.index(0, 0);
+        model.setData(index, QStringLiteral("one line"), Qt::EditRole);
+
+        QWidget parent;
+        int lastHeight = 0;
+        QWidget* lastEditor = nullptr;
+        connect(&delegate, &LabelTextDelegate::editorHeightHintChanged, &parent,
+                [&](const QPersistentModelIndex&, QWidget* editor, int height) {
+                    lastEditor = editor;
+                    lastHeight = height;
+                });
+
+        QStyleOptionViewItem option;
+        option.rect = QRect(0, 0, 240, 24);
+        auto* editor = qobject_cast<QPlainTextEdit*>(delegate.createEditor(&parent, option, index));
+        QVERIFY(editor != nullptr);
+        delegate.setEditorData(editor, index);
+
+        const auto expectedHeightForRows = [editor](int rows) {
+            constexpr int verticalPadding = 8;
+            return editor->fontMetrics().lineSpacing() * rows + verticalPadding;
+        };
+
+        QTRY_COMPARE(lastEditor, static_cast<QWidget*>(editor));
+        QCOMPARE(lastHeight, expectedHeightForRows(5));
+
+        editor->setPlainText(QStringLiteral("1\n2\n3\n4\n5\n6\n7\n8"));
+        QCOMPARE(lastHeight, expectedHeightForRows(5));
+
+        delegate.setMaximumTextRows(2);
+        delegate.updateEditorGeometry(editor, option, index);
+        QTRY_COMPARE(lastHeight, expectedHeightForRows(2));
+    }
+
+    void canvasLabelBubbleHtmlWrapsLongLinesAndMarksRealNewlines()
+    {
+        const QString html = canvasLabelBubbleHtml(3, QStringLiteral("abcdef\nxyz"), QColor(Qt::red), 3);
+
+        QVERIFY(html.contains(QStringLiteral("<table")));
+        QVERIFY(html.contains(QStringLiteral("#3:</td>")));
+        QVERIFY(!html.contains(QStringLiteral("#3</span> :")));
+        QVERIFY(html.contains(QStringLiteral("abc<br/>def")));
+        QVERIFY(html.contains(QStringLiteral("↵")));
+        QVERIFY(html.contains(QStringLiteral("xyz")));
+
+        const QString emoji = QString::fromUcs4(U"😀");
+        const QString emojiHtml = canvasLabelBubbleHtml(3, QStringLiteral("a") + emoji + QStringLiteral("b"),
+                                                        QColor(Qt::red), 1);
+        QVERIFY(emojiHtml.contains(emoji));
     }
 
     void labelClipboardRoundTripsLabels()
@@ -806,6 +889,85 @@ private slots:
         QCOMPARE(project.images().size(), 4);
     }
 
+    void pageOrderListModelSeparatesLiveRenamePreviewFromQueuedRename()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString imagePath = QDir(dir.path()).filePath(QStringLiteral("004.jpg"));
+        QFile imageFile(imagePath);
+        QVERIFY(imageFile.open(QIODevice::WriteOnly));
+        imageFile.write("image");
+        imageFile.close();
+
+        labelqt::core::Project project;
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("004.jpg"), imagePath, {}});
+
+        PageOrderListModel model(project);
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("cover"), 1, {0}));
+        QVERIFY(plan.isValid());
+
+        model.setRenamePlan(plan);
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenamePreviewColumn), Qt::DisplayRole).toString(),
+                 QString());
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenameStatusColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("Will be renamed to cover.jpg"));
+
+        model.setPendingRenamePlan(plan);
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenamePreviewColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("cover.jpg"));
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenameStatusColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("Will be renamed to cover.jpg"));
+
+        const labelqt::services::ProjectImageRenamePlan laterLivePreview =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page_{index}"), 1, {0}));
+        QVERIFY(laterLivePreview.isValid());
+        model.setRenamePlan(laterLivePreview);
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenamePreviewColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("cover.jpg"));
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenameStatusColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("Will be renamed to page_1.jpg"));
+
+        model.clearPendingRenamePlan();
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenamePreviewColumn), Qt::DisplayRole).toString(),
+                 QString());
+    }
+
+    void pageOrderListModelDisplaysMissingPageRenameAsFileReference()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("replacement.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::white);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing.png")),
+                                                          {}});
+
+        PageOrderListModel model(project);
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenameStatusColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("Image missing"));
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("replacement"), 1, {0}));
+        QVERIFY(plan.isValid());
+        QVERIFY(plan.items.first().referenceOnly);
+        model.setPendingRenamePlan(plan);
+        model.setRenamePlan(plan);
+
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenamePreviewColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("replacement.jpg"));
+        QCOMPARE(model.data(model.index(0, PageOrderListModel::RenameStatusColumn), Qt::DisplayRole).toString(),
+                 QStringLiteral("Will point to replacement.jpg"));
+    }
+
     void sessionStateStorePersistsMultiSelectedLabels()
     {
         const QString projectPath =
@@ -933,14 +1095,8 @@ private slots:
     void imageCanvasCtrlDragMarkerMovesLabelWithoutStartingViewPan()
     {
         ImageCanvas canvas;
-        canvas.resize(640, 480);
-        canvas.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&canvas));
-
         QVector<Label> labels{Label(QStringLiteral("first"), QStringLiteral("框内"), {0.5, 0.5})};
-        canvas.setGroups({QStringLiteral("框内")});
-        canvas.setVisibleGroups({QStringLiteral("框内")});
-        canvas.setImage(QStringLiteral("test.png"), QImage(200, 200, QImage::Format_ARGB32_Premultiplied), labels);
+        QVERIFY(showCanvasWithLabels(canvas, labels));
 
         const QPoint markerPosition = canvas.mapFromGlobal(canvas.globalPositionForLabel(0));
         const QPoint dragPosition = markerPosition + QPoint(QApplication::startDragDistance() + 30, 0);
@@ -956,6 +1112,31 @@ private slots:
         QCOMPARE(moveSpy.first().at(0).toInt(), 0);
         const QPointF movedPosition = moveSpy.first().at(1).toPointF();
         QVERIFY(movedPosition.x() > 0.5);
+    }
+
+    void imageCanvasCtrlDragMarkerWorksThroughSelectedTextBubble()
+    {
+        ImageCanvas canvas;
+        QVector<Label> labels{
+            Label(QStringLiteral("long selected text bubble that overlaps nearby markers"), QStringLiteral("框内"),
+                  {0.42, 0.5}),
+            Label(QStringLiteral("covered marker"), QStringLiteral("框内"), {0.52, 0.5}),
+        };
+        QVERIFY(showCanvasWithLabels(canvas, labels));
+        canvas.setSelectedLabels({0});
+
+        const QPoint markerPosition = canvas.mapFromGlobal(canvas.globalPositionForLabel(1));
+        const QPoint dragPosition = markerPosition + QPoint(QApplication::startDragDistance() + 30, 0);
+        QSignalSpy moveSpy(&canvas, &ImageCanvas::labelMoveRequested);
+
+        QTest::mousePress(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, markerPosition);
+        QTest::mouseMove(canvas.viewport(), dragPosition);
+        QTest::mouseRelease(canvas.viewport(), Qt::LeftButton, Qt::ControlModifier, dragPosition);
+
+        QCOMPARE(moveSpy.count(), 1);
+        QCOMPARE(moveSpy.first().at(0).toInt(), 1);
+        const QPointF movedPosition = moveSpy.first().at(1).toPointF();
+        QVERIFY(movedPosition.x() > 0.52);
     }
 
     void imageCanvasCtrlDragSelectedMarkersMovesSelectionTogether()
@@ -1075,6 +1256,41 @@ private slots:
                                     .arg(sceneAfter.y())));
             QCOMPARE(canvas.zoomPercent(), 280);
         }
+    }
+
+    void imageCanvasResizeKeepsVisualCenterAfterManualZoom()
+    {
+        ImageCanvas canvas;
+        canvas.resize(640, 480);
+        canvas.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&canvas));
+
+        canvas.setGroups({QStringLiteral("框内")});
+        canvas.setVisibleGroups({QStringLiteral("框内")});
+        canvas.setImage(QStringLiteral("test.png"), QImage(1200, 1200, QImage::Format_ARGB32_Premultiplied), {});
+        canvas.setZoomPercent(160);
+
+        const QPoint oldViewportCenter = canvas.viewport()->rect().center();
+        const QPointF sceneBefore = canvas.mapToScene(oldViewportCenter);
+
+        for (int width = 660; width <= 840; width += 20) {
+            canvas.resize(width, 480);
+            QApplication::processEvents();
+        }
+
+        const QPoint newViewportCenter = canvas.viewport()->rect().center();
+        const QPointF sceneAfter = canvas.mapToScene(newViewportCenter);
+        const QPointF drift = sceneAfter - sceneBefore;
+        QVERIFY2(std::abs(drift.x()) < 1.0,
+                 qPrintable(QStringLiteral("x drift: %1, before: %2, after: %3")
+                                .arg(drift.x())
+                                .arg(sceneBefore.x())
+                                .arg(sceneAfter.x())));
+        QVERIFY2(std::abs(drift.y()) < 1.0,
+                 qPrintable(QStringLiteral("y drift: %1, before: %2, after: %3")
+                                .arg(drift.y())
+                                .arg(sceneBefore.y())
+                                .arg(sceneAfter.y())));
     }
 
     void projectMergeUsesSingleInvolvedPageAutomatically()
@@ -1315,6 +1531,409 @@ private slots:
                  QStringLiteral("002.png"));
     }
 
+    void projectImageRenameServiceRendersSupportedPatternTokens()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString imagePath = QDir(dir.path()).filePath(QStringLiteral("old.name.png"));
+        QFile imageFile(imagePath);
+        QVERIFY(imageFile.open(QIODevice::WriteOnly));
+        imageFile.write("image");
+        imageFile.close();
+
+        labelqt::core::Project project;
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("old.name.png"), imagePath, {}});
+
+        auto renderedName = [&project](const QString& pattern, int startIndex) {
+            return labelqt::services::ProjectImageRenameService::createPlan(project, imageRenameOptions(pattern, startIndex))
+                .items.first()
+                .newName;
+        };
+
+        QCOMPARE(renderedName(QStringLiteral("{index}"), 12), QStringLiteral("12.png"));
+        QCOMPARE(renderedName(QStringLiteral("{index:03}"), 7), QStringLiteral("007.png"));
+        QCOMPARE(renderedName(QStringLiteral("page_{index:04}_{stem}"), 12),
+                 QStringLiteral("page_0012_old.name.png"));
+        QCOMPARE(renderedName(QStringLiteral("{stem}_copy"), 1), QStringLiteral("old.name_copy.png"));
+    }
+
+    void projectImageRenameServiceRejectsInvalidPatternSyntax()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString imagePath = QDir(dir.path()).filePath(QStringLiteral("old.name.png"));
+        QFile imageFile(imagePath);
+        QVERIFY(imageFile.open(QIODevice::WriteOnly));
+        imageFile.write("image");
+        imageFile.close();
+
+        labelqt::core::Project project;
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("old.name.png"), imagePath, {}});
+
+        auto expectInvalidPattern = [&project](const QString& pattern) {
+            const labelqt::services::ProjectImageRenamePlan plan =
+                labelqt::services::ProjectImageRenameService::createPlan(project, imageRenameOptions(pattern, 1));
+            QVERIFY(!plan.isValid());
+            QCOMPARE(plan.items.size(), 1);
+            QVERIFY(!plan.items.first().error.isEmpty());
+        };
+
+        expectInvalidPattern(QString());
+        expectInvalidPattern(QStringLiteral("{index:bad}"));
+        expectInvalidPattern(QStringLiteral("{unknown}"));
+        expectInvalidPattern(QStringLiteral("prefix}"));
+        expectInvalidPattern(QStringLiteral("{stem"));
+
+        const labelqt::services::ProjectImageRenamePlan directoryPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("sub/{index}"), 1));
+        QVERIFY(!directoryPlan.isValid());
+    }
+
+    void projectImageRenameServiceKeepsRelativeImageDirectory()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("pages")));
+        const QString imagePath = QDir(dir.path()).filePath(QStringLiteral("pages/old.png"));
+        QFile imageFile(imagePath);
+        QVERIFY(imageFile.open(QIODevice::WriteOnly));
+        imageFile.write("image");
+        imageFile.close();
+
+        labelqt::core::Project project;
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("pages/old.png"), imagePath, {}});
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("{index:03}"), 7));
+        QVERIFY(plan.isValid());
+        QCOMPARE(plan.items.first().newName, QStringLiteral("pages/007.png"));
+        QCOMPARE(plan.items.first().newPath, QDir(dir.path()).filePath(QStringLiteral("pages/007.png")));
+    }
+
+    void projectImageRenameServiceRejectsDuplicateTargets()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString firstPath = QDir(dir.path()).filePath(QStringLiteral("a.png"));
+        const QString secondPath = QDir(dir.path()).filePath(QStringLiteral("b.png"));
+        for (const QString& path : {firstPath, secondPath}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("image");
+        }
+
+        labelqt::core::Project project;
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("a.png"), firstPath, {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("b.png"), secondPath, {}});
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project, imageRenameOptions(QStringLiteral("same"), 1));
+        QVERIFY(!plan.isValid());
+        QVERIFY(std::ranges::all_of(plan.items, [](const auto& item) { return !item.error.isEmpty(); }));
+    }
+
+    void projectImageRenameServiceMergesQueuedPlans()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString firstPath = QDir(dir.path()).filePath(QStringLiteral("a.png"));
+        const QString secondPath = QDir(dir.path()).filePath(QStringLiteral("b.png"));
+        for (const QString& path : {firstPath, secondPath}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("image");
+        }
+
+        labelqt::core::Project project;
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("a.png"), firstPath, {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("b.png"), secondPath, {}});
+
+        const labelqt::services::ProjectImageRenamePlan firstPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("cover"), 1, {0}));
+        const labelqt::services::ProjectImageRenamePlan secondPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page_{index}"), 1, {1}));
+        QVERIFY(firstPlan.isValid());
+        QVERIFY(secondPlan.isValid());
+
+        const labelqt::services::ProjectImageRenamePlan mergedPlan =
+            labelqt::services::ProjectImageRenameService::mergePlans(firstPlan, secondPlan);
+        QVERIFY(mergedPlan.isValid());
+        QCOMPARE(mergedPlan.items.at(0).included, true);
+        QCOMPARE(mergedPlan.items.at(0).newName, QStringLiteral("cover.png"));
+        QCOMPARE(mergedPlan.items.at(1).included, true);
+        QCOMPARE(mergedPlan.items.at(1).newName, QStringLiteral("page_1.png"));
+
+        const labelqt::services::ProjectImageRenamePlan conflictingPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("cover"), 1, {1}));
+        QVERIFY(conflictingPlan.isValid());
+        const labelqt::services::ProjectImageRenamePlan invalidMergedPlan =
+            labelqt::services::ProjectImageRenameService::mergePlans(firstPlan, conflictingPlan);
+        QVERIFY(!invalidMergedPlan.isValid());
+        QVERIFY(!invalidMergedPlan.error.isEmpty());
+        QVERIFY(!invalidMergedPlan.items.at(0).error.isEmpty());
+        QVERIFY(!invalidMergedPlan.items.at(1).error.isEmpty());
+    }
+
+    void projectImageRenameServiceUpdatesMissingPageReferenceToActualSuffix()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("fixed")));
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("fixed/page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::white);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("fixed/missing.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("fixed/missing.png")),
+                                                          {}});
+        project.images().last().labels.append(Label(QStringLiteral("baseline"), QStringLiteral("框内"), QPointF(0.2, 0.3)));
+        setMergeSources(project, {{QStringLiteral("fixed/missing.png"), {1, QDir(dir.path()).filePath("part-a.txt")}}});
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+        project.setCommentLines(
+            labelqt::services::ReviewMetadataService::rewriteCommentLines(project.commentLines(), metadata));
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        QVERIFY(plan.isValid());
+        QVERIFY(plan.hasChanges());
+        QVERIFY(plan.items.first().referenceOnly);
+        QCOMPARE(plan.items.first().newName, QStringLiteral("fixed/page.jpg"));
+        QCOMPARE(plan.items.first().newPath, replacementPath);
+
+        const std::expected<void, QString> result =
+            labelqt::services::ProjectImageRenameService::applyPlan(project, plan);
+        QVERIFY(result.has_value());
+        QCOMPARE(project.images().first().name, QStringLiteral("fixed/page.jpg"));
+        QCOMPARE(project.images().first().path, replacementPath);
+
+        const auto sources = labelqt::services::PageSourceInfoService::sourcesForProject(project);
+        QCOMPARE(sources.value(QStringLiteral("fixed/page.jpg")).sourceIndex, 1);
+        const labelqt::services::ReviewMetadata migratedMetadata =
+            labelqt::services::ReviewMetadataService::metadataForProject(project);
+        QVERIFY(migratedMetadata.hasBaseline());
+        QCOMPARE(migratedMetadata.baselineFor(QStringLiteral("fixed/page.jpg"), 0).text, QStringLiteral("baseline"));
+    }
+
+    void projectImageRenameServiceRejectsDuplicateMissingPageReferenceTargets()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::black);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-a.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-a.png")),
+                                                          {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-b.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-b.png")),
+                                                          {}});
+
+        const labelqt::services::ProjectImageRenamePlan firstPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        const labelqt::services::ProjectImageRenamePlan secondPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {1}));
+        QVERIFY(firstPlan.isValid());
+        QVERIFY(secondPlan.isValid());
+
+        const labelqt::services::ProjectImageRenamePlan mergedPlan =
+            labelqt::services::ProjectImageRenameService::mergePlans(firstPlan, secondPlan);
+        QVERIFY(!mergedPlan.isValid());
+        QVERIFY(!mergedPlan.error.isEmpty());
+    }
+
+    void projectImageRenameServiceRejectsMissingPageReferenceToExistingProjectImage()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::black);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing.png")),
+                                                          {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("page.jpg"), replacementPath, {}});
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        QVERIFY(!plan.isValid());
+        QVERIFY(!plan.items.first().error.isEmpty());
+    }
+
+    void projectImageRenameServiceMergePreservesMissingReferenceErrors()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString replacementPath = QDir(dir.path()).filePath(QStringLiteral("page.jpg"));
+        QImage replacementImage(2, 2, QImage::Format_RGB32);
+        replacementImage.fill(Qt::black);
+        QVERIFY(replacementImage.save(replacementPath));
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-a.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-a.png")),
+                                                          {}});
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("missing-b.png"),
+                                                          QDir(dir.path()).filePath(QStringLiteral("missing-b.png")),
+                                                          {}});
+
+        const labelqt::services::ProjectImageRenamePlan validPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("page"), 1, {0}));
+        const labelqt::services::ProjectImageRenamePlan invalidPlan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("absent"), 1, {1}));
+        QVERIFY(validPlan.isValid());
+        QVERIFY(!invalidPlan.isValid());
+        QVERIFY(!invalidPlan.items.at(1).error.isEmpty());
+
+        const labelqt::services::ProjectImageRenamePlan mergedPlan =
+            labelqt::services::ProjectImageRenameService::mergePlans(validPlan, invalidPlan);
+        QVERIFY(!mergedPlan.isValid());
+        QVERIFY(!mergedPlan.items.at(1).error.isEmpty());
+    }
+
+    void projectImageRenameServiceRenamesOnlySelectedOrderedImages()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString firstPath = QDir(dir.path()).filePath(QStringLiteral("a.png"));
+        const QString secondPath = QDir(dir.path()).filePath(QStringLiteral("b.png"));
+        const QString thirdPath = QDir(dir.path()).filePath(QStringLiteral("c.png"));
+        for (const QString& path : {firstPath, secondPath, thirdPath}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("image");
+        }
+
+        labelqt::core::Project project;
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("a.png"), firstPath, {}});
+        project.images().last().labels.append(Label(QStringLiteral("first"), QStringLiteral("框内"), QPointF(0.1, 0.2)));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("b.png"), secondPath, {}});
+        project.images().last().labels.append(Label(QStringLiteral("second"), QStringLiteral("框内"), QPointF(0.3, 0.4)));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("c.png"), thirdPath, {}});
+        project.images().last().labels.append(Label(QStringLiteral("third"), QStringLiteral("框内"), QPointF(0.5, 0.6)));
+        setMergeSources(project, {
+                                     {QStringLiteral("a.png"), {1, QDir(dir.path()).filePath("part-a.txt")}},
+                                     {QStringLiteral("b.png"), {2, QDir(dir.path()).filePath("part-b.txt")}},
+                                     {QStringLiteral("c.png"), {3, QDir(dir.path()).filePath("part-c.txt")}},
+                                 });
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+        project.setCommentLines(
+            labelqt::services::ReviewMetadataService::rewriteCommentLines(project.commentLines(), metadata));
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(
+                project, imageRenameOptions(QStringLiteral("p{index:02}"), 5, {2, 0}));
+        QVERIFY(plan.isValid());
+        QCOMPARE(plan.items.at(0).included, true);
+        QCOMPARE(plan.items.at(0).newName, QStringLiteral("p06.png"));
+        QCOMPARE(plan.items.at(1).included, false);
+        QCOMPARE(plan.items.at(1).newName, QStringLiteral("b.png"));
+        QCOMPARE(plan.items.at(2).included, true);
+        QCOMPARE(plan.items.at(2).newName, QStringLiteral("p05.png"));
+
+        const std::expected<void, QString> result =
+            labelqt::services::ProjectImageRenameService::applyPlan(project, plan);
+        QVERIFY(result.has_value());
+        QVERIFY(QFileInfo::exists(QDir(dir.path()).filePath(QStringLiteral("p06.png"))));
+        QVERIFY(QFileInfo::exists(secondPath));
+        QVERIFY(QFileInfo::exists(QDir(dir.path()).filePath(QStringLiteral("p05.png"))));
+        QCOMPARE(project.images().at(0).name, QStringLiteral("p06.png"));
+        QCOMPARE(project.images().at(1).name, QStringLiteral("b.png"));
+        QCOMPARE(project.images().at(2).name, QStringLiteral("p05.png"));
+
+        const auto sources = labelqt::services::PageSourceInfoService::sourcesForProject(project);
+        QCOMPARE(sources.value(QStringLiteral("p06.png")).sourceIndex, 1);
+        QCOMPARE(sources.value(QStringLiteral("b.png")).sourceIndex, 2);
+        QCOMPARE(sources.value(QStringLiteral("p05.png")).sourceIndex, 3);
+        const labelqt::services::ReviewMetadata migratedMetadata =
+            labelqt::services::ReviewMetadataService::metadataForProject(project);
+        QVERIFY(migratedMetadata.hasBaseline());
+        QCOMPARE(migratedMetadata.baselineFor(QStringLiteral("p06.png"), 0).text, QStringLiteral("first"));
+        QCOMPARE(migratedMetadata.baselineFor(QStringLiteral("b.png"), 0).text, QStringLiteral("second"));
+        QCOMPARE(migratedMetadata.baselineFor(QStringLiteral("p05.png"), 0).text, QStringLiteral("third"));
+    }
+
+    void projectImageRenameServiceRenamesFilesAndMigratesMetadata()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString firstPath = QDir(dir.path()).filePath(QStringLiteral("b.png"));
+        const QString secondPath = QDir(dir.path()).filePath(QStringLiteral("a.png"));
+        {
+            QFile file(firstPath);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("first");
+        }
+        {
+            QFile file(secondPath);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("second");
+        }
+
+        labelqt::core::Project project;
+        project.setFilePath(QDir(dir.path()).filePath(QStringLiteral("project.txt")));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("b.png"), firstPath, {}});
+        project.images().last().labels.append(Label(QStringLiteral("baseline"), QStringLiteral("框内"), QPointF(0.2, 0.3)));
+        project.images().append(labelqt::core::ImageEntry{QStringLiteral("a.png"), secondPath, {}});
+        setMergeSources(project, {
+                                     {QStringLiteral("b.png"), {1, QDir(dir.path()).filePath("part-a.txt")}},
+                                     {QStringLiteral("a.png"), {2, QDir(dir.path()).filePath("part-b.txt")}},
+                                 });
+        const labelqt::services::ReviewMetadata metadata =
+            labelqt::services::ReviewMetadataService::captureBaseline(project);
+        project.setCommentLines(
+            labelqt::services::ReviewMetadataService::rewriteCommentLines(project.commentLines(), metadata));
+
+        const labelqt::services::ProjectImageRenamePlan plan =
+            labelqt::services::ProjectImageRenameService::createPlan(project,
+                                                                     imageRenameOptions(QStringLiteral("{index:03}"), 1));
+        QVERIFY(plan.isValid());
+        QCOMPARE(plan.items.at(0).newName, QStringLiteral("001.png"));
+        QCOMPARE(plan.items.at(1).newName, QStringLiteral("002.png"));
+
+        const std::expected<void, QString> result =
+            labelqt::services::ProjectImageRenameService::applyPlan(project, plan);
+        QVERIFY(result.has_value());
+        QVERIFY(!QFileInfo::exists(firstPath));
+        QVERIFY(!QFileInfo::exists(secondPath));
+        QVERIFY(QFileInfo::exists(QDir(dir.path()).filePath(QStringLiteral("001.png"))));
+        QVERIFY(QFileInfo::exists(QDir(dir.path()).filePath(QStringLiteral("002.png"))));
+        QCOMPARE(project.images().at(0).name, QStringLiteral("001.png"));
+        QCOMPARE(project.images().at(1).name, QStringLiteral("002.png"));
+
+        const auto sources = labelqt::services::PageSourceInfoService::sourcesForProject(project);
+        QCOMPARE(sources.value(QStringLiteral("001.png")).sourceIndex, 1);
+        QCOMPARE(sources.value(QStringLiteral("002.png")).sourceIndex, 2);
+        const labelqt::services::ReviewMetadata migratedMetadata =
+            labelqt::services::ReviewMetadataService::metadataForProject(project);
+        QVERIFY(migratedMetadata.hasBaseline());
+        QCOMPARE(migratedMetadata.baselineFor(QStringLiteral("001.png"), 0).text, QStringLiteral("baseline"));
+    }
+
     void mergeSourceAndReviewCommentBlocksDoNotConflict()
     {
         const QString dirPath = QDir::temp().filePath("labelqt_comment_blocks_test");
@@ -1424,6 +2043,7 @@ private slots:
                << "  \"markerTextBubble\": {\n"
                << "    \"fontFamily\": \"Noto Sans CJK SC\",\n"
                << "    \"fontPointSize\": 9.5,\n"
+               << "    \"maxLineCharacters\": 24,\n"
                << "    \"opacity\": 0.75\n"
                << "  },\n"
                << "  \"canvasLabelTextEditor\": {\n"
@@ -1475,11 +2095,13 @@ private slots:
         QCOMPARE(result.preferences.labelTextEditorFontPointSize(), 12.5);
         QCOMPARE(result.preferences.markerTextBubbleFontFamily(), QStringLiteral("Noto Sans CJK SC"));
         QCOMPARE(result.preferences.markerTextBubbleFontPointSize(), 9.5);
+        QCOMPARE(result.preferences.markerTextBubbleMaxLineCharacters(), 24);
         QCOMPARE(result.preferences.markerTextBubbleOpacity(), 0.75);
         QCOMPARE(result.preferences.canvasLabelTextEditorOpacity(), 0.6);
         const labelqt::core::AppPreferencesLoadResult serializedResult =
             labelqt::core::AppPreferences::loadFromJson(result.preferences.toJsonDocument().toJson());
         QVERIFY(serializedResult.warnings.isEmpty());
+        QCOMPARE(serializedResult.preferences.markerTextBubbleMaxLineCharacters(), 24);
         QCOMPARE(serializedResult.preferences.markerTextBubbleOpacity(), 0.75);
         QCOMPARE(serializedResult.preferences.canvasLabelTextEditorOpacity(), 0.6);
         QCOMPARE(serializedResult.preferences.alternateNextLabelShortcut().toString(QKeySequence::PortableText),
@@ -1563,6 +2185,8 @@ private slots:
         QCOMPARE(result.preferences.labelTextEditorFontPointSize(), 0.0);
         QCOMPARE(result.preferences.markerTextBubbleFontFamily(), QString());
         QCOMPARE(result.preferences.markerTextBubbleFontPointSize(), 0.0);
+        QCOMPARE(result.preferences.markerTextBubbleMaxLineCharacters(),
+                 labelqt::core::defaultMarkerTextBubbleMaxLineCharacters);
         QCOMPARE(result.preferences.applicationStyle(), QString());
         QCOMPARE(result.preferences.applicationTheme(), QString());
         QCOMPARE(result.preferences.moveLabelModifiers(), Qt::ControlModifier);

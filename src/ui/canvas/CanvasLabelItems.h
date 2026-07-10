@@ -8,7 +8,7 @@
 #include <QTextDocument>
 
 int canvasLabelMarkerItemType();
-QString canvasLabelBubbleHtml(int displayNumber, const QString& text, const QColor& color);
+QString canvasLabelBubbleHtml(int displayNumber, const QString& text, const QColor& color, int maxLineCharacters);
 
 class CanvasLabelMarkerItem final : public QGraphicsItem {
 public:
@@ -30,7 +30,7 @@ private:
 class CanvasLabelTextBubbleItem final : public QGraphicsItem {
 public:
     CanvasLabelTextBubbleItem(int displayNumber, QString text, labelqt::core::LabelGroupStyle style, QFont bubbleFont,
-                              double opacity, QGraphicsItem* parent = nullptr);
+                              double opacity, int maxLineCharacters, QGraphicsItem* parent = nullptr);
 
     QRectF boundingRect() const override;
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
@@ -43,5 +43,6 @@ private:
     labelqt::core::LabelGroupStyle m_style;
     QFont m_bubbleFont;
     double m_opacity{1.0};
+    int m_maxLineCharacters{labelqt::core::defaultMarkerTextBubbleMaxLineCharacters};
     QTextDocument m_document;
 };

@@ -100,6 +100,7 @@ private:
     QLabel* m_markerTextBubbleFontLabel{nullptr};
     QPushButton* m_chooseMarkerTextBubbleFontButton{nullptr};
     QPushButton* m_resetMarkerTextBubbleFontButton{nullptr};
+    QSpinBox* m_markerTextBubbleMaxLineCharactersSpinBox{nullptr};
     QScrollBar* m_markerTextBubbleOpacityScrollBar{nullptr};
     QLabel* m_markerTextBubbleOpacityLabel{nullptr};
     QScrollBar* m_canvasLabelTextEditorOpacityScrollBar{nullptr};

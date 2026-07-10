@@ -9,6 +9,7 @@
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMouseEvent>
@@ -17,6 +18,9 @@
 #include <QPen>
 #include <QPixmap>
 #include <QScrollBar>
+#include <QScreen>
+#include <QSignalBlocker>
+#include <QTimer>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -24,10 +28,35 @@
 #include <utility>
 
 namespace {
+constexpr int resizeCenterAnchorClearDelayMs = 180;
 
 QPointF clampedNormalizedPosition(QPointF position)
 {
     return {std::clamp(position.x(), 0.0, 1.0), std::clamp(position.y(), 0.0, 1.0)};
+}
+
+QPoint clampedToolTipGlobalPosition(QPoint preferredPosition, QSize toolTipSize, QPoint anchorPosition)
+{
+    const QScreen* screen = QGuiApplication::screenAt(anchorPosition);
+    if (screen == nullptr) {
+        screen = QGuiApplication::primaryScreen();
+    }
+    if (screen == nullptr) {
+        return preferredPosition;
+    }
+
+    constexpr int screenMargin = 4;
+    const QRect available = screen->availableGeometry().adjusted(screenMargin, screenMargin, -screenMargin, -screenMargin);
+    QPoint position = preferredPosition;
+    if (position.x() + toolTipSize.width() > available.right()) {
+        position.setX(available.right() - toolTipSize.width() + 1);
+    }
+    if (position.y() + toolTipSize.height() > available.bottom()) {
+        position.setY(available.bottom() - toolTipSize.height() + 1);
+    }
+    position.setX(std::max(available.left(), position.x()));
+    position.setY(std::max(available.top(), position.y()));
+    return position;
 }
 
 } // namespace
@@ -40,16 +69,20 @@ ImageCanvas::ImageCanvas(QWidget* parent) : QGraphicsView(parent)
     setDragMode(QGraphicsView::ScrollHandDrag);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setTransformationAnchor(QGraphicsView::NoAnchor);
-    setResizeAnchor(QGraphicsView::AnchorViewCenter);
+    setResizeAnchor(QGraphicsView::NoAnchor);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
     viewport()->setMouseTracking(true);
+    m_lastViewportSize = viewport()->size();
     updateCursorForInteractionMode();
     connect(horizontalScrollBar(), &QScrollBar::valueChanged, this, &ImageCanvas::notifyViewportStateChanged);
     connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &ImageCanvas::notifyViewportStateChanged);
 
-    m_hoverToolTip = new QLabel(this);
+    // Keep the bubble as a top-level, mouse-transparent tooltip so it can cross the
+    // canvas edge without stealing events from the label table or scroll bars.
+    m_hoverToolTip = new QLabel(this, Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus);
     m_hoverToolTip->setAttribute(Qt::WA_TransparentForMouseEvents);
+    m_hoverToolTip->setAttribute(Qt::WA_ShowWithoutActivating);
     m_hoverToolTip->setTextFormat(Qt::RichText);
     m_hoverToolTip->setMargin(6);
     m_hoverToolTip->setStyleSheet(QStringLiteral("QLabel {"
@@ -117,6 +150,7 @@ void ImageCanvas::setPreferences(const labelqt::core::AppPreferences& preference
     m_markerDiameterPixels = preferences.labelMarkerDiameterPixels();
     m_markerFontPointSize = preferences.labelMarkerFontPointSize();
     m_textBubbleOpacity = preferences.markerTextBubbleOpacity();
+    m_textBubbleMaxLineCharacters = preferences.markerTextBubbleMaxLineCharacters();
     if (m_hoverOpacityEffect != nullptr) {
         m_hoverOpacityEffect->setOpacity(std::clamp(m_textBubbleOpacity, 0.0, 1.0));
     }
@@ -201,6 +235,8 @@ void ImageCanvas::setImageLoading(const QString& path, const QVector<labelqt::co
 
 void ImageCanvas::clearSceneItems()
 {
+    m_resizeSceneCenterAnchor.reset();
+    m_pendingResizeSceneCenter.reset();
     m_pixmapItem = nullptr;
     m_selectionItem = nullptr;
     m_statusTextItem = nullptr;
@@ -713,11 +749,33 @@ void ImageCanvas::wheelEvent(QWheelEvent* event)
 
 void ImageCanvas::resizeEvent(QResizeEvent* event)
 {
+    const QSize previousViewportSize = m_lastViewportSize.isValid() ? m_lastViewportSize : viewport()->size();
+    const QPoint previousViewportCenter((previousViewportSize.width() - 1) / 2,
+                                        (previousViewportSize.height() - 1) / 2);
+    std::optional<QPointF> sceneCenterBeforeResize;
+    if (m_hasUserZoom && m_pixmapItem != nullptr) {
+        if (!m_resizeSceneCenterAnchor.has_value()) {
+            m_resizeSceneCenterAnchor = mapToScene(previousViewportCenter);
+        }
+        sceneCenterBeforeResize = m_resizeSceneCenterAnchor;
+    }
+    const QSignalBlocker horizontalBlocker(horizontalScrollBar());
+    const QSignalBlocker verticalBlocker(verticalScrollBar());
+
     QGraphicsView::resizeEvent(event);
     if (!m_hasUserZoom && m_pixmapItem != nullptr) {
         fitInView(m_pixmapItem->boundingRect(), Qt::KeepAspectRatio);
     }
     updateScenePadding();
+
+    if (sceneCenterBeforeResize.has_value() && m_pixmapItem != nullptr) {
+        scheduleResizeCenterRestore(*sceneCenterBeforeResize);
+        scheduleResizeCenterAnchorClear();
+    }
+    m_lastViewportSize = viewport()->size();
+    if (!sceneCenterBeforeResize.has_value()) {
+        notifyViewportStateChanged();
+    }
 }
 
 void ImageCanvas::leaveEvent(QEvent* event)
@@ -760,7 +818,7 @@ void ImageCanvas::rebuildLabelItems()
         if (m_selectedLabelTextBubblesVisible && m_interactionMode == InteractionMode::Label &&
             m_selectedLabels.contains(i)) {
             auto* bubble = new CanvasLabelTextBubbleItem(displayNumber, displayTextForLabel(i), style, m_textBubbleFont,
-                                                         m_textBubbleOpacity);
+                                                         m_textBubbleOpacity, m_textBubbleMaxLineCharacters);
             bubble->setPos(marker->pos());
             m_scene.addItem(bubble);
             m_labelItems.append(bubble);
@@ -801,10 +859,51 @@ void ImageCanvas::setZoomPercentAt(int percent, QPointF sceneAnchor, QPointF glo
     applyZoom();
 
     const QPointF currentViewportAnchor = viewport()->mapFromGlobal(globalAnchor.toPoint());
-    const QPointF transformedAnchor = transform().map(sceneAnchor);
-    horizontalScrollBar()->setValue(qRound(transformedAnchor.x() - currentViewportAnchor.x()));
-    verticalScrollBar()->setValue(qRound(transformedAnchor.y() - currentViewportAnchor.y()));
+    scrollScenePointToViewportPosition(sceneAnchor, currentViewportAnchor);
     notifyViewportStateChanged();
+}
+
+void ImageCanvas::scrollScenePointToViewportPosition(QPointF scenePoint, QPointF viewportPosition)
+{
+    const QPointF transformedPoint = transform().map(scenePoint);
+    horizontalScrollBar()->setValue(qRound(transformedPoint.x() - viewportPosition.x()));
+    verticalScrollBar()->setValue(qRound(transformedPoint.y() - viewportPosition.y()));
+}
+
+void ImageCanvas::scheduleResizeCenterRestore(QPointF sceneCenter)
+{
+    m_pendingResizeSceneCenter = sceneCenter;
+    if (m_resizeCenterRestoreScheduled) {
+        return;
+    }
+
+    m_resizeCenterRestoreScheduled = true;
+    QTimer::singleShot(0, this, &ImageCanvas::restorePendingResizeCenter);
+}
+
+void ImageCanvas::restorePendingResizeCenter()
+{
+    m_resizeCenterRestoreScheduled = false;
+    if (!m_pendingResizeSceneCenter.has_value() || m_pixmapItem == nullptr) {
+        m_pendingResizeSceneCenter.reset();
+        notifyViewportStateChanged();
+        return;
+    }
+
+    const QPointF sceneCenter = *m_pendingResizeSceneCenter;
+    m_pendingResizeSceneCenter.reset();
+    centerOn(sceneCenter);
+    notifyViewportStateChanged();
+}
+
+void ImageCanvas::scheduleResizeCenterAnchorClear()
+{
+    const quint64 generation = ++m_resizeAnchorClearGeneration;
+    QTimer::singleShot(resizeCenterAnchorClearDelayMs, this, [this, generation]() {
+        if (generation == m_resizeAnchorClearGeneration) {
+            m_resizeSceneCenterAnchor.reset();
+        }
+    });
 }
 
 void ImageCanvas::notifyViewportStateChanged()
@@ -822,13 +921,15 @@ bool ImageCanvas::isLabelVisible(const labelqt::core::Label& label) const
 
 int ImageCanvas::labelIndexAt(QPoint viewportPosition) const
 {
-    QGraphicsItem* item = itemAt(viewportPosition);
-    while (item != nullptr) {
-        if (item->type() == canvasLabelMarkerItemType()) {
-            auto* marker = static_cast<CanvasLabelMarkerItem*>(item);
-            return marker->labelIndex();
+    const QList<QGraphicsItem*> hitItems = items(viewportPosition);
+    for (QGraphicsItem* item : hitItems) {
+        while (item != nullptr) {
+            if (item->type() == canvasLabelMarkerItemType()) {
+                auto* marker = static_cast<CanvasLabelMarkerItem*>(item);
+                return marker->labelIndex();
+            }
+            item = item->parentItem();
         }
-        item = item->parentItem();
     }
     return -1;
 }
@@ -906,7 +1007,8 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
         if (displayNumber <= 0) {
             continue;
         }
-        lines.append(canvasLabelBubbleHtml(displayNumber, displayTextForLabel(labelIndex), color));
+        lines.append(
+            canvasLabelBubbleHtml(displayNumber, displayTextForLabel(labelIndex), color, m_textBubbleMaxLineCharacters));
     }
     setHoveredLabelIndex(hoveredLabelIndex);
 
@@ -921,7 +1023,9 @@ void ImageCanvas::updateHoveredLabelToolTip(const QPoint& viewportPosition, cons
         m_hoverOpacityEffect->setOpacity(std::clamp(m_textBubbleOpacity, 0.0, 1.0));
     }
     m_hoverToolTip->adjustSize();
-    m_hoverToolTip->move(mapFromGlobal(globalPosition + QPoint(12, 18)));
+    m_hoverToolTip->move(clampedToolTipGlobalPosition(globalPosition + QPoint(12, 18),
+                                                      m_hoverToolTip->size(),
+                                                      globalPosition));
     m_hoverToolTip->show();
     m_hoverToolTip->raise();
 }

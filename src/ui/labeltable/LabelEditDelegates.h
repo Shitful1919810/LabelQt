@@ -18,6 +18,7 @@ public:
     explicit LabelTextDelegate(QObject* parent = nullptr);
 
     void setCommitShortcut(QKeySequence shortcut);
+    void setMaximumTextRows(int rows);
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     void setEditorData(QWidget* editor, const QModelIndex& index) const override;
     void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
@@ -37,6 +38,7 @@ private:
     void scheduleEditorHeightHint(QPlainTextEdit* editor, QPersistentModelIndex index) const;
 
     QKeySequence m_commitShortcut{QStringLiteral("Ctrl+Return")};
+    int m_maximumTextRows{4};
 };
 
 class LabelGroupDelegate final : public QStyledItemDelegate {

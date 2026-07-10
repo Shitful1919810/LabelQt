@@ -13,6 +13,7 @@
 #include "services/proofread/TextDiffService.h"
 #include "ui/automation/AutomationController.h"
 #include "ui/automation/AutomationShortcutController.h"
+#include "ui/canvas/CanvasBottomBar.h"
 #include "ui/canvas/CanvasLabelTextEditController.h"
 #include "ui/widgets/DialogWindowUtils.h"
 #include "ui/EditorStateController.h"
@@ -34,7 +35,6 @@
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
-#include <QButtonGroup>
 #include <QCloseEvent>
 #include <QClipboard>
 #include <QComboBox>
@@ -46,7 +46,6 @@
 #include <QFutureWatcher>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QIcon>
 #include <QInputDialog>
 #include <QItemSelectionModel>
 #include <QKeySequence>
@@ -66,7 +65,6 @@
 #include <QStatusBar>
 #include <QStringList>
 #include <QStringView>
-#include <QStyle>
 #include <QStyleFactory>
 #include <QTableView>
 #include <QTextCursor>
@@ -77,6 +75,7 @@
 #include <QtConcurrent/QtConcurrent>
 
 #include <algorithm>
+#include <expected>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -328,6 +327,7 @@ MainWindow::MainWindow(QWidget* parent)
             });
     m_labelTableMaxTextRows = m_preferences.labelTableMaxTextRows();
     m_labelTextDelegate->setCommitShortcut(m_preferences.commitLabelTextShortcut());
+    m_labelTextDelegate->setMaximumTextRows(m_labelTableMaxTextRows);
     m_undoStack.setChangedCallback([this]() { updateUndoRedoActions(); });
     m_projectWorkflowController =
         std::make_unique<labelqt::services::ProjectWorkflowController>(project(), m_undoStack, tr("Reorder pages"));
@@ -477,7 +477,7 @@ void MainWindow::createActions()
     m_mergeProjectsAction = new QAction(tr("&Merge Projects..."), this);
     connect(m_mergeProjectsAction, &QAction::triggered, this, &MainWindow::mergeProjects);
 
-    m_reorderPagesAction = new QAction(tr("Reorder &Pages..."), this);
+    m_reorderPagesAction = new QAction(tr("Manage &Pages..."), this);
     connect(m_reorderPagesAction, &QAction::triggered, this, &MainWindow::reorderPages);
 
     m_startProofreadingAction = new QAction(tr("Start Proofreading Baseline"), this);
@@ -572,70 +572,16 @@ void MainWindow::createCentralWidget()
     m_imagePageViewController->setCanvas(m_canvas);
     leftLayout->addWidget(m_canvas, 1);
 
-    auto* bottomBar = new QWidget(leftPanel);
-    auto* bottomLayout = new QHBoxLayout(bottomBar);
-    bottomLayout->setContentsMargins(0, 0, 0, 0);
-    bottomLayout->setSpacing(6);
-
-    m_zoomSlider = new QSlider(Qt::Horizontal, bottomBar);
-    m_zoomSlider->setRange(10, 400);
-    m_zoomSlider->setValue(100);
-    m_zoomSlider->setFixedWidth(180);
-    bottomLayout->addWidget(new QLabel(tr("Zoom"), bottomBar));
-    bottomLayout->addWidget(m_zoomSlider);
-    bottomLayout->addStretch();
-
-    auto* interactionModeGroup = new QButtonGroup(bottomBar);
-    interactionModeGroup->setExclusive(true);
-    m_labelModeButton = new QToolButton(bottomBar);
-    m_selectionModeButton = new QToolButton(bottomBar);
-    m_labelModeButton->setText(tr("Label mode"));
-    m_selectionModeButton->setText(tr("Selection mode"));
-    m_labelModeButton->setCheckable(true);
-    m_selectionModeButton->setCheckable(true);
-    m_labelModeButton->setChecked(true);
-    m_labelModeButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    m_selectionModeButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    interactionModeGroup->addButton(m_labelModeButton);
-    interactionModeGroup->addButton(m_selectionModeButton);
-    bottomLayout->addWidget(m_labelModeButton);
-    bottomLayout->addWidget(m_selectionModeButton);
-    bottomLayout->addStretch();
-
-    m_insertGroupComboBox = new QComboBox(bottomBar);
-    m_insertGroupComboBox->setMinimumWidth(120);
-    auto* addGroupButton = new QToolButton(bottomBar);
-    auto* removeGroupButton = new QToolButton(bottomBar);
-    addGroupButton->setIcon(
-        QIcon::fromTheme(QStringLiteral("document-new"), style()->standardIcon(QStyle::SP_FileIcon)));
-    removeGroupButton->setIcon(
-        QIcon::fromTheme(QStringLiteral("user-trash"), style()->standardIcon(QStyle::SP_TrashIcon)));
-    addGroupButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    removeGroupButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    addGroupButton->setToolTip(tr("Add group"));
-    removeGroupButton->setToolTip(tr("Remove selected group"));
-    addGroupButton->setAutoRaise(true);
-    removeGroupButton->setAutoRaise(true);
-    addGroupButton->setFixedSize(24, 24);
-    removeGroupButton->setFixedSize(24, 24);
-    bottomLayout->addWidget(new QLabel(tr("Insert group"), bottomBar));
-    bottomLayout->addWidget(m_insertGroupComboBox);
-    bottomLayout->addWidget(addGroupButton);
-    bottomLayout->addWidget(removeGroupButton);
-    bottomLayout->addStretch();
-
-    m_previousButton = new QPushButton(tr("Previous"), bottomBar);
-    m_nextButton = new QPushButton(tr("Next"), bottomBar);
-    m_imageComboBox = new PageSelectorComboBox(bottomBar);
-    m_imageComboBox->setMinimumWidth(160);
-    m_pageSourceLabel = new QLabel(bottomBar);
-    m_pageSourceLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_pageSourceLabel->setVisible(false);
+    auto* bottomBar = new CanvasBottomBar(leftPanel);
+    m_zoomSlider = bottomBar->zoomSlider();
+    m_labelModeButton = bottomBar->labelModeButton();
+    m_selectionModeButton = bottomBar->selectionModeButton();
+    m_insertGroupComboBox = bottomBar->insertGroupComboBox();
+    m_previousButton = bottomBar->previousButton();
+    m_nextButton = bottomBar->nextButton();
+    m_imageComboBox = bottomBar->imageComboBox();
+    m_pageSourceLabel = bottomBar->pageSourceLabel();
     m_projectViewController->setWidgets(m_imageComboBox, m_previousButton, m_nextButton, m_pageSourceLabel);
-    bottomLayout->addWidget(m_pageSourceLabel);
-    bottomLayout->addWidget(m_previousButton);
-    bottomLayout->addWidget(m_imageComboBox);
-    bottomLayout->addWidget(m_nextButton);
     leftLayout->addWidget(bottomBar);
 
     auto* rightPanel = new QWidget(m_rootSplitter);
@@ -820,8 +766,8 @@ void MainWindow::createCentralWidget()
     connect(m_groupFilterComboBox, &GroupFilterComboBox::selectedGroupsChanged, this, &MainWindow::updateGroupFilter);
     connect(m_labelGroupComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::updateCurrentLabelGroup);
     connect(m_insertGroupComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::updateInsertGroupTextColor);
-    connect(addGroupButton, &QToolButton::clicked, this, &MainWindow::addGroup);
-    connect(removeGroupButton, &QToolButton::clicked, this, &MainWindow::removeGroup);
+    connect(bottomBar, &CanvasBottomBar::addGroupRequested, this, &MainWindow::addGroup);
+    connect(bottomBar, &CanvasBottomBar::removeGroupRequested, this, &MainWindow::removeGroup);
 }
 
 void MainWindow::newProject()
@@ -1001,11 +947,13 @@ void MainWindow::reorderPages()
 
     commitActiveTextInput();
     if (project().images().isEmpty()) {
-        showMainWindowInformation(this, tr("Reorder Pages"), tr("There are no pages to reorder."));
+        showMainWindowInformation(this, tr("Manage Pages"), tr("There are no pages to manage."));
         return;
     }
 
-    PageOrderDialog dialog(project(), m_preferences, this);
+    PageOrderDialog dialog(project(), m_preferences, this, true);
+    dialog.setPendingImageRenameHandler(
+        [this](const labelqt::services::ProjectImageRenamePlan& plan) { return executeImageRenamePlan(plan); });
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -1019,6 +967,62 @@ void MainWindow::reorderPages()
         m_canvas == nullptr ? QPointF(0.5, 0.5) : m_canvas->normalizedViewCenter(),
     };
     m_projectWorkflowController->applyPageOrder(dialog.pageOrder(), viewState);
+}
+
+bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan)
+{
+    if (!plan.isValid()) {
+        showMainWindowWarning(this, tr("Rename Images"),
+                              plan.error.isEmpty() ? tr("Fix invalid file names before renaming.") : plan.error);
+        return false;
+    }
+    if (!plan.hasChanges()) {
+        showMainWindowWarning(this, tr("Rename Images"), tr("There are no image files to rename."));
+        return false;
+    }
+
+    const QMessageBox::StandardButton answer = showMainWindowMessageBox(
+        this, QMessageBox::Warning, tr("Rename Images"),
+        tr("This will rename existing image files on disk and update missing page references when the rendered target image already exists.\n\nThe project will be saved before applying the changes, then saved again after the operation finishes.\n\nThis operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.\n\nContinue?"),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return false;
+    }
+
+    if (!saveProject()) {
+        return false;
+    }
+
+    const int oldImageIndex = m_currentImageIndex;
+    const int oldZoomPercent = m_canvas == nullptr ? 100 : m_canvas->zoomPercent();
+    const QPointF oldCenter = m_canvas == nullptr ? QPointF(0.5, 0.5) : m_canvas->normalizedViewCenter();
+    const std::expected<void, QString> result = m_projectWorkflowController->applyImageRename(plan);
+    if (!result) {
+        showMainWindowCritical(this, tr("Rename failed"), result.error());
+        return false;
+    }
+
+    try {
+        m_projectController.save();
+    }
+    catch (const std::exception& error) {
+        showMainWindowCritical(
+            this, tr("Save failed"),
+            tr("Image files or references were updated, but the project file could not be saved. Please save the project before closing LabelQt.\n\nLast error: %1")
+                .arg(QString::fromUtf8(error.what())));
+        return false;
+    }
+
+    refreshProjectUi();
+    if (oldImageIndex >= 0 && oldImageIndex < project().images().size()) {
+        m_currentImageIndex = oldImageIndex;
+        refreshImageUi();
+        if (m_imagePageViewController != nullptr) {
+            m_imagePageViewController->restoreViewAfterCurrentImageDisplayed(oldZoomPercent, oldCenter);
+        }
+    }
+    statusBar()->showMessage(tr("Updated image files and page references by page order."), 4000);
+    return true;
 }
 
 void MainWindow::startProofreadingBaseline()
@@ -3051,6 +3055,7 @@ void MainWindow::applyPreferences(labelqt::core::AppPreferencesLoadResult result
     labelqt::services::TextDiffService::setCleanupMode(m_preferences.textDiffCleanupMode());
     m_labelTableMaxTextRows = m_preferences.labelTableMaxTextRows();
     m_labelTextDelegate->setCommitShortcut(m_preferences.commitLabelTextShortcut());
+    m_labelTextDelegate->setMaximumTextRows(m_labelTableMaxTextRows);
     if (m_shortcutController != nullptr) {
         m_shortcutController->setPreferences(m_preferences);
     }
@@ -3180,6 +3185,9 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
         return tr("%1 must be a number between 0 and 1; using the default value.").arg(warning.key);
     case AppPreferenceWarningType::MarkerTextBubbleOpacityOutOfRange:
         return tr("%1 must be a number between 0 and 1; using the default value.").arg(warning.key);
+    case AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersWrongType:
+    case AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersOutOfRange:
+        return tr("%1 must be a positive integer; using the default value.").arg(warning.key);
     case AppPreferenceWarningType::CanvasLabelTextEditorNotObject:
         return tr("canvasLabelTextEditor must be a JSON object; using default canvas label editor preferences.");
     case AppPreferenceWarningType::CanvasLabelTextEditorOpacityWrongType:

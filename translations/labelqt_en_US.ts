@@ -2,118 +2,157 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
-    <name>ImageCanvas</name>
-    <message>
-        <source>Failed to load image</source>
-        <translation>Failed to load image</translation>
-    </message>
-    <message>
-        <source>Loading image...</source>
-        <translation>Loading image...</translation>
-    </message>
-</context>
-<context>
     <name>AutomationController</name>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="73"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="74"/>
         <source>Automation script is no longer available: %1</source>
         <translation>Automation script is no longer available: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="84"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="85"/>
         <source>Canceling automation script...</source>
         <translation>Canceling automation script...</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="94"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="95"/>
         <source>Cancel Running Script</source>
         <translation>Cancel Running Script</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="101"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="102"/>
         <source>No automation scripts found</source>
         <translation>No automation scripts found</translation>
     </message>
     <message>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="147"/>
         <source>Open User Script Folder</source>
         <translation>Open User Script Folder</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="149"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="151"/>
         <source>Refresh Scripts</source>
         <translation>Refresh Scripts</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="196"/>
-        <location filename="../src/ui/AutomationController.cpp" line="214"/>
-        <location filename="../src/ui/AutomationController.cpp" line="220"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="202"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="221"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="227"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="281"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="287"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="292"/>
         <source>Automation</source>
         <translation>Automation</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="196"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="203"/>
         <source>Open a project before running automation scripts.</source>
         <translation>Open a project before running automation scripts.</translation>
     </message>
     <message>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="281"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="287"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="292"/>
         <source>Could not open the user script folder.</source>
         <translation>Could not open the user script folder.</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="224"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="231"/>
         <source>Running automation script: %1</source>
         <translation>Running automation script: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="278"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="313"/>
         <source>Automation script was canceled.</source>
         <translation>Automation script was canceled.</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="280"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="315"/>
         <source>The automation script failed.</source>
         <translation>The automation script failed.</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="285"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="320"/>
         <source>Automation failed</source>
         <translation>Automation failed</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="287"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="322"/>
         <source>Automation script failed: %1</source>
         <translation>Automation script failed: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationController.cpp" line="304"/>
+        <location filename="../src/ui/automation/AutomationController.cpp" line="339"/>
         <source>Automation script finished: %1</source>
         <translation>Automation script finished: %1</translation>
     </message>
 </context>
 <context>
+    <name>CanvasBottomBar</name>
+    <message>
+        <source>Zoom</source>
+        <translation>Zoom</translation>
+    </message>
+    <message>
+        <source>Label mode</source>
+        <translation>Label mode</translation>
+    </message>
+    <message>
+        <source>Selection mode</source>
+        <translation>Selection mode</translation>
+    </message>
+    <message>
+        <source>Insert group</source>
+        <translation>Insert group</translation>
+    </message>
+    <message>
+        <source>Add group</source>
+        <translation>Add group</translation>
+    </message>
+    <message>
+        <source>Remove selected group</source>
+        <translation>Remove selected group</translation>
+    </message>
+    <message>
+        <source>Previous</source>
+        <translation>Previous</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Next</translation>
+    </message>
+    <message>
+        <source>More tools</source>
+        <translation>More tools</translation>
+    </message>
+    <message>
+        <source>Page</source>
+        <translation>Page</translation>
+    </message>
+</context>
+<context>
     <name>AutomationParameterDialog</name>
     <message>
-        <location filename="../src/ui/AutomationParameterDialog.cpp" line="47"/>
+        <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="47"/>
         <source>Browse...</source>
         <translation>Browse...</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationParameterDialog.cpp" line="56"/>
+        <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="56"/>
         <source>Choose Directory</source>
         <translation>Choose Directory</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationParameterDialog.cpp" line="60"/>
+        <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="60"/>
         <source>Choose File</source>
         <translation>Choose File</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationParameterDialog.cpp" line="115"/>
+        <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="115"/>
         <source>Leave empty to keep the stored secret</source>
         <translation>Leave empty to keep the stored secret</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationParameterDialog.cpp" line="173"/>
+        <location filename="../src/ui/automation/AutomationParameterDialog.cpp" line="173"/>
         <source>Automation Parameters</source>
         <translation>Automation Parameters</translation>
     </message>
@@ -121,42 +160,42 @@
 <context>
     <name>AutomationRunDialog</name>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="23"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="22"/>
         <source>Automation Running</source>
         <translation>Automation Running</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="28"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="27"/>
         <source>Running automation script: %1</source>
         <translation>Running automation script: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="38"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="37"/>
         <source>Cancel</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="39"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="38"/>
         <source>Close</source>
         <translation>Close</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="63"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="62"/>
         <source>Automation script finished.</source>
         <translation>Automation script finished.</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="63"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="62"/>
         <source>Automation script failed.</source>
         <translation>Automation script failed.</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="71"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="70"/>
         <source>Canceling automation script...</source>
         <translation>Canceling automation script...</translation>
     </message>
     <message>
-        <location filename="../src/ui/AutomationRunDialog.cpp" line="93"/>
+        <location filename="../src/ui/automation/AutomationRunDialog.cpp" line="92"/>
         <source>[Large automation log chunk was truncated.]
 </source>
         <translation>[Large automation log chunk was truncated.]
@@ -166,54 +205,54 @@
 <context>
     <name>AutomationService</name>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="236"/>
         <source>Python was not found. Install Python 3 or set LABELQT_PYTHON to the Python executable path.
 
 Tried: %1
 Last error: %2</source>
-        <translation>Python was not found. Install Python 3 or set LABELQT_PYTHON to the Python executable path.
+        <translation type="vanished">Python was not found. Install Python 3 or set LABELQT_PYTHON to the Python executable path.
 
 Tried: %1
 Last error: %2</translation>
     </message>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="373"/>
+        <location filename="../src/services/automation/AutomationService.cpp" line="263"/>
         <source>[Earlier automation log output was truncated.]
 </source>
         <translation>[Earlier automation log output was truncated.]
 </translation>
     </message>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="386"/>
+        <location filename="../src/services/automation/AutomationService.cpp" line="276"/>
         <source>Skipped automation script %1: missing entry.</source>
         <translation>Skipped automation script %1: missing entry.</translation>
     </message>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="397"/>
+        <location filename="../src/services/automation/AutomationService.cpp" line="285"/>
         <source>Skipped automation script %1: entry file does not exist.</source>
         <translation>Skipped automation script %1: entry file does not exist.</translation>
     </message>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="447"/>
+        <location filename="../src/services/automation/AutomationService.cpp" line="336"/>
         <source>Skipped automation script directory %1: %2</source>
         <translation>Skipped automation script directory %1: %2</translation>
     </message>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="498"/>
+        <location filename="../src/services/automation/AutomationService.cpp" line="387"/>
         <source>Failed to store automation secret %1: %2</source>
         <translation>Failed to store automation secret %1: %2</translation>
     </message>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="518"/>
+        <location filename="../src/services/automation/AutomationService.cpp" line="415"/>
         <source>Failed to read automation secret %1: %2</source>
         <translation>Failed to read automation secret %1: %2</translation>
     </message>
     <message>
-        <location filename="../src/services/AutomationService.cpp" line="527"/>
+        <location filename="../src/services/automation/AutomationService.cpp" line="420"/>
         <source>Automation secret %1 is not configured. Run the script&apos;s configuration first.</source>
         <translation>Automation secret %1 is not configured. Run the script&apos;s configuration first.</translation>
     </message>
     <message>
+        <location filename="../src/services/automation/AutomationPythonResolver.cpp" line="107"/>
         <source>Python was not found. Install Python 3, configure the Python command in Preferences, or place a portable Python runtime next to LabelQt.
 
 Tried: %1
@@ -224,46 +263,106 @@ Tried: %1
 Last error: %2</translation>
     </message>
     <message>
+        <location filename="../src/services/automation/AutomationService.cpp" line="599"/>
         <source>Installing requirements</source>
         <translation>Installing requirements</translation>
     </message>
     <message>
+        <location filename="../src/services/automation/AutomationService.cpp" line="600"/>
         <source>Running script</source>
         <translation>Running script</translation>
     </message>
     <message>
+        <location filename="../src/services/automation/AutomationService.cpp" line="628"/>
         <source>Failed to install automation requirements with exit code %1.</source>
         <translation>Failed to install automation requirements with exit code %1.</translation>
     </message>
     <message>
+        <location filename="../src/services/automation/AutomationService.cpp" line="233"/>
         <source>JSON root must be an object.</source>
         <translation>JSON root must be an object.</translation>
     </message>
 </context>
 <context>
-    <name>GroupFilterComboBox</name>
+    <name>AutomationShortcutEditorWidget</name>
     <message>
-        <location filename="../src/ui/GroupFilterComboBox.cpp" line="50"/>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="28"/>
+        <source>Assign shortcuts to automation scripts. Leave a shortcut empty to disable it.</source>
+        <translation>Assign shortcuts to automation scripts. Leave a shortcut empty to disable it.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="34"/>
+        <source>Automation script</source>
+        <translation>Automation script</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="34"/>
+        <source>Shortcut</source>
+        <translation>Shortcut</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="96"/>
+        <source>Shortcut %1 is assigned to both %2 and %3.</source>
+        <translation>Shortcut %1 is assigned to both %2 and %3.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="108"/>
+        <source>Official</source>
+        <translation>Official</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="108"/>
+        <source>Custom</source>
+        <translation>Custom</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="109"/>
+        <source>%1 / %2 / %3</source>
+        <translation>%1 / %2 / %3</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/automation/AutomationShortcutEditorWidget.cpp" line="126"/>
+        <source>Missing script: %1</source>
+        <translation>Missing script: %1</translation>
+    </message>
+</context>
+<context>
+    <name>CheckableFilterButton</name>
+    <message>
+        <location filename="../src/ui/widgets/CheckableFilterButton.cpp" line="76"/>
         <source>Select All</source>
         <translation>Select All</translation>
     </message>
     <message>
-        <location filename="../src/ui/GroupFilterComboBox.cpp" line="53"/>
+        <location filename="../src/ui/widgets/CheckableFilterButton.cpp" line="83"/>
+        <source>Clear</source>
+        <translation>Clear</translation>
+    </message>
+</context>
+<context>
+    <name>GroupFilterComboBox</name>
+    <message>
+        <location filename="../src/ui/widgets/GroupFilterComboBox.cpp" line="58"/>
+        <source>Select All</source>
+        <translation>Select All</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/widgets/GroupFilterComboBox.cpp" line="65"/>
         <source>Clear</source>
         <translation>Clear</translation>
     </message>
     <message>
-        <location filename="../src/ui/GroupFilterComboBox.cpp" line="117"/>
+        <location filename="../src/ui/widgets/GroupFilterComboBox.cpp" line="156"/>
         <source>No groups</source>
         <translation>No groups</translation>
     </message>
     <message>
-        <location filename="../src/ui/GroupFilterComboBox.cpp" line="120"/>
+        <location filename="../src/ui/widgets/GroupFilterComboBox.cpp" line="159"/>
         <source>All groups</source>
         <translation>All groups</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/GroupFilterComboBox.cpp" line="126"/>
+        <location filename="../src/ui/widgets/GroupFilterComboBox.cpp" line="165"/>
         <source>%n group(s)</source>
         <translation>
             <numerusform>%n group</numerusform>
@@ -272,14 +371,120 @@ Last error: %2</translation>
     </message>
 </context>
 <context>
+    <name>GroupStyleEditorWidget</name>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="51"/>
+        <source>Color</source>
+        <translation>Color</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="51"/>
+        <source>Marker diameter</source>
+        <translation>Marker diameter</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="51"/>
+        <source>Font size</source>
+        <translation>Font size</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="51"/>
+        <source>Marker style</source>
+        <translation>Marker style</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="59"/>
+        <source>Add group style</source>
+        <translation>Add group style</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="60"/>
+        <source>Remove selected styles</source>
+        <translation>Remove selected styles</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="139"/>
+        <source>Circle</source>
+        <translation>Circle</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="140"/>
+        <source>Square</source>
+        <translation>Square</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/GroupStyleEditorWidget.cpp" line="172"/>
+        <source>Choose group color</source>
+        <translation>Choose group color</translation>
+    </message>
+</context>
+<context>
+    <name>ImageCanvas</name>
+    <message>
+        <location filename="../src/ui/canvas/ImageCanvas.cpp" line="169"/>
+        <source>Failed to load image</source>
+        <translation>Failed to load image</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/canvas/ImageCanvas.cpp" line="199"/>
+        <source>Loading image...</source>
+        <translation>Loading image...</translation>
+    </message>
+</context>
+<context>
+    <name>ImageRenamePreviewWidget</name>
+    <message>
+        <source>Rename image files according to the current page order. The extension is always preserved.</source>
+        <translation type="vanished">Rename image files according to the current page order. The extension is always preserved.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/ImageRenamePreviewWidget.cpp" line="183"/>
+        <source>Supported: {index}, {index:03}, {stem}</source>
+        <translation>Supported: {index}, {index:03}, {stem}</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/ImageRenamePreviewWidget.cpp" line="201"/>
+        <source>File name pattern</source>
+        <translation>File name pattern</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/ImageRenamePreviewWidget.cpp" line="203"/>
+        <source>Start index</source>
+        <translation>Start index</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/project/ImageRenamePreviewWidget.cpp" line="233"/>
+        <source>%n image item(s) will be updated.</source>
+        <translation>
+            <numerusform>%n image item(s) will be updated.</numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/ImageRenamePreviewWidget.cpp" line="192"/>
+        <source>Queue Rename...</source>
+        <translation>Queue Rename...</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/ImageRenamePreviewWidget.cpp" line="170"/>
+        <source>Rename existing image files according to the current page order. Missing pages will be linked to a matching existing image file, using that file&apos;s extension.</source>
+        <translation>Rename existing image files according to the current page order. Missing pages will be linked to a matching existing image file, using that file&apos;s extension.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/ImageRenamePreviewWidget.cpp" line="236"/>
+        <source>Queued until you click OK.</source>
+        <translation>Queued until you click OK.</translation>
+    </message>
+</context>
+<context>
     <name>LabelTableModel</name>
     <message>
-        <location filename="../src/ui/LabelTableModel.cpp" line="298"/>
+        <location filename="../src/ui/labeltable/LabelTableModel.cpp" line="284"/>
         <source>Text</source>
         <translation>Text</translation>
     </message>
     <message>
-        <location filename="../src/ui/LabelTableModel.cpp" line="300"/>
+        <location filename="../src/ui/labeltable/LabelTableModel.cpp" line="286"/>
         <source>Group</source>
         <translation>Group</translation>
     </message>
@@ -287,67 +492,98 @@ Last error: %2</translation>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="326"/>
+        <location filename="../src/ui/MainWindow.cpp" line="470"/>
         <source>&amp;New Project...</source>
         <translation>&amp;New Project...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="330"/>
+        <location filename="../src/ui/MainWindow.cpp" line="474"/>
         <source>&amp;Open LabelPlus Text...</source>
         <translation>&amp;Open LabelPlus Text...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="334"/>
+        <location filename="../src/ui/MainWindow.cpp" line="478"/>
         <source>&amp;Merge Projects...</source>
         <translation>&amp;Merge Projects...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="340"/>
+        <location filename="../src/ui/MainWindow.cpp" line="493"/>
         <source>&amp;Save</source>
         <translation>&amp;Save</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="344"/>
+        <location filename="../src/ui/MainWindow.cpp" line="497"/>
         <source>Save &amp;As...</source>
         <translation>Save &amp;As...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="348"/>
+        <location filename="../src/ui/MainWindow.cpp" line="501"/>
         <source>&amp;Undo</source>
         <translation>&amp;Undo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="351"/>
+        <location filename="../src/ui/MainWindow.cpp" line="504"/>
         <source>&amp;Redo</source>
         <translation>&amp;Redo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="364"/>
+        <location filename="../src/ui/MainWindow.cpp" line="517"/>
         <source>&amp;Preferences...</source>
         <translation>&amp;Preferences...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="368"/>
+        <location filename="../src/ui/MainWindow.cpp" line="521"/>
         <source>&amp;Quit</source>
         <translation>&amp;Quit</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="378"/>
+        <location filename="../src/ui/MainWindow.cpp" line="531"/>
         <source>&amp;File</source>
         <translation>&amp;File</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="392"/>
+        <location filename="../src/ui/MainWindow.cpp" line="545"/>
         <source>&amp;Edit</source>
         <translation>&amp;Edit</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="398"/>
+        <location filename="../src/ui/MainWindow.cpp" line="554"/>
         <source>&amp;Automation</source>
         <translation>&amp;Automation</translation>
     </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1043"/>
+        <source>This will rename existing image files on disk and update missing page references when the rendered target image already exists.
+
+The project will be saved before applying the changes, then saved again after the operation finishes.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</source>
+        <translation>This will rename existing image files on disk and update missing page references when the rendered target image already exists.
+
+The project will be saved before applying the changes, then saved again after the operation finishes.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1068"/>
+        <source>Image files or references were updated, but the project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</source>
+        <translation>Image files or references were updated, but the project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1081"/>
+        <source>Updated image files and page references by page order.</source>
+        <translation>Updated image files and page references by page order.</translation>
+    </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="823"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1309"/>
         <source>Skipped %n invalid automation script(s): %1</source>
         <translation>
             <numerusform>Skipped %n invalid automation script(s): %1</numerusform>
@@ -355,18 +591,18 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="846"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1332"/>
         <source>Run automation script</source>
         <translation>Run automation script</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="846"/>
-        <location filename="../src/ui/MainWindow.cpp" line="847"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1332"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1333"/>
         <source>Automation script %1</source>
         <translation>Automation script %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="849"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1335"/>
         <source>Automation applied %n change(s).</source>
         <translation>
             <numerusform>Automation applied %n change(s).</numerusform>
@@ -374,80 +610,47 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="382"/>
+        <location filename="../src/ui/MainWindow.cpp" line="535"/>
         <source>Recent Projects</source>
         <translation>Recent Projects</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="428"/>
-        <source>Zoom</source>
-        <translation>Zoom</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="465"/>
-        <source>Insert group</source>
-        <translation>Insert group</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="436"/>
-        <source>Label mode</source>
-        <translation>Label mode</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="437"/>
-        <source>Selection mode</source>
-        <translation>Selection mode</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="471"/>
-        <source>Previous</source>
-        <translation>Previous</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="472"/>
-        <source>Next</source>
-        <translation>Next</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2096"/>
         <source>source #%1</source>
-        <translation>source #%1</translation>
+        <translation type="vanished">source #%1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2099"/>
         <source>unknown</source>
-        <translation>unknown</translation>
+        <translation type="vanished">unknown</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2102"/>
         <source>Source: %1</source>
-        <translation>Source: %1</translation>
+        <translation type="vanished">Source: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="354"/>
+        <location filename="../src/ui/MainWindow.cpp" line="507"/>
         <source>Previous page</source>
         <translation>Previous page</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="359"/>
+        <location filename="../src/ui/MainWindow.cpp" line="512"/>
         <source>Next page</source>
         <translation>Next page</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="213"/>
-        <location filename="../src/ui/MainWindow.cpp" line="459"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1012"/>
+        <location filename="../src/ui/MainWindow.cpp" line="352"/>
+        <location filename="../src/ui/MainWindow.cpp" line="616"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1523"/>
         <source>Add group</source>
         <translation>Add group</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="214"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1063"/>
+        <location filename="../src/ui/MainWindow.cpp" line="353"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1578"/>
         <source>Remove group</source>
         <translation>Remove group</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="1066"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1581"/>
         <source>Do you want to remove the %1 group? %n label(s) in this group will be moved to %2.</source>
         <translation>
             <numerusform>Do you want to remove the %1 group? %n label(s) in this group will be moved to %2.</numerusform>
@@ -455,133 +658,134 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="460"/>
+        <location filename="../src/ui/MainWindow.cpp" line="617"/>
         <source>Remove selected group</source>
         <translation>Remove selected group</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="490"/>
+        <location filename="../src/ui/MainWindow.cpp" line="652"/>
         <source>Group</source>
         <translation>Group</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="550"/>
+        <location filename="../src/ui/MainWindow.cpp" line="712"/>
         <source>Label group</source>
         <translation>Label group</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="556"/>
+        <location filename="../src/ui/MainWindow.cpp" line="718"/>
         <source>Selected label text</source>
         <translation>Selected label text</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="696"/>
+        <location filename="../src/ui/MainWindow.cpp" line="896"/>
         <source>Open LabelPlus text</source>
         <translation>Open LabelPlus text</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="709"/>
+        <location filename="../src/ui/MainWindow.cpp" line="915"/>
         <source>Select LabelPlus projects to merge</source>
         <translation>Select LabelPlus projects to merge</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="722"/>
-        <location filename="../src/ui/MainWindow.cpp" line="777"/>
+        <location filename="../src/ui/MainWindow.cpp" line="929"/>
+        <location filename="../src/ui/MainWindow.cpp" line="983"/>
         <source>Merge failed</source>
         <translation>Merge failed</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="727"/>
-        <location filename="../src/ui/MainWindow.cpp" line="734"/>
+        <location filename="../src/ui/MainWindow.cpp" line="934"/>
+        <location filename="../src/ui/MainWindow.cpp" line="941"/>
         <source>Merge Projects</source>
         <translation>Merge Projects</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="727"/>
+        <location filename="../src/ui/MainWindow.cpp" line="934"/>
         <source>No image pages were found in the selected projects.</source>
         <translation>No image pages were found in the selected projects.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="735"/>
+        <location filename="../src/ui/MainWindow.cpp" line="942"/>
         <source>No page conflicts were found. The selected projects can be merged directly.</source>
         <translation>No page conflicts were found. The selected projects can be merged directly.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="757"/>
+        <location filename="../src/ui/MainWindow.cpp" line="962"/>
         <source>Save merged LabelPlus text</source>
         <translation>Save merged LabelPlus text</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="783"/>
-        <location filename="../src/ui/MainWindow.cpp" line="787"/>
+        <location filename="../src/ui/MainWindow.cpp" line="989"/>
+        <location filename="../src/ui/MainWindow.cpp" line="993"/>
         <source>Merged project saved to %1</source>
         <translation>Merged project saved to %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="697"/>
-        <location filename="../src/ui/MainWindow.cpp" line="711"/>
-        <location filename="../src/ui/MainWindow.cpp" line="759"/>
-        <location filename="../src/ui/MainWindow.cpp" line="986"/>
+        <location filename="../src/ui/MainWindow.cpp" line="899"/>
+        <location filename="../src/ui/MainWindow.cpp" line="918"/>
+        <location filename="../src/ui/MainWindow.cpp" line="965"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1493"/>
         <source>LabelPlus text (*.txt);;All files (*)</source>
         <translation>LabelPlus text (*.txt);;All files (*)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="647"/>
+        <location filename="../src/ui/MainWindow.cpp" line="841"/>
         <source>Select image folder</source>
         <translation>Select image folder</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="674"/>
-        <location filename="../src/ui/MainWindow.cpp" line="678"/>
+        <location filename="../src/ui/MainWindow.cpp" line="871"/>
+        <location filename="../src/ui/MainWindow.cpp" line="875"/>
         <source>New project failed</source>
         <translation>New project failed</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="674"/>
+        <location filename="../src/ui/MainWindow.cpp" line="871"/>
         <source>No supported image files were found in this folder.</source>
         <translation>No supported image files were found in this folder.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="653"/>
+        <location filename="../src/ui/MainWindow.cpp" line="849"/>
         <source>New Translation</source>
         <translation>New Translation</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="658"/>
+        <location filename="../src/ui/MainWindow.cpp" line="854"/>
         <source>Project file already exists</source>
         <translation>Project file already exists</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="659"/>
+        <location filename="../src/ui/MainWindow.cpp" line="855"/>
         <source>%1 already exists. Create the project with the next available name instead?</source>
         <translation>%1 already exists. Create the project with the next available name instead?</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="662"/>
+        <location filename="../src/ui/MainWindow.cpp" line="859"/>
         <source>Try another name</source>
         <translation>Try another name</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="663"/>
+        <location filename="../src/ui/MainWindow.cpp" line="860"/>
         <source>Cancel</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="683"/>
+        <location filename="../src/ui/MainWindow.cpp" line="879"/>
         <source>Created %1</source>
         <translation>Created %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="855"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1345"/>
         <source>Loaded %1</source>
         <translation>Loaded %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="869"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1359"/>
         <source>Loaded recent project: %1</source>
         <translation>Loaded recent project: %1</translation>
     </message>
     <message numerus="yes">
+        <location filename="../src/ui/MainWindow.cpp" line="1379"/>
         <source>%n image file(s) are missing.</source>
         <translation>
             <numerusform>%n image file is missing.</numerusform>
@@ -589,112 +793,116 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="889"/>
-        <location filename="../src/ui/MainWindow.cpp" line="920"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1387"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1418"/>
         <source>Open failed</source>
         <translation>Open failed</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="920"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1418"/>
         <source>%1 does not exist.</source>
         <translation>%1 does not exist.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2551"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3389"/>
         <source>No recent projects</source>
         <translation>No recent projects</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2562"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3400"/>
         <source>%1 (missing)</source>
         <translation>%1 (missing)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="961"/>
-        <location filename="../src/ui/MainWindow.cpp" line="998"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1463"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1505"/>
         <source>Saved %1</source>
         <translation>Saved %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="965"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1003"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1067"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1467"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1510"/>
         <source>Save failed</source>
         <translation>Save failed</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="985"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1492"/>
         <source>Save LabelPlus text</source>
         <translation>Save LabelPlus text</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1012"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1523"/>
         <source>Group name:</source>
         <translation>Group name:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="207"/>
+        <location filename="../src/ui/MainWindow.cpp" line="345"/>
         <source>Add label</source>
         <translation>Add label</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="208"/>
+        <location filename="../src/ui/MainWindow.cpp" line="346"/>
         <source>Edit label text</source>
         <translation>Edit label text</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="209"/>
+        <location filename="../src/ui/MainWindow.cpp" line="347"/>
         <source>Change label group</source>
         <translation>Change label group</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="210"/>
+        <location filename="../src/ui/MainWindow.cpp" line="348"/>
         <source>Move label</source>
         <translation>Move label</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="212"/>
+        <location filename="../src/ui/MainWindow.cpp" line="350"/>
         <source>Reorder labels</source>
         <translation>Reorder labels</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="351"/>
         <source>Paste labels</source>
         <translation>Paste labels</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="215"/>
+        <location filename="../src/ui/MainWindow.cpp" line="354"/>
         <source>Add %1 %2 label %3</source>
         <translation>Add %1 %2 label %3</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="216"/>
+        <location filename="../src/ui/MainWindow.cpp" line="355"/>
         <source>Delete %1 %2 label %3</source>
         <translation>Delete %1 %2 label %3</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="217"/>
+        <location filename="../src/ui/MainWindow.cpp" line="356"/>
         <source>Edit %1 %2 label %3</source>
         <translation>Edit %1 %2 label %3</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="218"/>
+        <location filename="../src/ui/MainWindow.cpp" line="357"/>
         <source>Change %1 %2 label %3</source>
         <translation>Change %1 %2 label %3</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="219"/>
+        <location filename="../src/ui/MainWindow.cpp" line="358"/>
         <source>Move %1 %2 label %3</source>
         <translation>Move %1 %2 label %3</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="220"/>
+        <location filename="../src/ui/MainWindow.cpp" line="359"/>
         <source>Reorder labels on %1</source>
         <translation>Reorder labels on %1</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="360"/>
         <source>Paste %2 label(s) on %1</source>
         <translation>Paste %2 label(s) on %1</translation>
     </message>
     <message numerus="yes">
+        <location filename="../src/ui/MainWindow.cpp" line="1756"/>
         <source>Copied %n label(s).</source>
         <translation>
             <numerusform>Copied %n label.</numerusform>
@@ -702,6 +910,7 @@ Last error: %2</translation>
         </translation>
     </message>
     <message numerus="yes">
+        <location filename="../src/ui/MainWindow.cpp" line="1794"/>
         <source>Cut %n label(s).</source>
         <translation>
             <numerusform>Cut %n label.</numerusform>
@@ -709,6 +918,7 @@ Last error: %2</translation>
         </translation>
     </message>
     <message numerus="yes">
+        <location filename="../src/ui/MainWindow.cpp" line="1851"/>
         <source>Pasted %n label(s).</source>
         <translation>
             <numerusform>Pasted %n label.</numerusform>
@@ -716,543 +926,739 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="221"/>
+        <location filename="../src/ui/MainWindow.cpp" line="361"/>
         <source>Add group %1</source>
         <translation>Add group %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="222"/>
+        <location filename="../src/ui/MainWindow.cpp" line="362"/>
         <source>Remove group %1</source>
         <translation>Remove group %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="196"/>
+        <location filename="../src/ui/MainWindow.cpp" line="334"/>
         <source>Reorder pages</source>
         <translation>Reorder pages</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="337"/>
-        <source>Reorder &amp;Pages...</source>
-        <translation>Reorder &amp;Pages...</translation>
+        <location filename="../src/ui/MainWindow.cpp" line="481"/>
+        <source>Manage &amp;Pages...</source>
+        <translation>Manage &amp;Pages...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>Reorder Pages</source>
-        <translation>Reorder Pages</translation>
+        <location filename="../src/ui/MainWindow.cpp" line="1005"/>
+        <source>Manage Pages</source>
+        <translation>Manage Pages</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="795"/>
-        <source>There are no pages to reorder.</source>
-        <translation>There are no pages to reorder.</translation>
+        <location filename="../src/ui/MainWindow.cpp" line="1005"/>
+        <source>There are no pages to manage.</source>
+        <translation>There are no pages to manage.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1615"/>
+        <location filename="../src/ui/MainWindow.cpp" line="2357"/>
         <source>Undo:</source>
         <translation>Undo:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1626"/>
+        <location filename="../src/ui/MainWindow.cpp" line="2372"/>
         <source>Redo:</source>
         <translation>Redo:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="211"/>
+        <location filename="../src/ui/MainWindow.cpp" line="349"/>
         <source>Delete labels</source>
         <translation>Delete labels</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1233"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1950"/>
         <source>Delete selected labels</source>
         <translation>Delete selected labels</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2515"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3350"/>
         <source>Unsaved changes</source>
         <translation>Unsaved changes</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2515"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3351"/>
         <source>The current project has unsaved changes. Do you want to save them?</source>
         <translation>The current project has unsaved changes. Do you want to save them?</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1168"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1717"/>
         <source>The insert group is hidden by the current filter.</source>
         <translation>The insert group is hidden by the current filter.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="254"/>
+        <location filename="../src/ui/MainWindow.cpp" line="402"/>
         <source>Ready</source>
         <translation>Ready</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2317"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3102"/>
         <source>Preference warnings</source>
         <translation>Preference warnings</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2254"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3039"/>
         <source>Auto backup failed: could not create %1</source>
         <translation>Auto backup failed: could not create %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2250"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3035"/>
         <source>Auto backed up %1</source>
         <translation>Auto backed up %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2257"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3042"/>
         <source>Auto backup failed: %1</source>
         <translation>Auto backup failed: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2372"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3158"/>
         <source>Preferences applied</source>
         <translation>Preferences applied</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2369"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3155"/>
         <source>Language Changed</source>
         <translation>Language Changed</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2370"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3156"/>
         <source>The language change will take effect after restarting the application.</source>
         <translation>The language change will take effect after restarting the application.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2381"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3167"/>
         <source>Could not read preference.json; using default preferences.</source>
         <translation>Could not read preference.json; using default preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2383"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3169"/>
         <source>preference.json is not valid JSON: %1; using default preferences.</source>
         <translation>preference.json is not valid JSON: %1; using default preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2385"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3171"/>
         <source>preference.json must contain a JSON object; using default preferences.</source>
         <translation>preference.json must contain a JSON object; using default preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2387"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3173"/>
         <source>appearance must be a JSON object; using default appearance preferences.</source>
         <translation>appearance must be a JSON object; using default appearance preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2403"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3207"/>
         <source>labelMarker must be a JSON object; using default marker preferences.</source>
         <translation>labelMarker must be a JSON object; using default marker preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2405"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2407"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2453"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2455"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3209"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3211"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3257"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3259"/>
         <source>%1 must be a positive number; using the default value.</source>
         <translation>%1 must be a positive number; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2409"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3213"/>
         <source>labelTable must be a JSON object; using default label table preferences.</source>
         <translation>labelTable must be a JSON object; using default label table preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2411"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2413"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2476"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2478"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3215"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3217"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3281"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3283"/>
         <source>%1 must be a positive integer; using the default value.</source>
         <translation>%1 must be a positive integer; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2421"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3225"/>
         <source>labelTextEditor must be a JSON object; using default text editor preferences.</source>
         <translation>labelTextEditor must be a JSON object; using default text editor preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2429"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3233"/>
         <source>markerTextBubble must be a JSON object; using default marker text bubble preferences.</source>
         <translation>markerTextBubble must be a JSON object; using default marker text bubble preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2441"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3245"/>
         <source>canvasLabelTextEditor must be a JSON object; using default canvas label editor preferences.</source>
         <translation>canvasLabelTextEditor must be a JSON object; using default canvas label editor preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2389"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2415"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2423"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2431"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3175"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3219"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3227"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3235"/>
         <source>%1 must be a string; using the default value.</source>
         <translation>%1 must be a string; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2391"/>
+        <source>Repair Image References</source>
+        <translation type="vanished">Repair Image References</translation>
+    </message>
+    <message>
+        <source>Fix invalid image references before applying.</source>
+        <translation type="vanished">Fix invalid image references before applying.</translation>
+    </message>
+    <message>
+        <source>There are no image references to update.</source>
+        <translation type="vanished">There are no image references to update.</translation>
+    </message>
+    <message>
+        <source>This will update the project to point selected pages to the chosen image files.
+
+The project will be saved before and after updating image references.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</source>
+        <translation type="vanished">This will update the project to point selected pages to the chosen image files.
+
+The project will be saved before and after updating image references.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</translation>
+    </message>
+    <message>
+        <source>Repair failed</source>
+        <translation type="vanished">Repair failed</translation>
+    </message>
+    <message>
+        <source>Image references were updated, but the project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</source>
+        <translation type="vanished">Image references were updated, but the project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</translation>
+    </message>
+    <message>
+        <source>Image references updated.</source>
+        <translation type="vanished">Image references updated.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3177"/>
         <source>%1 must name a built-in theme; using no application theme.</source>
         <translation>%1 must name a built-in theme; using no application theme.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2393"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3179"/>
         <source>%1 must be a string; using the system language.</source>
         <translation>%1 must be a string; using the system language.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2395"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3185"/>
         <source>automation must be a JSON object; using default automation preferences.</source>
         <translation>automation must be a JSON object; using default automation preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2397"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3187"/>
         <source>%1 must be true or false; using the default value.</source>
         <translation>%1 must be true or false; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2399"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3203"/>
         <source>%1 must be a JSON object; ignoring automation shortcuts.</source>
         <translation>%1 must be a JSON object; ignoring automation shortcuts.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2401"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3205"/>
         <source>%1 must be a valid shortcut string; ignoring this automation shortcut.</source>
         <translation>%1 must be a valid shortcut string; ignoring this automation shortcut.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2417"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2419"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2425"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2427"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2433"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2435"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3221"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3223"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3229"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3231"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3237"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3239"/>
         <source>%1 must be zero or a positive number; using the default value.</source>
         <translation>%1 must be zero or a positive number; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2437"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2439"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2443"/>
-        <location filename="../src/ui/MainWindow.cpp" line="2445"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3241"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3243"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3247"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3249"/>
         <source>%1 must be a number between 0 and 1; using the default value.</source>
         <translation>%1 must be a number between 0 and 1; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2447"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3251"/>
         <source>groupStyles must be an array; group styles will use defaults.</source>
         <translation>groupStyles must be an array; group styles will use defaults.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2449"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3253"/>
         <source>groupStyles[%1] must be a JSON object; this group style will use defaults.</source>
         <translation>groupStyles[%1] must be a JSON object; this group style will use defaults.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2451"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3255"/>
         <source>groupStyles[%1].groupColor is not a valid color; this color was skipped.</source>
         <translation>groupStyles[%1].groupColor is not a valid color; this color was skipped.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2457"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3261"/>
         <source>groupStyles[%1].markerStyle must be circle or square; using the default value.</source>
         <translation>groupStyles[%1].markerStyle must be circle or square; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2459"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3263"/>
         <source>input must be a JSON object; using default input preferences.</source>
         <translation>input must be a JSON object; using default input preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2462"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3266"/>
         <source>%1 must be a modifier name or modifier combination; using the default value.</source>
         <translation>%1 must be a modifier name or modifier combination; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2472"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3277"/>
         <source>%1 must be a valid key sequence; using the default value.</source>
         <translation>%1 must be a valid key sequence; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2474"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3279"/>
         <source>%1 must be a non-empty string; using the default value.</source>
         <translation>%1 must be a non-empty string; using the default value.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2481"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3286"/>
         <source>Unknown preference warning.</source>
         <translation>Unknown preference warning.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2486"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3291"/>
         <source>Dialogue</source>
         <translation>Dialogue</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="2486"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3291"/>
         <source>Outside text</source>
         <translation>Outside text</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="630"/>
+        <location filename="../src/ui/MainWindow.cpp" line="820"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1763"/>
         <source>Image copied to clipboard.</source>
         <translation>Image copied to clipboard.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3189"/>
         <source>%1 must be a JSON object; using default Python automation settings.</source>
         <translation>%1 must be a JSON object; using default Python automation settings.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3191"/>
         <source>%1 must be a string; using automatic Python detection.</source>
         <translation>%1 must be a string; using automatic Python detection.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3193"/>
         <source>%1 must be an array; ignoring Python arguments.</source>
         <translation>%1 must be an array; ignoring Python arguments.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3195"/>
         <source>%1 entry %2 must be a string; ignoring this Python argument.</source>
         <translation>%1 entry %2 must be a string; ignoring this Python argument.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3199"/>
         <source>%1 must be true or false; requirements will not be installed automatically.</source>
         <translation>%1 must be true or false; requirements will not be installed automatically.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3201"/>
         <source>%1 must be a string; using the pip default index.</source>
         <translation>%1 must be a string; using the pip default index.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="484"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3331"/>
         <source>Start Proofreading Baseline</source>
         <translation>Start Proofreading Baseline</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="3331"/>
         <source>End Proofreading</source>
         <translation>End Proofreading</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="487"/>
         <source>Show Proofreading Changes...</source>
         <translation>Show Proofreading Changes...</translation>
     </message>
     <message>
         <source>Export Proofreading Report...</source>
-        <translation>Export Proofreading Report...</translation>
+        <translation type="vanished">Export Proofreading Report...</translation>
     </message>
     <message>
         <source>Open a project before exporting proofreading report.</source>
-        <translation>Open a project before exporting proofreading report.</translation>
+        <translation type="vanished">Open a project before exporting proofreading report.</translation>
     </message>
     <message>
         <source>Start a proofreading baseline before exporting a report.</source>
-        <translation>Start a proofreading baseline before exporting a report.</translation>
+        <translation type="vanished">Start a proofreading baseline before exporting a report.</translation>
     </message>
     <message>
         <source>No proofreading changes to export.</source>
-        <translation>No proofreading changes to export.</translation>
+        <translation type="vanished">No proofreading changes to export.</translation>
     </message>
     <message>
         <source>Export proofreading report</source>
-        <translation>Export proofreading report</translation>
+        <translation type="vanished">Export proofreading report</translation>
     </message>
     <message>
         <source>Exporting proofreading report...</source>
-        <translation>Exporting proofreading report...</translation>
+        <translation type="vanished">Exporting proofreading report...</translation>
     </message>
     <message>
         <source>HTML files (*.html);;All files (*)</source>
-        <translation>HTML files (*.html);;All files (*)</translation>
+        <translation type="vanished">HTML files (*.html);;All files (*)</translation>
     </message>
     <message>
         <source>Failed to export proofreading report: %1</source>
-        <translation>Failed to export proofreading report: %1</translation>
+        <translation type="vanished">Failed to export proofreading report: %1</translation>
     </message>
     <message>
         <source>Proofreading report exported.</source>
-        <translation>Proofreading report exported.</translation>
+        <translation type="vanished">Proofreading report exported.</translation>
     </message>
     <message>
         <source>Proofreading Report</source>
-        <translation>Proofreading Report</translation>
+        <translation type="vanished">Proofreading Report</translation>
     </message>
     <message>
         <source>Generated at</source>
-        <translation>Generated at</translation>
+        <translation type="vanished">Generated at</translation>
     </message>
     <message>
         <source>Total changes</source>
-        <translation>Total changes</translation>
+        <translation type="vanished">Total changes</translation>
     </message>
     <message>
         <source>Label</source>
-        <translation>Label</translation>
+        <translation type="vanished">Label</translation>
     </message>
     <message>
         <source>Change Type</source>
-        <translation>Change Type</translation>
+        <translation type="vanished">Change Type</translation>
     </message>
     <message>
         <source>Group Change</source>
-        <translation>Group Change</translation>
+        <translation type="vanished">Group Change</translation>
     </message>
     <message>
         <source>Marker Change</source>
-        <translation>Marker Change</translation>
+        <translation type="vanished">Marker Change</translation>
     </message>
     <message>
         <source>Order Change</source>
-        <translation>Order Change</translation>
+        <translation type="vanished">Order Change</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="490"/>
         <source>Compare With Project...</source>
         <translation>Compare With Project...</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1211"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1229"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1244"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1254"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1272"/>
         <source>Compare Projects</source>
         <translation>Compare Projects</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1280"/>
         <source>Current Project</source>
         <translation>Current Project</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1281"/>
         <source>Target Project</source>
         <translation>Target Project</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1211"/>
         <source>Open a project before comparing.</source>
         <translation>Open a project before comparing.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1216"/>
         <source>Select project to compare</source>
         <translation>Select project to compare</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1219"/>
         <source>LabelPlus Text (*.txt);;All Files (*)</source>
         <translation>LabelPlus Text (*.txt);;All Files (*)</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1230"/>
         <source>Failed to open comparison project: %1</source>
         <translation>Failed to open comparison project: %1</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1236"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1258"/>
         <source>Comparing projects...</source>
         <translation>Comparing projects...</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1236"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1258"/>
         <source>Abort</source>
         <translation>Abort</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1245"/>
         <source>Failed to compare projects: %1</source>
         <translation>Failed to compare projects: %1</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1243"/>
         <source>Unknown error</source>
         <translation>Unknown error</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1255"/>
         <source>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</source>
         <translation>The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1272"/>
         <source>No differences from the selected project.</source>
         <translation>No differences from the selected project.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1093"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1170"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1177"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1185"/>
         <source>Proofreading</source>
         <translation>Proofreading</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1093"/>
         <source>Open a project before starting proofreading.</source>
         <translation>Open a project before starting proofreading.</translation>
     </message>
     <message>
         <source>Replace the existing proofreading baseline with the current project state?</source>
-        <translation>Replace the existing proofreading baseline with the current project state?</translation>
+        <translation type="vanished">Replace the existing proofreading baseline with the current project state?</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1114"/>
         <source>Start proofreading baseline</source>
         <translation>Start proofreading baseline</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1148"/>
         <source>End proofreading</source>
         <translation>End proofreading</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1129"/>
         <source>Proofreading baseline updated.</source>
         <translation>Proofreading baseline updated.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1163"/>
         <source>Proofreading ended.</source>
         <translation>Proofreading ended.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1170"/>
         <source>Open a project before viewing proofreading changes.</source>
         <translation>Open a project before viewing proofreading changes.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1178"/>
         <source>Start a proofreading baseline before viewing changes.</source>
         <translation>Start a proofreading baseline before viewing changes.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1185"/>
         <source>No proofreading changes since the baseline.</source>
         <translation>No proofreading changes since the baseline.</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="395"/>
         <source>Revision mode</source>
         <translation>Revision mode</translation>
     </message>
     <message>
+        <location filename="../src/ui/MainWindow.cpp" line="399"/>
         <source>Proofreading baseline is active.</source>
         <translation>Proofreading baseline is active.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="0"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3181"/>
         <source>proofreading must be a JSON object; using default proofreading preferences.</source>
         <translation>proofreading must be a JSON object; using default proofreading preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="0"/>
+        <location filename="../src/ui/MainWindow.cpp" line="3183"/>
         <source>%1 must be auto, semantic, or raw; using automatic text diff cleanup.</source>
         <translation>%1 must be auto, semantic, or raw; using automatic text diff cleanup.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1032"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1037"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1042"/>
+        <source>Rename Images</source>
+        <translation>Rename Images</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1037"/>
+        <source>There are no image files to rename.</source>
+        <translation>There are no image files to rename.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1033"/>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>Fix invalid file names before renaming.</translation>
+    </message>
+    <message>
+        <source>This will rename image files on disk and update the project to point to the new file names.
+
+The project will be saved before renaming, then saved again after the image files are renamed.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</source>
+        <translation type="vanished">This will rename image files on disk and update the project to point to the new file names.
+
+The project will be saved before renaming, then saved again after the image files are renamed.
+
+This operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.
+
+Continue?</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1058"/>
+        <source>Rename failed</source>
+        <translation>Rename failed</translation>
+    </message>
+    <message>
+        <source>Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</source>
+        <translation type="vanished">Image files were renamed, but the updated project file could not be saved. Please save the project before closing LabelQt.
+
+Last error: %1</translation>
+    </message>
+    <message>
+        <source>Renamed image files by page order.</source>
+        <translation type="vanished">Renamed image files by page order.</translation>
     </message>
 </context>
 <context>
     <name>PageOrderDialog</name>
     <message>
-        <location filename="../src/ui/PageOrderDialog.cpp" line="51"/>
-        <source>Reorder Pages</source>
-        <translation>Reorder Pages</translation>
+        <source>Images (%1);;All files (*)</source>
+        <translation type="vanished">Images (%1);;All files (*)</translation>
     </message>
     <message>
-        <location filename="../src/ui/PageOrderDialog.cpp" line="55"/>
+        <location filename="../src/ui/project/PageOrderDialog.cpp" line="90"/>
+        <source>Manage Pages</source>
+        <translation>Manage Pages</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderDialog.cpp" line="94"/>
         <source>Drag pages in the list to change their order.</source>
         <translation>Drag pages in the list to change their order.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PageOrderDialog.cpp" line="82"/>
+        <location filename="../src/ui/project/PageOrderDialog.cpp" line="122"/>
         <source>Move selected pages up</source>
         <translation>Move selected pages up</translation>
     </message>
     <message>
-        <location filename="../src/ui/PageOrderDialog.cpp" line="83"/>
+        <location filename="../src/ui/project/PageOrderDialog.cpp" line="123"/>
         <source>Move selected pages down</source>
         <translation>Move selected pages down</translation>
     </message>
     <message>
-        <location filename="../src/ui/PageOrderDialog.cpp" line="84"/>
+        <location filename="../src/ui/project/PageOrderDialog.cpp" line="124"/>
         <source>Remove selected pages from the project</source>
         <translation>Remove selected pages from the project</translation>
+    </message>
+    <message>
+        <source>Assign an image file to the selected page</source>
+        <translation type="vanished">Assign an image file to the selected page</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderDialog.cpp" line="169"/>
+        <source>Rename Images</source>
+        <translation>Rename Images</translation>
+    </message>
+    <message>
+        <source>Select Replacement Image</source>
+        <translation type="vanished">Select Replacement Image</translation>
     </message>
 </context>
 <context>
     <name>PageOrderListModel</name>
     <message>
-        <location filename="../src/ui/PageOrderListModel.cpp" line="167"/>
-        <source>Image</source>
-        <translation>Image</translation>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="247"/>
+        <source>Current image</source>
+        <translation>Current image</translation>
     </message>
     <message>
-        <location filename="../src/ui/PageOrderListModel.cpp" line="169"/>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="249"/>
+        <source>Target image</source>
+        <translation>Target image</translation>
+    </message>
+    <message>
+        <source>Rename status</source>
+        <translation type="vanished">Rename status</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="202"/>
+        <source>Not selected</source>
+        <translation>Not selected</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="213"/>
+        <source>Will be renamed to %1</source>
+        <translation>Will be renamed to %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="210"/>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="214"/>
+        <source>Unchanged</source>
+        <translation>Unchanged</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="209"/>
+        <source>Will point to %1</source>
+        <translation>Will point to %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="201"/>
+        <source>Image missing</source>
+        <translation>Image missing</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="251"/>
+        <source>Image action</source>
+        <translation>Image action</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/PageOrderListModel.cpp" line="253"/>
         <source>Original #</source>
         <translation>Original #</translation>
     </message>
@@ -1260,582 +1666,615 @@ Last error: %2</translation>
 <context>
     <name>PreferenceDialog</name>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="177"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="121"/>
         <source>Preferences</source>
         <translation>Preferences</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="182"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="126"/>
         <source>Preference file: %1</source>
         <translation>Preference file: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="264"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="318"/>
         <source>Default marker diameter</source>
         <translation>Default marker diameter</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="265"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="319"/>
         <source>Default marker font size</source>
         <translation>Default marker font size</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="227"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="277"/>
         <source>Use system default</source>
         <translation>Use system default</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="266"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="288"/>
         <source>Qt widget style</source>
         <translation>Qt widget style</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="233"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="283"/>
         <source>Use no application theme</source>
         <translation>Use no application theme</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="135"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="65"/>
         <source>Breeze Dark</source>
         <translation>Breeze Dark</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="138"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="68"/>
         <source>Breeze Light</source>
         <translation>Breeze Light</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="267"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="289"/>
         <source>Breeze stylesheet theme</source>
         <translation>Breeze stylesheet theme</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="238"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="254"/>
         <source>Follow system language</source>
         <translation>Follow system language</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="268"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="264"/>
         <source>Language</source>
         <translation>Language</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="269"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="172"/>
         <source>Automation</source>
         <translation>Automation</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="242"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="363"/>
         <source>Show automation run log window</source>
         <translation>Show automation run log window</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="189"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="174"/>
         <source>Automation shortcuts</source>
         <translation>Automation shortcuts</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="328"/>
         <source>Assign shortcuts to automation scripts. Leave a shortcut empty to disable it.</source>
-        <translation>Assign shortcuts to automation scripts. Leave a shortcut empty to disable it.</translation>
+        <translation type="vanished">Assign shortcuts to automation scripts. Leave a shortcut empty to disable it.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="334"/>
         <source>Automation script</source>
-        <translation>Automation script</translation>
+        <translation type="vanished">Automation script</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="334"/>
         <source>Shortcut</source>
-        <translation>Shortcut</translation>
+        <translation type="vanished">Shortcut</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="496"/>
         <source>Official</source>
-        <translation>Official</translation>
+        <translation type="vanished">Official</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="496"/>
         <source>Custom</source>
-        <translation>Custom</translation>
+        <translation type="vanished">Custom</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="497"/>
         <source>%1 / %2 / %3</source>
-        <translation>%1 / %2 / %3</translation>
+        <translation type="vanished">%1 / %2 / %3</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="516"/>
         <source>Missing script: %1</source>
-        <translation>Missing script: %1</translation>
+        <translation type="vanished">Missing script: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="977"/>
         <source>%1 is already assigned to %2; clear one automation shortcut before saving.</source>
-        <translation>%1 is already assigned to %2; clear one automation shortcut before saving.</translation>
+        <translation type="vanished">%1 is already assigned to %2; clear one automation shortcut before saving.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="270"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="320"/>
         <source>Maximum label table text rows</source>
         <translation>Maximum label table text rows</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="83"/>
+        <location filename="../src/ui/preferences/PreferenceDialogWidgets.cpp" line="32"/>
         <source>Choose Font...</source>
         <translation>Choose Font...</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="84"/>
+        <location filename="../src/ui/preferences/PreferenceDialogWidgets.cpp" line="33"/>
         <source>Use Default</source>
         <translation>Use Default</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="272"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="322"/>
         <source>Text editor font</source>
         <translation>Text editor font</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="271"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="321"/>
         <source>Label table font</source>
         <translation>Label table font</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="273"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="323"/>
         <source>Marker text bubble font</source>
         <translation>Marker text bubble font</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="274"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="324"/>
+        <source>Marker text bubble line wrap threshold</source>
+        <translation>Marker text bubble line wrap threshold</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="324"/>
         <source>Marker text bubble opacity</source>
         <translation>Marker text bubble opacity</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="275"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="325"/>
         <source>Canvas label editor opacity</source>
         <translation>Canvas label editor opacity</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="408"/>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="412"/>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="571"/>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="579"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="478"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="482"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="630"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="638"/>
         <source>%1%</source>
         <translation>%1%</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="307"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="401"/>
         <source>Move-label modifier</source>
         <translation>Move-label modifier</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="308"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="402"/>
         <source>Previous label modifier</source>
         <translation>Previous label modifier</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="309"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="403"/>
         <source>Undo</source>
         <translation>Undo</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="310"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="404"/>
         <source>Redo</source>
         <translation>Redo</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="314"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="409"/>
         <source>Switch label</source>
         <translation>Switch label</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="315"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="410"/>
         <source>Previous label</source>
         <translation>Previous label</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="316"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="411"/>
         <source>Next label</source>
         <translation>Next label</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="317"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="412"/>
         <source>Previous page</source>
         <translation>Previous page</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="318"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="413"/>
         <source>Next page</source>
         <translation>Next page</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="311"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="406"/>
         <source>Edit label text</source>
         <translation>Edit label text</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="312"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="407"/>
         <source>Commit label text</source>
         <translation>Commit label text</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="310"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="405"/>
         <source>Delete label</source>
         <translation>Delete label</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="188"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="170"/>
         <source>Key mappings</source>
         <translation>Key mappings</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="276"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="265"/>
         <source>Backup path</source>
         <translation>Backup path</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="277"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="266"/>
         <source>Backup interval seconds</source>
         <translation>Backup interval seconds</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="187"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="164"/>
         <source>General</source>
         <translation>General</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="354"/>
         <source>Color</source>
-        <translation>Color</translation>
+        <translation type="vanished">Color</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="354"/>
         <source>Marker diameter</source>
-        <translation>Marker diameter</translation>
+        <translation type="vanished">Marker diameter</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="354"/>
         <source>Font size</source>
-        <translation>Font size</translation>
+        <translation type="vanished">Font size</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="354"/>
         <source>Marker style</source>
-        <translation>Marker style</translation>
+        <translation type="vanished">Marker style</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="362"/>
         <source>Add group style</source>
-        <translation>Add group style</translation>
+        <translation type="vanished">Add group style</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="363"/>
         <source>Remove selected styles</source>
-        <translation>Remove selected styles</translation>
+        <translation type="vanished">Remove selected styles</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="190"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="176"/>
         <source>Group styles</source>
         <translation>Group styles</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="191"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="180"/>
         <source>JSON preview</source>
         <translation>JSON preview</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="201"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="199"/>
         <source>Reload</source>
         <translation>Reload</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="202"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="200"/>
         <source>Open in Text Editor</source>
         <translation>Open in Text Editor</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="203"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="201"/>
         <source>Save</source>
         <translation>Save</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="204"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="202"/>
         <source>Close</source>
         <translation>Close</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="440"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="512"/>
         <source>Could not read preference file; showing defaults.</source>
         <translation>Could not read preference file; showing defaults.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="448"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="520"/>
         <source>Preference file is invalid; showing defaults.</source>
         <translation>Preference file is invalid; showing defaults.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="454"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="526"/>
         <source>Loaded preference file.</source>
         <translation>Loaded preference file.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="172"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="116"/>
         <source>Showing current preferences.</source>
         <translation>Showing current preferences.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="796"/>
         <source>Circle</source>
-        <translation>Circle</translation>
+        <translation type="vanished">Circle</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="797"/>
         <source>Square</source>
-        <translation>Square</translation>
+        <translation type="vanished">Square</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="834"/>
         <source>Choose group color</source>
-        <translation>Choose group color</translation>
+        <translation type="vanished">Choose group color</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="887"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="844"/>
         <source>Choose text editor font</source>
         <translation>Choose text editor font</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="848"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="828"/>
         <source>Choose label table font</source>
         <translation>Choose label table font</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="927"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="860"/>
         <source>Choose marker text bubble font</source>
         <translation>Choose marker text bubble font</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="874"/>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="913"/>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="953"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="911"/>
         <source>Default font and size</source>
         <translation>Default font and size</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="880"/>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="919"/>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="959"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="916"/>
         <source>%1, %2 pt</source>
         <translation>%1, %2 pt</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="995"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="948"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="954"/>
         <source>Could not save preference file.</source>
         <translation>Could not save preference file.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="1008"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="967"/>
         <source>Preferences saved and applied.</source>
         <translation>Preferences saved and applied.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="1009"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="968"/>
         <source>Preferences saved and applied with warnings; see the main window status bar.</source>
         <translation>Preferences saved and applied with warnings; see the main window status bar.</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="1016"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="975"/>
         <source>Could not open preference file in the system text editor.</source>
         <translation>Could not open preference file in the system text editor.</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="352"/>
         <source>Use bundled or system Python</source>
         <translation>Use bundled or system Python</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="353"/>
         <source>Browse...</source>
         <translation>Browse...</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="358"/>
         <source>Optional Python interpreter arguments</source>
         <translation>Optional Python interpreter arguments</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="360"/>
         <source>Install requirements.txt before running scripts</source>
         <translation>Install requirements.txt before running scripts</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="362"/>
         <source>Use pip default index</source>
         <translation>Use pip default index</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="366"/>
         <source>Python command</source>
         <translation>Python command</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="367"/>
         <source>Python arguments</source>
         <translation>Python arguments</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="368"/>
         <source>Dependencies</source>
         <translation>Dependencies</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="369"/>
         <source>pip index URL</source>
         <translation>pip index URL</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="370"/>
         <source>Run log</source>
         <translation>Run log</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="927"/>
         <source>Choose Python executable</source>
         <translation>Choose Python executable</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="923"/>
         <source>Python executable (python.exe pythonw.exe *.exe);;All files (*)</source>
         <translation>Python executable (python.exe pythonw.exe *.exe);;All files (*)</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="925"/>
         <source>Python executable (python python3 python*);;All files (*)</source>
         <translation>Python executable (python python3 python*);;All files (*)</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="334"/>
         <source>Auto: CJK text uses raw diff</source>
         <translation>Auto: CJK text uses raw diff</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="335"/>
         <source>Always use semantic cleanup</source>
         <translation>Always use semantic cleanup</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="336"/>
         <source>Never use semantic cleanup</source>
         <translation>Never use semantic cleanup</translation>
     </message>
     <message>
-        <location filename="../src/ui/PreferenceDialog.cpp" line="0"/>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="338"/>
         <source>Text diff cleanup</source>
         <translation>Text diff cleanup</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="139"/>
         <source>Search...</source>
         <translation>Search...</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="166"/>
         <source>Appearance</source>
         <translation>Appearance</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="168"/>
         <source>Label display</source>
         <translation>Label display</translation>
     </message>
     <message>
+        <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="178"/>
         <source>Proofreading</source>
         <translation>Proofreading</translation>
     </message>
 </context>
 <context>
-    <name>AutomationShortcutEditorWidget</name>
+    <name>ProjectImageRenameService</name>
     <message>
-        <source>Assign shortcuts to automation scripts. Leave a shortcut empty to disable it.</source>
-        <translation>Assign shortcuts to automation scripts. Leave a shortcut empty to disable it.</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="30"/>
+        <source>Pattern cannot be empty.</source>
+        <translation>Pattern cannot be empty.</translation>
     </message>
     <message>
-        <source>Automation script</source>
-        <translation>Automation script</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="31"/>
+        <source>Unexpected &apos;}&apos; in pattern.</source>
+        <translation>Unexpected &apos;}&apos; in pattern.</translation>
     </message>
     <message>
-        <source>Shortcut</source>
-        <translation>Shortcut</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="32"/>
+        <source>Missing &apos;}&apos; in pattern.</source>
+        <translation>Missing &apos;}&apos; in pattern.</translation>
     </message>
     <message>
-        <source>Shortcut %1 is assigned to both %2 and %3.</source>
-        <translation>Shortcut %1 is assigned to both %2 and %3.</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="33"/>
+        <source>Only {index:03}-style zero padding is supported.</source>
+        <translation>Only {index:03}-style zero padding is supported.</translation>
     </message>
     <message>
-        <source>Official</source>
-        <translation>Official</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="34"/>
+        <source>Unknown token {%1}.</source>
+        <translation>Unknown token {%1}.</translation>
     </message>
     <message>
-        <source>Custom</source>
-        <translation>Custom</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="35"/>
+        <source>Rendered file name cannot be empty.</source>
+        <translation>Rendered file name cannot be empty.</translation>
     </message>
     <message>
-        <source>%1 / %2 / %3</source>
-        <translation>%1 / %2 / %3</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="44"/>
+        <source>Source image does not exist.</source>
+        <translation>Source image does not exist.</translation>
     </message>
     <message>
-        <source>Missing script: %1</source>
-        <translation>Missing script: %1</translation>
-    </message>
-</context>
-<context>
-    <name>GroupStyleEditorWidget</name>
-    <message>
-        <source>Color</source>
-        <translation>Color</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="45"/>
+        <source>Source image is not a file.</source>
+        <translation>Source image is not a file.</translation>
     </message>
     <message>
-        <source>Marker diameter</source>
-        <translation>Marker diameter</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="47"/>
+        <source>File name cannot start or end with whitespace.</source>
+        <translation>File name cannot start or end with whitespace.</translation>
     </message>
     <message>
-        <source>Font size</source>
-        <translation>Font size</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="48"/>
+        <source>File name cannot be empty or end with a dot.</source>
+        <translation>File name cannot be empty or end with a dot.</translation>
     </message>
     <message>
-        <source>Marker style</source>
-        <translation>Marker style</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="49"/>
+        <source>File name contains characters that are not portable.</source>
+        <translation>File name contains characters that are not portable.</translation>
     </message>
     <message>
-        <source>Add group style</source>
-        <translation>Add group style</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="50"/>
+        <source>File name uses a Windows reserved device name.</source>
+        <translation>File name uses a Windows reserved device name.</translation>
     </message>
     <message>
-        <source>Remove selected styles</source>
-        <translation>Remove selected styles</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="36"/>
+        <source>Duplicate target file name.</source>
+        <translation>Duplicate target file name.</translation>
     </message>
     <message>
-        <source>Circle</source>
-        <translation>Circle</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="37"/>
+        <source>Target file already exists.</source>
+        <translation>Target file already exists.</translation>
     </message>
     <message>
-        <source>Square</source>
-        <translation>Square</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="38"/>
+        <source>Fix invalid file names before renaming.</source>
+        <translation>Fix invalid file names before renaming.</translation>
     </message>
     <message>
-        <source>Choose group color</source>
-        <translation>Choose group color</translation>
-    </message>
-</context>
-<context>
-    <name>ProjectViewController</name>
-    <message>
-        <location filename="../src/ui/ProjectViewController.cpp" line="93"/>
-        <source>source #%1</source>
-        <translation>source #%1</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="39"/>
+        <source>The pattern does not change any file name.</source>
+        <translation>The pattern does not change any file name.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ProjectViewController.cpp" line="96"/>
-        <source>unknown</source>
-        <translation>unknown</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="51"/>
+        <source>There are no image files to rename.</source>
+        <translation>There are no image files to rename.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ProjectViewController.cpp" line="99"/>
-        <source>Source: %1</source>
-        <translation>Source: %1</translation>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="52"/>
+        <source>Failed to rename %1 to a temporary file.</source>
+        <translation>Failed to rename %1 to a temporary file.</translation>
+    </message>
+    <message>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="53"/>
+        <source>Failed to rename %1 to %2.</source>
+        <translation>Failed to rename %1 to %2.</translation>
+    </message>
+    <message>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="46"/>
+        <source>File name pattern cannot change the image directory.</source>
+        <translation>File name pattern cannot change the image directory.</translation>
+    </message>
+    <message>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="41"/>
+        <source>Target image does not exist.</source>
+        <translation>Target image does not exist.</translation>
+    </message>
+    <message>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="42"/>
+        <source>Target image is not a file.</source>
+        <translation>Target image is not a file.</translation>
+    </message>
+    <message>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="43"/>
+        <source>Target image cannot be read.</source>
+        <translation>Target image cannot be read.</translation>
+    </message>
+    <message>
+        <location filename="../src/services/project/ProjectImageRenameService.cpp" line="40"/>
+        <source>Multiple readable image files match the rendered name.</source>
+        <translation>Multiple readable image files match the rendered name.</translation>
     </message>
 </context>
 <context>
     <name>ProjectMergeDialog</name>
     <message>
-        <location filename="../src/ui/ProjectMergeDialog.cpp" line="57"/>
+        <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="58"/>
         <source>Merge Projects</source>
         <translation>Merge Projects</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/ProjectMergeDialog.cpp" line="100"/>
+        <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="101"/>
         <source>%1 (%n candidate(s))</source>
         <translation>
             <numerusform>%1 (%n candidate(s))</numerusform>
@@ -1843,12 +2282,12 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/ProjectMergeDialog.cpp" line="112"/>
+        <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="113"/>
         <source>Choose the project to use for %1.</source>
         <translation>Choose the project to use for %1.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/ProjectMergeDialog.cpp" line="152"/>
+        <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="153"/>
         <source>%1 - %n label(s)</source>
         <translation>
             <numerusform>%1 - %n label(s)</numerusform>
@@ -1856,7 +2295,7 @@ Last error: %2</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/ProjectMergeDialog.cpp" line="186"/>
+        <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="188"/>
         <source>Loaded %n page(s). %1 page(s) need a source selection.</source>
         <translation>
             <numerusform>Loaded %n page(s). %1 page(s) need a source selection.</numerusform>
@@ -1864,256 +2303,332 @@ Last error: %2</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/ProjectMergeDialog.cpp" line="88"/>
+        <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="89"/>
         <source>Open merged project after saving</source>
         <translation>Open merged project after saving</translation>
     </message>
 </context>
 <context>
-    <name>main</name>
+    <name>ProjectViewController</name>
     <message>
-        <location filename="../src/main.cpp" line="50"/>
-        <source>LabelPlus text project editor.</source>
-        <translation>LabelPlus text project editor.</translation>
+        <location filename="../src/ui/project/ProjectViewController.cpp" line="93"/>
+        <source>source #%1</source>
+        <translation>source #%1</translation>
     </message>
     <message>
-        <location filename="../src/main.cpp" line="54"/>
-        <source>LabelPlus text project to open.</source>
-        <translation>LabelPlus text project to open.</translation>
+        <location filename="../src/ui/project/ProjectViewController.cpp" line="96"/>
+        <source>unknown</source>
+        <translation>unknown</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/project/ProjectViewController.cpp" line="99"/>
+        <source>Source: %1</source>
+        <translation>Source: %1</translation>
     </message>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
-    <message>
+    <message numerus="yes">
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="339"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="590"/>
         <source>%n proofreading change(s)</source>
-        <translation>%n proofreading change(s)</translation>
+        <translation>
+            <numerusform>%n proofreading change(s)</numerusform>
+            <numerusform>%n proofreading changes</numerusform>
+        </translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="343"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="358"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="888"/>
         <source>Page</source>
         <translation>Page</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="346"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="358"/>
         <source>Change</source>
         <translation>Change</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="349"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="358"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="891"/>
         <source>Summary</source>
         <translation>Summary</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="279"/>
         <source>Before</source>
         <translation>Before</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="282"/>
         <source>After</source>
         <translation>After</translation>
     </message>
     <message>
         <source>Details</source>
-        <translation>Details</translation>
+        <translation type="vanished">Details</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="443"/>
         <source>Jump to Label</source>
         <translation>Jump to Label</translation>
     </message>
     <message>
         <source>Page: %1</source>
-        <translation>Page: %1</translation>
+        <translation type="vanished">Page: %1</translation>
     </message>
     <message>
         <source>Label: %1</source>
-        <translation>Label: %1</translation>
+        <translation type="vanished">Label: %1</translation>
     </message>
     <message>
         <source>Change: %1</source>
-        <translation>Change: %1</translation>
+        <translation type="vanished">Change: %1</translation>
     </message>
     <message>
         <source>Before group: %1</source>
-        <translation>Before group: %1</translation>
+        <translation type="vanished">Before group: %1</translation>
     </message>
     <message>
         <source>Before position: %1</source>
-        <translation>Before position: %1</translation>
+        <translation type="vanished">Before position: %1</translation>
     </message>
     <message>
         <source>After group: %1</source>
-        <translation>After group: %1</translation>
+        <translation type="vanished">After group: %1</translation>
     </message>
     <message>
         <source>After position: %1</source>
-        <translation>After position: %1</translation>
+        <translation type="vanished">After position: %1</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="812"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="898"/>
         <source>Added</source>
         <translation>Added</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="814"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="899"/>
         <source>Deleted</source>
         <translation>Deleted</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="816"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="818"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="831"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="900"/>
         <source>Modified</source>
         <translation>Modified</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="838"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="901"/>
         <source>text</source>
         <translation>text</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="842"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="903"/>
         <source>group</source>
         <translation>group</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="844"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="904"/>
         <source>marker</source>
         <translation>marker</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="846"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="905"/>
         <source>order</source>
         <translation>order</translation>
     </message>
     <message>
         <source>x=%1, y=%2</source>
-        <translation>x=%1, y=%2</translation>
+        <translation type="vanished">x=%1, y=%2</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="335"/>
         <source>Proofreading Changes</source>
         <translation>Proofreading Changes</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="398"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="892"/>
         <source>Text Difference</source>
         <translation>Text Difference</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="879"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="906"/>
         <source>No text change.</source>
         <translation>No text change.</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="444"/>
         <source>Export HTML...</source>
         <translation>Export HTML...</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="623"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="649"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="654"/>
         <source>Proofreading</source>
         <translation>Proofreading</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="623"/>
         <source>No proofreading changes to export.</source>
         <translation>No proofreading changes to export.</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="634"/>
         <source>Export proofreading report</source>
         <translation>Export proofreading report</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="643"/>
         <source>Exporting proofreading report...</source>
         <translation>Exporting proofreading report...</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="643"/>
         <source>Abort</source>
         <translation>Abort</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="635"/>
         <source>HTML files (*.html);;All files (*)</source>
         <translation>HTML files (*.html);;All files (*)</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="650"/>
         <source>Failed to export proofreading report: %1</source>
         <translation>Failed to export proofreading report: %1</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="654"/>
         <source>Proofreading report exported.</source>
         <translation>Proofreading report exported.</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="885"/>
         <source>Proofreading Report</source>
         <translation>Proofreading Report</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="886"/>
         <source>Generated at</source>
         <translation>Generated at</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="887"/>
         <source>Total changes</source>
         <translation>Total changes</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="889"/>
         <source>Label</source>
         <translation>Label</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="890"/>
         <source>Change Type</source>
         <translation>Change Type</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="893"/>
         <source>Group Change</source>
         <translation>Group Change</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="894"/>
         <source>Marker Change</source>
         <translation>Marker Change</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="895"/>
         <source>Order Change</source>
         <translation>Order Change</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="517"/>
         <source>All pages</source>
         <translation>All pages</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="517"/>
         <source>No pages</source>
         <translation>No pages</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="517"/>
         <source>%1 page(s)</source>
         <translation>%1 page(s)</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="518"/>
         <source>All changes</source>
         <translation>All changes</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="518"/>
         <source>No changes</source>
         <translation>No changes</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="518"/>
         <source>%1 change type(s)</source>
         <translation>%1 change type(s)</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="524"/>
         <source>All summaries</source>
         <translation>All summaries</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="524"/>
         <source>No summaries</source>
         <translation>No summaries</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="524"/>
         <source>%1 summary item(s)</source>
         <translation>%1 summary item(s)</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="840"/>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="902"/>
         <source>format</source>
         <translation>format</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="907"/>
         <source>Filters</source>
         <translation>Filters</translation>
     </message>
     <message>
+        <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="873"/>
         <source>Pages: %1; Changes: %2; Summaries: %3</source>
         <translation>Pages: %1; Changes: %2; Summaries: %3</translation>
     </message>
 </context>
 <context>
-    <name>CheckableFilterButton</name>
+    <name>main</name>
     <message>
-        <source>Select All</source>
-        <translation>Select All</translation>
+        <location filename="../src/main.cpp" line="52"/>
+        <source>LabelPlus text project editor.</source>
+        <translation>LabelPlus text project editor.</translation>
     </message>
     <message>
-        <source>Clear</source>
-        <translation>Clear</translation>
+        <location filename="../src/main.cpp" line="56"/>
+        <source>LabelPlus text project to open.</source>
+        <translation>LabelPlus text project to open.</translation>
     </message>
 </context>
 </TS>

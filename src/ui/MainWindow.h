@@ -54,6 +54,7 @@ class ViewportFittedTableColumns;
 
 namespace labelqt::services {
 struct ClipboardLabels;
+struct ProjectImageRenamePlan;
 }
 
 class MainWindow final : public QMainWindow {
@@ -78,6 +79,7 @@ private:
     void openProject();
     void mergeProjects();
     void reorderPages();
+    bool executeImageRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan);
     void startProofreadingBaseline();
     void endProofreadingBaseline();
     void showProofreadingChanges();

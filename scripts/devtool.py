@@ -74,6 +74,7 @@ MODULE_TOPICS = (
         keywords=("canvas", "image", "zoom", "viewport", "hover", "selection mode"),
         files=(
             "src/ui/canvas/ImageCanvas.*",
+            "src/ui/canvas/CanvasBottomBar.*",
             "src/ui/canvas/CanvasLabelItems.*",
             "src/ui/canvas/CanvasLabelTextEditor.*",
             "src/ui/canvas/ImagePageViewController.*",

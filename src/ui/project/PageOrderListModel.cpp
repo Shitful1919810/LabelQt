@@ -1,7 +1,9 @@
 #include "ui/project/PageOrderListModel.h"
 
 #include <QCoreApplication>
+#include <QColor>
 #include <QDataStream>
+#include <QFileInfo>
 #include <QIODevice>
 #include <QMimeData>
 #include <QSet>
@@ -43,6 +45,47 @@ int PageOrderListModel::sourceIndexForRow(int row) const
 int PageOrderListModel::rowForSourceIndex(int sourceIndex) const
 {
     return static_cast<int>(m_order.indexOf(sourceIndex));
+}
+
+void PageOrderListModel::refreshAllRows()
+{
+    if (m_order.isEmpty()) {
+        return;
+    }
+
+    emit dataChanged(index(0, 0), index(static_cast<int>(m_order.size()) - 1, ColumnCount - 1),
+                     {Qt::DisplayRole, Qt::ToolTipRole});
+}
+
+void PageOrderListModel::setRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan)
+{
+    m_renameItemsBySourceIndex.clear();
+    for (const labelqt::services::ProjectImageRenameItem& item : plan.items) {
+        if (item.imageIndex >= 0) {
+            m_renameItemsBySourceIndex.insert(item.imageIndex, item);
+        }
+    }
+    refreshAllRows();
+}
+
+void PageOrderListModel::setPendingRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan)
+{
+    m_pendingRenameItemsBySourceIndex.clear();
+    for (const labelqt::services::ProjectImageRenameItem& item : plan.items) {
+        if (item.imageIndex >= 0) {
+            m_pendingRenameItemsBySourceIndex.insert(item.imageIndex, item);
+        }
+    }
+    refreshAllRows();
+}
+
+void PageOrderListModel::clearPendingRenamePlan()
+{
+    if (m_pendingRenameItemsBySourceIndex.isEmpty()) {
+        return;
+    }
+    m_pendingRenameItemsBySourceIndex.clear();
+    refreshAllRows();
 }
 
 void PageOrderListModel::moveSourceIndexes(QVector<int> sourceIndexes, int delta)
@@ -141,14 +184,51 @@ QVariant PageOrderListModel::data(const QModelIndex& index, int role) const
 
     const labelqt::core::ImageEntry& image = m_project.images().at(sourceIndex);
     const QString pageName = image.name.isEmpty() ? image.path : image.name;
+    const labelqt::services::ProjectImageRenameItem renameItem = m_renameItemsBySourceIndex.value(sourceIndex);
+    const labelqt::services::ProjectImageRenameItem pendingRenameItem =
+        m_pendingRenameItemsBySourceIndex.value(sourceIndex);
+    const bool imageMissing = !QFileInfo::exists(image.path);
     switch (role) {
     case Qt::DisplayRole:
         if (index.column() == ImageNameColumn) {
             return pageName;
         }
+        if (index.column() == RenamePreviewColumn) {
+            return pendingRenameItem.included ? pendingRenameItem.newName : QString();
+        }
+        if (index.column() == RenameStatusColumn) {
+            if (!renameItem.included) {
+                return imageMissing ? QCoreApplication::translate("PageOrderListModel", "Image missing")
+                                    : QCoreApplication::translate("PageOrderListModel", "Not selected");
+            }
+            if (!renameItem.error.isEmpty()) {
+                return renameItem.error;
+            }
+            if (renameItem.referenceOnly) {
+                return renameItem.isChanged()
+                           ? QCoreApplication::translate("PageOrderListModel", "Will point to %1").arg(renameItem.newName)
+                           : QCoreApplication::translate("PageOrderListModel", "Unchanged");
+            }
+            return renameItem.isChanged()
+                       ? QCoreApplication::translate("PageOrderListModel", "Will be renamed to %1").arg(renameItem.newName)
+                       : QCoreApplication::translate("PageOrderListModel", "Unchanged");
+        }
         return QString::number(sourceIndex + 1).rightJustified(3, QLatin1Char('0'));
     case Qt::ToolTipRole:
+        if (index.column() == RenamePreviewColumn) {
+            return pendingRenameItem.included ? pendingRenameItem.newName : QString();
+        }
+        if (index.column() == RenameStatusColumn) {
+            return data(index, Qt::DisplayRole);
+        }
         return pageName;
+    case Qt::ForegroundRole:
+        if (index.column() == RenameStatusColumn) {
+            if ((renameItem.included && !renameItem.error.isEmpty()) || (!renameItem.included && imageMissing)) {
+                return QColor(Qt::red);
+            }
+        }
+        return {};
     case Qt::UserRole:
         return sourceIndex;
     default:
@@ -164,7 +244,11 @@ QVariant PageOrderListModel::headerData(int section, Qt::Orientation orientation
 
     switch (section) {
     case ImageNameColumn:
-        return QCoreApplication::translate("PageOrderListModel", "Image");
+        return QCoreApplication::translate("PageOrderListModel", "Current image");
+    case RenamePreviewColumn:
+        return QCoreApplication::translate("PageOrderListModel", "Target image");
+    case RenameStatusColumn:
+        return QCoreApplication::translate("PageOrderListModel", "Image action");
     case OriginalIndexColumn:
         return QCoreApplication::translate("PageOrderListModel", "Original #");
     default:

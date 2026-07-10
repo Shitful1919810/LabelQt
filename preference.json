@@ -71,6 +71,7 @@
     "markerTextBubble": {
         "fontFamily": "",
         "fontPointSize": 0,
+        "maxLineCharacters": 18,
         "opacity": 0.85
     },
     "proofreading": {

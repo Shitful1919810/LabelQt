@@ -14,6 +14,8 @@ class QJsonParseError;
 
 namespace labelqt::core {
 
+inline constexpr int defaultMarkerTextBubbleMaxLineCharacters = 18;
+
 enum class AppPreferenceWarningType {
     FileNotReadable,
     InvalidJson,
@@ -37,6 +39,8 @@ enum class AppPreferenceWarningType {
     MarkerTextBubbleFontPointSizeOutOfRange,
     MarkerTextBubbleOpacityWrongType,
     MarkerTextBubbleOpacityOutOfRange,
+    MarkerTextBubbleMaxLineCharactersWrongType,
+    MarkerTextBubbleMaxLineCharactersOutOfRange,
     CanvasLabelTextEditorNotObject,
     CanvasLabelTextEditorOpacityWrongType,
     CanvasLabelTextEditorOpacityOutOfRange,
@@ -121,6 +125,7 @@ public:
     QString markerTextBubbleFontFamily() const;
     double markerTextBubbleFontPointSize() const noexcept;
     double markerTextBubbleOpacity() const noexcept;
+    int markerTextBubbleMaxLineCharacters() const noexcept;
     double canvasLabelTextEditorOpacity() const noexcept;
     QString applicationStyle() const;
     QString applicationTheme() const;
@@ -162,6 +167,7 @@ private:
     QString m_markerTextBubbleFontFamily;
     double m_markerTextBubbleFontPointSize{0.0};
     double m_markerTextBubbleOpacity{1.0};
+    int m_markerTextBubbleMaxLineCharacters{defaultMarkerTextBubbleMaxLineCharacters};
     double m_canvasLabelTextEditorOpacity{1.0};
     QString m_applicationStyle;
     QString m_applicationTheme;

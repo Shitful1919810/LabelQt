@@ -17,7 +17,7 @@ constexpr QLatin1StringView rootSplitterKey{"rootSplitter"};
 constexpr QLatin1StringView rightSplitterKey{"rightSplitter"};
 constexpr QLatin1StringView labelTableNumberColumnWidthKey{"labelTableNumberColumnWidth"};
 constexpr QLatin1StringView labelTableGroupColumnWidthKey{"labelTableGroupColumnWidth"};
-constexpr QLatin1StringView pageOrderOriginalIndexColumnWidthKey{"pageOrderOriginalIndexColumnWidth"};
+constexpr QLatin1StringView pageOrderColumnWidthsKey{"pageOrderColumnWidths"};
 constexpr QLatin1StringView proofreadingChangesColumnWidthsKey{"proofreadingChangesColumnWidths"};
 constexpr QLatin1StringView projectSessionsGroup{"projectSessions"};
 constexpr QLatin1StringView sessionFilePathKey{"filePath"};
@@ -248,18 +248,36 @@ void SessionStateStore::saveLabelTableColumnWidths(int numberWidth, int groupWid
     settings.setValue(labelTableGroupColumnWidthKey, groupWidth);
 }
 
-int SessionStateStore::pageOrderOriginalIndexColumnWidth(int defaultWidth) const
+QVector<int> SessionStateStore::pageOrderColumnWidths(const QVector<int>& defaultWidths) const
 {
     QSettings settings;
     settings.beginGroup(layoutGroup);
-    return settings.value(pageOrderOriginalIndexColumnWidthKey, defaultWidth).toInt();
+    const QVariantList values = settings.value(pageOrderColumnWidthsKey).toList();
+    if (values.size() != defaultWidths.size()) {
+        return defaultWidths;
+    }
+
+    QVector<int> widths;
+    widths.reserve(values.size());
+    for (int i = 0; i < values.size(); ++i) {
+        bool ok = false;
+        const int width = values.at(i).toInt(&ok);
+        widths.append(ok && width > 0 ? width : defaultWidths.at(i));
+    }
+    return widths;
 }
 
-void SessionStateStore::savePageOrderOriginalIndexColumnWidth(int width) const
+void SessionStateStore::savePageOrderColumnWidths(const QVector<int>& widths) const
 {
+    QVariantList values;
+    values.reserve(widths.size());
+    for (int width : widths) {
+        values.append(width);
+    }
+
     QSettings settings;
     settings.beginGroup(layoutGroup);
-    settings.setValue(pageOrderOriginalIndexColumnWidthKey, width);
+    settings.setValue(pageOrderColumnWidthsKey, values);
 }
 
 QVector<int> SessionStateStore::proofreadingChangesColumnWidths(const QVector<int>& defaultWidths) const

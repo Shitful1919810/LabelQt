@@ -74,6 +74,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `ProjectWorkflowController`：承接合并工程、保存合并结果、页面顺序调整与对应撤销命令的项目级工作流。`MainWindow` 只负责弹出对话框和刷新 UI。
 - `ProjectMergeService`：读取多个 LabelPlus 工程，按页生成合并计划，生成最终合并工程，并写入合并来源元数据。
 - `ProjectPageOrderService`：校验并应用页面重排，负责在重排后保持来源元数据仍绑定到图片名。
+- `ProjectImageRenameService`：按当前页序生成图片条目更新计划，校验 `{index}` / `{index:03}` / `{stem}` 格式串。对于已有图片，它执行文件系统两阶段重命名；对于缺失图片，它复用同一套计划把页面引用改为匹配到的已有图片，并采用该图片的实际扩展名。成功后负责迁移合并来源和校对基线元数据。它不注册普通撤销命令，因为该操作可能真实改动磁盘文件。
 - `ProjectImageValidator`：扫描工程中缺失的图片文件，返回数据型诊断，由 UI 非阻塞展示。
 - `PageSourceInfoService`：解析和重写统一项目元数据里的合并来源 section。UI 不能自己解析 comment 行。
 - `ProjectComparisonService`：把校对基线或另一个工程与当前工程比较为结构化差异。UI 只展示结果，不直接实现
@@ -99,7 +100,8 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 主要类：
 
 - `MainWindow`：菜单、主布局、信号连接、状态栏提示和控制器编排。它可以调用服务，但不应该新增文件格式、脚本解析、标签编辑规则或图片加载状态机。
-- `ImageCanvas`：左侧图像预览、标签标记绘制、悬停气泡、选区模式、缩放/拖动视图，以及点击/拖动标签标记时发出的用户意图信号。它不直接修改 `Project`。
+- `ImageCanvas`：左侧图像预览、标签标记绘制、悬停气泡、选区模式、缩放/拖动视图，以及点击/拖动标签标记时发出的用户意图信号。它不直接修改 `Project`。悬停气泡使用鼠标透明的顶层 tooltip 窗口显示，允许跨过画布边界但不能拦截右侧标签表格或滚动条的鼠标事件。手动缩放后窗口尺寸变化时，应以当前视口中心对应的 scene 点作为锚点，resize 后把它恢复到新的视口中心，避免布局变化造成视觉焦点跳动。
+- `CanvasBottomBar`：左侧图像区域下边栏。它负责缩放滑条、标签/选区模式按钮、插入分组控件、翻页控件、页码下拉框、来源提示，以及窄宽度下的“更多工具”紧凑菜单。响应式布局、紧凑菜单同步和底栏最小宽度推导都应留在这里；`MainWindow` 只连接它暴露的控件和 `addGroupRequested()` / `removeGroupRequested()` 信号。
 - `CanvasLabelItems`：标签标记与气泡等 `QGraphicsItem` 绘制细节。
 - `CanvasLabelTextEditController` / `CanvasLabelTextEditor`：双击标签标记后出现的临时文本编辑框生命周期。
 - `ImagePageViewController`：当前页图片显示协调。缓存命中、异步加载 request id、过期结果丢弃、相邻页预加载和延迟恢复视图都属于它。
@@ -112,7 +114,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `AutomationRunDialog` / `AutomationParameterDialog`：自动化日志与运行前参数输入。
 - `LabelTableModel`：右侧标签表格模型。它持有当前页标签指针，维护可见行映射，发出编辑/重排请求，但不直接修改标签。
 - `LabelEditDelegates`：表格文本列和类别列的原地编辑控件。
-- `PageOrderDialog` / `PageOrderListModel`：页面顺序调整界面与对应模型。
+- `PageOrderDialog` / `PageOrderListModel`：页面管理界面与对应模型，负责页面排序、移除页面，以及展示按当前顺序生成的图片文件重命名或缺失页引用修复预览；真正的文件系统重命名和项目引用更新仍交给 `ProjectImageRenameService`。
 - `ProjectMergeDialog`：合并工程冲突解决窗口，复用只读 `ImageCanvas` 预览候选页。
 - `GroupFilterComboBox`：右上角分组多选筛选。
 - `PreferenceDialog`：偏好设置窗口，负责左侧分类导航、右侧页面栈和偏好 JSON 读写协调。复杂子页的表格逻辑应放到 `GroupStyleEditorWidget`、`AutomationShortcutEditorWidget` 或 `PreferenceDialogWidgets`。
@@ -174,6 +176,8 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - 新增/删除分组。
 - 页面顺序调整。
 - 自动化脚本产生的新增、改文本、改类别、改坐标、删除标签操作。
+
+按页序重命名图片文件、或为缺失图片页指定已有图片来源，都属于项目文件和文件系统边界上的批处理操作，不进入普通撤销栈。UI 必须在执行前提示用户该操作可能修改磁盘文件并在成功后清空当前撤销历史；实际重命名、引用更新和元数据迁移应通过 `ProjectImageRenameService` 完成，不要在 UI 中直接调用 `QFile::rename()` 或手写 `ImageEntry` 路径修复逻辑。
 
 新增编辑操作时，要求：
 
@@ -259,7 +263,7 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 - `automation.python.command` / `arguments` / `autoInstallRequirements` / `pipIndexUrl`：自动化 Python 解释器和依赖安装设置。
 - `automation.shortcuts`：用户给自动化脚本绑定的快捷键。
 - `labelMarker`、`groupStyles`：标签标记默认样式和按分组覆盖的样式。
-- `labelTable`、`labelTextEditor`、`markerTextBubble`、`canvasLabelTextEditor`：表格、文本框、气泡和临时编辑框的字体/透明度。
+- `labelTable`、`labelTextEditor`、`markerTextBubble`、`canvasLabelTextEditor`：表格、文本框、气泡和临时编辑框的字体、透明度和显示细节。`markerTextBubble.maxLineCharacters` 控制气泡单行软换行阈值；真实换行应保留可见换行标记。
 - `input`：主窗口快捷键和修饰键。
 - `backupPath`、`backupIntervalSeconds`：自动备份配置。
 
