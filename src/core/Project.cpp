@@ -1,5 +1,6 @@
 #include "core/Project.h"
 
+#include <algorithm>
 #include <utility>
 
 namespace labelqt::core {
@@ -26,6 +27,39 @@ const QVector<ImageEntry>& Project::images() const noexcept
 QVector<ImageEntry>& Project::images() noexcept
 {
     return m_images;
+}
+
+int Project::imageIndexByName(const QString& imageName) const noexcept
+{
+    for (int index = 0; index < m_images.size(); ++index) {
+        if (m_images.at(index).name == imageName) {
+            return index;
+        }
+    }
+    return -1;
+}
+
+const ImageEntry* Project::imageByName(const QString& imageName) const noexcept
+{
+    const int index = imageIndexByName(imageName);
+    return index < 0 ? nullptr : &m_images.at(index);
+}
+
+ImageEntry* Project::imageByName(const QString& imageName) noexcept
+{
+    const int index = imageIndexByName(imageName);
+    return index < 0 ? nullptr : &m_images[index];
+}
+
+int Project::activeLabelCountForGroup(const QString& group) const noexcept
+{
+    int count = 0;
+    for (const ImageEntry& image : m_images) {
+        count += static_cast<int>(std::ranges::count_if(image.labels, [&group](const Label& label) {
+            return !label.isDeleted() && label.group() == group;
+        }));
+    }
+    return count;
 }
 
 const QStringList& Project::groups() const noexcept

@@ -19,7 +19,6 @@
 #include <QFontDialog>
 #include <QFormLayout>
 #include <QHBoxLayout>
-#include <QJsonArray>
 #include <QJsonObject>
 #include <QKeySequence>
 #include <QKeySequenceEdit>
@@ -112,7 +111,7 @@ PreferenceDialog::PreferenceDialog(QString preferencePath, labelqt::core::AppPre
       m_automationScripts(std::move(automationScripts))
 {
     createUi();
-    loadDocument(m_currentPreferences.toJsonDocument());
+    loadPreferences(m_currentPreferences);
     setMessage(tr("Showing current preferences."));
 }
 
@@ -336,7 +335,7 @@ QWidget* PreferenceDialog::createProofreadingPage(QWidget* parent)
     auto* proofreadingPage = createScrolledFormPage(parent, proofreadingLayout);
     m_textDiffCleanupComboBox = new QComboBox(proofreadingPage);
     m_textDiffCleanupComboBox->addItem(tr("Auto: CJK text uses raw diff"), QStringLiteral("auto"));
-    m_textDiffCleanupComboBox->addItem(tr("Always use semantic cleanup"), QStringLiteral("semantic"));
+    m_textDiffCleanupComboBox->addItem(tr("Use semantic cleanup for non-CJK text"), QStringLiteral("semantic"));
     m_textDiffCleanupComboBox->addItem(tr("Never use semantic cleanup"), QStringLiteral("raw"));
 
     proofreadingLayout->addRow(tr("Text diff cleanup"), m_textDiffCleanupComboBox);
@@ -513,86 +512,53 @@ void PreferenceDialog::connectPreferenceChangeSignals()
 
 void PreferenceDialog::loadFromDisk()
 {
-    QFile file(m_preferencePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        setMessage(tr("Could not read preference file; showing defaults."), true);
-        loadDocument(QJsonDocument(QJsonObject{}));
-        return;
-    }
-
-    QJsonParseError parseError;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
-    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        setMessage(tr("Preference file is invalid; showing defaults."), true);
-        loadDocument(QJsonDocument(QJsonObject{}));
-        return;
-    }
-
-    loadDocument(document);
-    setMessage(tr("Loaded preference file."));
+    const labelqt::core::AppPreferencesLoadResult result =
+        labelqt::core::AppPreferences::loadFromFile(m_preferencePath);
+    m_currentPreferences = result.preferences;
+    loadPreferences(m_currentPreferences);
+    setMessage(result.warnings.isEmpty() ? tr("Loaded preference file.")
+                                         : tr("Preference file is invalid; showing defaults."),
+               !result.warnings.isEmpty());
 }
 
-void PreferenceDialog::loadDocument(const QJsonDocument& document)
+void PreferenceDialog::loadPreferences(const labelqt::core::AppPreferences& preferences)
 {
-    const QJsonObject root = document.object();
-    const QJsonObject labelMarker = root.value(QStringLiteral("labelMarker")).toObject();
-    const QJsonObject appearance = root.value(QStringLiteral("appearance")).toObject();
-    const QJsonObject automation = root.value(QStringLiteral("automation")).toObject();
-    const QJsonObject labelTable = root.value(QStringLiteral("labelTable")).toObject();
-    const QJsonObject labelTextEditor = root.value(QStringLiteral("labelTextEditor")).toObject();
-    const QJsonObject markerTextBubble = root.value(QStringLiteral("markerTextBubble")).toObject();
-    const QJsonObject canvasLabelTextEditor = root.value(QStringLiteral("canvasLabelTextEditor")).toObject();
-    const QJsonObject input = root.value(QStringLiteral("input")).toObject();
-
-    m_markerDiameterSpinBox->setValue(
-        labelMarker.value(QStringLiteral("diameter")).toDouble(defaultPreferences().labelMarkerDiameterPixels()));
-    m_markerFontSpinBox->setValue(
-        labelMarker.value(QStringLiteral("fontPointSize")).toDouble(defaultPreferences().labelMarkerFontPointSize()));
-    const QString applicationStyle = appearance.value(QStringLiteral("style")).toString().trimmed();
+    m_markerDiameterSpinBox->setValue(preferences.labelMarkerDiameterPixels());
+    m_markerFontSpinBox->setValue(preferences.labelMarkerFontPointSize());
+    const QString applicationStyle = preferences.applicationStyle();
     if (applicationStyle.isEmpty()) {
         m_applicationStyleComboBox->setCurrentIndex(0);
     }
     else {
         m_applicationStyleComboBox->setCurrentText(applicationStyle);
     }
-    const QString applicationTheme = appearance.value(QStringLiteral("theme")).toString().trimmed();
+    const QString applicationTheme = preferences.applicationTheme();
     const int themeIndex = m_applicationThemeComboBox->findData(applicationTheme);
     m_applicationThemeComboBox->setCurrentIndex(themeIndex >= 0 ? themeIndex : 0);
-    const QString applicationLanguage = appearance.value(QStringLiteral("language")).toString().trimmed();
+    const QString applicationLanguage = preferences.applicationLanguage();
     const int languageIndex = m_applicationLanguageComboBox->findData(applicationLanguage);
     m_applicationLanguageComboBox->setCurrentIndex(languageIndex >= 0 ? languageIndex : 0);
-    const QJsonObject proofreading = root.value(QStringLiteral("proofreading")).toObject();
-    const QString textDiffCleanup = proofreading.value(QStringLiteral("textDiffCleanup")).toString(QStringLiteral("auto"));
+    const QString textDiffCleanup = preferences.textDiffCleanupMode() == labelqt::core::TextDiffCleanupMode::Semantic
+                                        ? QStringLiteral("semantic")
+                                    : preferences.textDiffCleanupMode() == labelqt::core::TextDiffCleanupMode::Raw
+                                        ? QStringLiteral("raw")
+                                        : QStringLiteral("auto");
     const int textDiffCleanupIndex = m_textDiffCleanupComboBox->findData(textDiffCleanup);
     m_textDiffCleanupComboBox->setCurrentIndex(textDiffCleanupIndex >= 0 ? textDiffCleanupIndex : 0);
-    m_showAutomationRunLogCheckBox->setChecked(
-        automation.value(QStringLiteral("showRunLog")).toBool(defaultPreferences().showAutomationRunLog()));
-    const QJsonObject automationPython = automation.value(QStringLiteral("python")).toObject();
-    m_automationPythonCommandEdit->setText(
-        automationPython.value(QStringLiteral("command")).toString(defaultPreferences().automationPythonCommand()));
-    QStringList pythonArguments;
-    const QJsonArray pythonArgumentArray = automationPython.value(QStringLiteral("arguments")).toArray();
-    for (const QJsonValue& argument : pythonArgumentArray) {
-        if (argument.isString()) {
-            pythonArguments.append(argument.toString());
-        }
+    m_showAutomationRunLogCheckBox->setChecked(preferences.showAutomationRunLog());
+    m_automationPythonCommandEdit->setText(preferences.automationPythonCommand());
+    m_automationPythonArgumentsEdit->setText(labelqt::core::joinCommandLine(preferences.automationPythonArguments()));
+    m_automationAutoInstallRequirementsCheckBox->setChecked(preferences.automationAutoInstallRequirements());
+    m_automationPipIndexUrlEdit->setText(preferences.automationPipIndexUrl());
+    QJsonObject automationShortcuts;
+    for (auto it = preferences.automationShortcuts().cbegin(); it != preferences.automationShortcuts().cend(); ++it) {
+        automationShortcuts.insert(it.key(), it.value().toString(QKeySequence::PortableText));
     }
-    if (pythonArgumentArray.isEmpty()) {
-        pythonArguments = defaultPreferences().automationPythonArguments();
-    }
-    m_automationPythonArgumentsEdit->setText(labelqt::core::joinCommandLine(pythonArguments));
-    m_automationAutoInstallRequirementsCheckBox->setChecked(
-        automationPython.value(QStringLiteral("autoInstallRequirements"))
-            .toBool(defaultPreferences().automationAutoInstallRequirements()));
-    m_automationPipIndexUrlEdit->setText(
-        automationPython.value(QStringLiteral("pipIndexUrl")).toString(defaultPreferences().automationPipIndexUrl()));
-    const QJsonObject automationShortcuts = automation.value(QStringLiteral("shortcuts")).toObject();
     m_automationShortcutEditor->loadShortcuts(automationShortcuts);
 
-    m_tableMaxRowsSpinBox->setValue(
-        labelTable.value(QStringLiteral("maxTextRows")).toInt(defaultPreferences().labelTableMaxTextRows()));
-    const QString labelTableFontFamily = labelTable.value(QStringLiteral("fontFamily")).toString().trimmed();
-    const double labelTableFontPointSize = labelTable.value(QStringLiteral("fontPointSize")).toDouble(0.0);
+    m_tableMaxRowsSpinBox->setValue(preferences.labelTableMaxTextRows());
+    const QString labelTableFontFamily = preferences.labelTableFontFamily();
+    const double labelTableFontPointSize = preferences.labelTableFontPointSize();
     m_usesDefaultLabelTableFont = labelTableFontFamily.isEmpty() && labelTableFontPointSize <= 0.0;
     m_labelTableFont = font();
     if (!labelTableFontFamily.isEmpty()) {
@@ -603,8 +569,8 @@ void PreferenceDialog::loadDocument(const QJsonDocument& document)
     }
     updateLabelTableFontSummary();
 
-    const QString textEditorFontFamily = labelTextEditor.value(QStringLiteral("fontFamily")).toString().trimmed();
-    const double textEditorFontPointSize = labelTextEditor.value(QStringLiteral("fontPointSize")).toDouble(0.0);
+    const QString textEditorFontFamily = preferences.labelTextEditorFontFamily();
+    const double textEditorFontPointSize = preferences.labelTextEditorFontPointSize();
     m_usesDefaultTextEditorFont = textEditorFontFamily.isEmpty() && textEditorFontPointSize <= 0.0;
     m_textEditorFont = font();
     if (!textEditorFontFamily.isEmpty()) {
@@ -615,9 +581,8 @@ void PreferenceDialog::loadDocument(const QJsonDocument& document)
     }
     updateTextEditorFontSummary();
 
-    const QString markerTextBubbleFontFamily =
-        markerTextBubble.value(QStringLiteral("fontFamily")).toString().trimmed();
-    const double markerTextBubbleFontPointSize = markerTextBubble.value(QStringLiteral("fontPointSize")).toDouble(0.0);
+    const QString markerTextBubbleFontFamily = preferences.markerTextBubbleFontFamily();
+    const double markerTextBubbleFontPointSize = preferences.markerTextBubbleFontPointSize();
     m_usesDefaultMarkerTextBubbleFont = markerTextBubbleFontFamily.isEmpty() && markerTextBubbleFontPointSize <= 0.0;
     m_markerTextBubbleFont = font();
     if (!markerTextBubbleFontFamily.isEmpty()) {
@@ -627,196 +592,115 @@ void PreferenceDialog::loadDocument(const QJsonDocument& document)
         m_markerTextBubbleFont.setPointSizeF(markerTextBubbleFontPointSize);
     }
     updateMarkerTextBubbleFontSummary();
-    m_markerTextBubbleMaxLineCharactersSpinBox->setValue(
-        markerTextBubble.value(QStringLiteral("maxLineCharacters"))
-            .toInt(defaultPreferences().markerTextBubbleMaxLineCharacters()));
-    const int markerTextBubbleOpacity = std::clamp(
-        static_cast<int>(std::round(
-            markerTextBubble.value(QStringLiteral("opacity")).toDouble(defaultPreferences().markerTextBubbleOpacity()) *
-            100.0)),
-        0, 100);
+    m_markerTextBubbleMaxLineCharactersSpinBox->setValue(preferences.markerTextBubbleMaxLineCharacters());
+    const int markerTextBubbleOpacity =
+        std::clamp(static_cast<int>(std::round(preferences.markerTextBubbleOpacity() * 100.0)), 0, 100);
     m_markerTextBubbleOpacityScrollBar->setValue(markerTextBubbleOpacity);
     m_markerTextBubbleOpacityLabel->setText(tr("%1%").arg(markerTextBubbleOpacity));
 
     const int canvasLabelTextEditorOpacity =
-        std::clamp(static_cast<int>(std::round(canvasLabelTextEditor.value(QStringLiteral("opacity"))
-                                                   .toDouble(defaultPreferences().canvasLabelTextEditorOpacity()) *
-                                               100.0)),
-                   0, 100);
+        std::clamp(static_cast<int>(std::round(preferences.canvasLabelTextEditorOpacity() * 100.0)), 0, 100);
     m_canvasLabelTextEditorOpacityScrollBar->setValue(canvasLabelTextEditorOpacity);
     m_canvasLabelTextEditorOpacityLabel->setText(tr("%1%").arg(canvasLabelTextEditorOpacity));
 
-    m_moveModifierComboBox->setCurrentText(
-        input.value(QStringLiteral("moveLabelModifier")).toString(QStringLiteral("ctrl")));
-    m_previousLabelModifierComboBox->setCurrentText(
-        input.value(QStringLiteral("previousLabelModifier")).toString(QStringLiteral("ctrl")));
-    const QKeySequence undoShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("undoShortcut"))
-            .toString(defaultPreferences().undoShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence redoShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("redoShortcut"))
-            .toString(defaultPreferences().redoShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence nextLabelShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("nextLabelShortcut"))
-            .toString(defaultPreferences().nextLabelShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence alternatePreviousLabelShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("alternatePreviousLabelShortcut"))
-            .toString(defaultPreferences().alternatePreviousLabelShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence alternateNextLabelShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("alternateNextLabelShortcut"))
-            .toString(defaultPreferences().alternateNextLabelShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence previousPageShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("previousPageShortcut"))
-            .toString(defaultPreferences().previousPageShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence nextPageShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("nextPageShortcut"))
-            .toString(defaultPreferences().nextPageShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence editLabelTextShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("editLabelTextShortcut"))
-            .toString(defaultPreferences().editLabelTextShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence commitLabelTextShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("commitLabelTextShortcut"))
-            .toString(defaultPreferences().commitLabelTextShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    const QKeySequence deleteLabelShortcut = QKeySequence::fromString(
-        input.value(QStringLiteral("deleteLabelShortcut"))
-            .toString(defaultPreferences().deleteLabelShortcut().toString(QKeySequence::PortableText)),
-        QKeySequence::PortableText);
-    m_undoShortcutEdit->setKeySequence(undoShortcut.isEmpty() ? defaultPreferences().undoShortcut() : undoShortcut);
-    m_redoShortcutEdit->setKeySequence(redoShortcut.isEmpty() ? defaultPreferences().redoShortcut() : redoShortcut);
-    m_nextLabelShortcutEdit->setKeySequence(nextLabelShortcut.isEmpty() ? defaultPreferences().nextLabelShortcut()
-                                                                        : nextLabelShortcut);
-    m_alternatePreviousLabelShortcutEdit->setKeySequence(alternatePreviousLabelShortcut.isEmpty()
-                                                             ? defaultPreferences().alternatePreviousLabelShortcut()
-                                                             : alternatePreviousLabelShortcut);
-    m_alternateNextLabelShortcutEdit->setKeySequence(alternateNextLabelShortcut.isEmpty()
-                                                         ? defaultPreferences().alternateNextLabelShortcut()
-                                                         : alternateNextLabelShortcut);
-    m_previousPageShortcutEdit->setKeySequence(
-        previousPageShortcut.isEmpty() ? defaultPreferences().previousPageShortcut() : previousPageShortcut);
-    m_nextPageShortcutEdit->setKeySequence(nextPageShortcut.isEmpty() ? defaultPreferences().nextPageShortcut()
-                                                                      : nextPageShortcut);
-    m_editLabelTextShortcutEdit->setKeySequence(
-        editLabelTextShortcut.isEmpty() ? defaultPreferences().editLabelTextShortcut() : editLabelTextShortcut);
-    m_commitLabelTextShortcutEdit->setKeySequence(
-        commitLabelTextShortcut.isEmpty() ? defaultPreferences().commitLabelTextShortcut() : commitLabelTextShortcut);
-    m_deleteLabelShortcutEdit->setKeySequence(deleteLabelShortcut.isEmpty() ? defaultPreferences().deleteLabelShortcut()
-                                                                            : deleteLabelShortcut);
-    m_backupPathEdit->setText(root.value(QStringLiteral("backupPath")).toString(defaultPreferences().backupPath()));
-    m_backupIntervalSpinBox->setValue(
-        root.value(QStringLiteral("backupIntervalSeconds")).toInt(defaultPreferences().backupIntervalSeconds()));
+    auto modifierText = [](Qt::KeyboardModifiers modifiers) {
+        if (modifiers == Qt::NoModifier) {
+            return QStringLiteral("none");
+        }
+        QStringList parts;
+        if (modifiers.testFlag(Qt::ControlModifier)) parts.append(QStringLiteral("ctrl"));
+        if (modifiers.testFlag(Qt::ShiftModifier)) parts.append(QStringLiteral("shift"));
+        if (modifiers.testFlag(Qt::AltModifier)) parts.append(QStringLiteral("alt"));
+        if (modifiers.testFlag(Qt::MetaModifier)) parts.append(QStringLiteral("meta"));
+        return parts.join(QLatin1Char('+'));
+    };
+    m_moveModifierComboBox->setCurrentText(modifierText(preferences.moveLabelModifiers()));
+    m_previousLabelModifierComboBox->setCurrentText(modifierText(preferences.previousLabelModifiers()));
+    m_undoShortcutEdit->setKeySequence(preferences.undoShortcut());
+    m_redoShortcutEdit->setKeySequence(preferences.redoShortcut());
+    m_nextLabelShortcutEdit->setKeySequence(preferences.nextLabelShortcut());
+    m_alternatePreviousLabelShortcutEdit->setKeySequence(preferences.alternatePreviousLabelShortcut());
+    m_alternateNextLabelShortcutEdit->setKeySequence(preferences.alternateNextLabelShortcut());
+    m_previousPageShortcutEdit->setKeySequence(preferences.previousPageShortcut());
+    m_nextPageShortcutEdit->setKeySequence(preferences.nextPageShortcut());
+    m_editLabelTextShortcutEdit->setKeySequence(preferences.editLabelTextShortcut());
+    m_commitLabelTextShortcutEdit->setKeySequence(preferences.commitLabelTextShortcut());
+    m_deleteLabelShortcutEdit->setKeySequence(preferences.deleteLabelShortcut());
+    m_backupPathEdit->setText(preferences.backupPath());
+    m_backupIntervalSpinBox->setValue(preferences.backupIntervalSeconds());
 
     m_groupStyleEditor->setMarkerDefaults(m_markerDiameterSpinBox->value(), m_markerFontSpinBox->value());
-    const QJsonArray groupStyles = root.value(QStringLiteral("groupStyles")).toArray();
-    m_groupStyleEditor->loadStyles(groupStyles);
+    m_groupStyleEditor->loadStyles(preferences.groupStyles());
 
     updateJsonPreview();
 }
 
+labelqt::core::AppPreferences PreferenceDialog::preferencesFromUi() const
+{
+    labelqt::core::AppPreferencesValues values = m_currentPreferences.values();
+    values.labelMarkerDiameterPixels = m_markerDiameterSpinBox->value();
+    values.labelMarkerFontPointSize = m_markerFontSpinBox->value();
+    values.labelTableMaxTextRows = m_tableMaxRowsSpinBox->value();
+    values.labelTableFontFamily = m_usesDefaultLabelTableFont ? QString() : m_labelTableFont.family();
+    values.labelTableFontPointSize = m_usesDefaultLabelTableFont ? 0.0 : m_labelTableFont.pointSizeF();
+    values.labelTextEditorFontFamily = m_usesDefaultTextEditorFont ? QString() : m_textEditorFont.family();
+    values.labelTextEditorFontPointSize = m_usesDefaultTextEditorFont ? 0.0 : m_textEditorFont.pointSizeF();
+    values.markerTextBubbleFontFamily =
+        m_usesDefaultMarkerTextBubbleFont ? QString() : m_markerTextBubbleFont.family();
+    values.markerTextBubbleFontPointSize =
+        m_usesDefaultMarkerTextBubbleFont ? 0.0 : m_markerTextBubbleFont.pointSizeF();
+    values.markerTextBubbleMaxLineCharacters = m_markerTextBubbleMaxLineCharactersSpinBox->value();
+    values.markerTextBubbleOpacity = m_markerTextBubbleOpacityScrollBar->value() / 100.0;
+    values.canvasLabelTextEditorOpacity = m_canvasLabelTextEditorOpacityScrollBar->value() / 100.0;
+    values.applicationStyle = comboBoxDataOrText(m_applicationStyleComboBox);
+    values.applicationTheme = comboBoxDataOrText(m_applicationThemeComboBox);
+    values.applicationLanguage = comboBoxDataOrText(m_applicationLanguageComboBox);
+    const QString cleanup = comboBoxDataOrText(m_textDiffCleanupComboBox);
+    values.textDiffCleanupMode = cleanup == QStringLiteral("semantic") ? labelqt::core::TextDiffCleanupMode::Semantic
+                               : cleanup == QStringLiteral("raw")      ? labelqt::core::TextDiffCleanupMode::Raw
+                                                                        : labelqt::core::TextDiffCleanupMode::Auto;
+    values.showAutomationRunLog = m_showAutomationRunLogCheckBox->isChecked();
+    values.automationPythonCommand = m_automationPythonCommandEdit->text().trimmed();
+    values.automationPythonArguments = QProcess::splitCommand(m_automationPythonArgumentsEdit->text());
+    values.automationAutoInstallRequirements = m_automationAutoInstallRequirementsCheckBox->isChecked();
+    values.automationPipIndexUrl = m_automationPipIndexUrlEdit->text().trimmed();
+    values.automationShortcuts.clear();
+    const QJsonObject shortcutObject = m_automationShortcutEditor->shortcuts();
+    for (auto it = shortcutObject.begin(); it != shortcutObject.end(); ++it) {
+        values.automationShortcuts.insert(
+            it.key(), QKeySequence::fromString(it.value().toString(), QKeySequence::PortableText));
+    }
+    const auto parseModifiers = [](const QString& text) {
+        Qt::KeyboardModifiers modifiers;
+        for (const QString& part : text.toLower().split(QLatin1Char('+'), Qt::SkipEmptyParts)) {
+            if (part.trimmed() == QStringLiteral("ctrl")) modifiers |= Qt::ControlModifier;
+            else if (part.trimmed() == QStringLiteral("shift")) modifiers |= Qt::ShiftModifier;
+            else if (part.trimmed() == QStringLiteral("alt")) modifiers |= Qt::AltModifier;
+            else if (part.trimmed() == QStringLiteral("meta")) modifiers |= Qt::MetaModifier;
+        }
+        return modifiers;
+    };
+    values.moveLabelModifiers = parseModifiers(m_moveModifierComboBox->currentText());
+    values.previousLabelModifiers = parseModifiers(m_previousLabelModifierComboBox->currentText());
+    values.undoShortcut = m_undoShortcutEdit->keySequence();
+    values.redoShortcut = m_redoShortcutEdit->keySequence();
+    values.nextLabelShortcut = m_nextLabelShortcutEdit->keySequence();
+    values.alternatePreviousLabelShortcut = m_alternatePreviousLabelShortcutEdit->keySequence();
+    values.alternateNextLabelShortcut = m_alternateNextLabelShortcutEdit->keySequence();
+    values.previousPageShortcut = m_previousPageShortcutEdit->keySequence();
+    values.nextPageShortcut = m_nextPageShortcutEdit->keySequence();
+    values.editLabelTextShortcut = m_editLabelTextShortcutEdit->keySequence();
+    values.commitLabelTextShortcut = m_commitLabelTextShortcutEdit->keySequence();
+    values.deleteLabelShortcut = m_deleteLabelShortcutEdit->keySequence();
+    values.backupPath = m_backupPathEdit->text().trimmed();
+    values.backupIntervalSeconds = m_backupIntervalSpinBox->value();
+    values.groupStyles = m_groupStyleEditor->styles();
+    return labelqt::core::AppPreferences::fromValues(std::move(values));
+}
+
 QJsonDocument PreferenceDialog::documentFromUi() const
 {
-    QJsonObject labelMarker;
-    labelMarker.insert(QStringLiteral("diameter"), m_markerDiameterSpinBox->value());
-    labelMarker.insert(QStringLiteral("fontPointSize"), m_markerFontSpinBox->value());
-
-    QJsonObject appearance;
-    appearance.insert(QStringLiteral("style"), comboBoxDataOrText(m_applicationStyleComboBox));
-    appearance.insert(QStringLiteral("theme"), comboBoxDataOrText(m_applicationThemeComboBox));
-    appearance.insert(QStringLiteral("language"), comboBoxDataOrText(m_applicationLanguageComboBox));
-
-    QJsonObject automation;
-    automation.insert(QStringLiteral("showRunLog"), m_showAutomationRunLogCheckBox->isChecked());
-    QJsonObject automationPython;
-    automationPython.insert(QStringLiteral("command"), m_automationPythonCommandEdit->text().trimmed());
-    QJsonArray automationPythonArguments;
-    for (const QString& argument : QProcess::splitCommand(m_automationPythonArgumentsEdit->text())) {
-        automationPythonArguments.append(argument);
-    }
-    automationPython.insert(QStringLiteral("arguments"), automationPythonArguments);
-    automationPython.insert(QStringLiteral("autoInstallRequirements"),
-                            m_automationAutoInstallRequirementsCheckBox->isChecked());
-    automationPython.insert(QStringLiteral("pipIndexUrl"), m_automationPipIndexUrlEdit->text().trimmed());
-    automation.insert(QStringLiteral("python"), automationPython);
-    const QJsonObject automationShortcuts = m_automationShortcutEditor->shortcuts();
-    automation.insert(QStringLiteral("shortcuts"), automationShortcuts);
-
-    QJsonObject labelTable;
-    labelTable.insert(QStringLiteral("maxTextRows"), m_tableMaxRowsSpinBox->value());
-    labelTable.insert(QStringLiteral("fontFamily"),
-                      m_usesDefaultLabelTableFont ? QString() : m_labelTableFont.family());
-    labelTable.insert(QStringLiteral("fontPointSize"),
-                      m_usesDefaultLabelTableFont ? 0.0 : m_labelTableFont.pointSizeF());
-
-    QJsonObject labelTextEditor;
-    labelTextEditor.insert(QStringLiteral("fontFamily"),
-                           m_usesDefaultTextEditorFont ? QString() : m_textEditorFont.family());
-    labelTextEditor.insert(QStringLiteral("fontPointSize"),
-                           m_usesDefaultTextEditorFont ? 0.0 : m_textEditorFont.pointSizeF());
-
-    QJsonObject markerTextBubble;
-    markerTextBubble.insert(QStringLiteral("fontFamily"),
-                            m_usesDefaultMarkerTextBubbleFont ? QString() : m_markerTextBubbleFont.family());
-    markerTextBubble.insert(QStringLiteral("fontPointSize"),
-                            m_usesDefaultMarkerTextBubbleFont ? 0.0 : m_markerTextBubbleFont.pointSizeF());
-    markerTextBubble.insert(QStringLiteral("maxLineCharacters"), m_markerTextBubbleMaxLineCharactersSpinBox->value());
-    markerTextBubble.insert(QStringLiteral("opacity"),
-                            static_cast<double>(m_markerTextBubbleOpacityScrollBar->value()) / 100.0);
-
-    QJsonObject canvasLabelTextEditor;
-    canvasLabelTextEditor.insert(QStringLiteral("opacity"),
-                                 static_cast<double>(m_canvasLabelTextEditorOpacityScrollBar->value()) / 100.0);
-
-    QJsonObject proofreading;
-    proofreading.insert(QStringLiteral("textDiffCleanup"), comboBoxDataOrText(m_textDiffCleanupComboBox));
-
-    QJsonObject input;
-    input.insert(QStringLiteral("moveLabelModifier"), m_moveModifierComboBox->currentText().trimmed());
-    input.insert(QStringLiteral("previousLabelModifier"), m_previousLabelModifierComboBox->currentText().trimmed());
-    input.insert(QStringLiteral("undoShortcut"),
-                 m_undoShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("redoShortcut"),
-                 m_redoShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("nextLabelShortcut"),
-                 m_nextLabelShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("alternatePreviousLabelShortcut"),
-                 m_alternatePreviousLabelShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("alternateNextLabelShortcut"),
-                 m_alternateNextLabelShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("previousPageShortcut"),
-                 m_previousPageShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("nextPageShortcut"),
-                 m_nextPageShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("editLabelTextShortcut"),
-                 m_editLabelTextShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("commitLabelTextShortcut"),
-                 m_commitLabelTextShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("deleteLabelShortcut"),
-                 m_deleteLabelShortcutEdit->keySequence().toString(QKeySequence::PortableText));
-
-    const QJsonArray groupStyles = m_groupStyleEditor->styles();
-
-    QJsonObject root;
-    root.insert(QStringLiteral("appearance"), appearance);
-    root.insert(QStringLiteral("automation"), automation);
-    root.insert(QStringLiteral("labelMarker"), labelMarker);
-    root.insert(QStringLiteral("labelTable"), labelTable);
-    root.insert(QStringLiteral("labelTextEditor"), labelTextEditor);
-    root.insert(QStringLiteral("markerTextBubble"), markerTextBubble);
-    root.insert(QStringLiteral("canvasLabelTextEditor"), canvasLabelTextEditor);
-    root.insert(QStringLiteral("proofreading"), proofreading);
-    root.insert(QStringLiteral("input"), input);
-    root.insert(QStringLiteral("backupPath"), m_backupPathEdit->text().trimmed());
-    root.insert(QStringLiteral("backupIntervalSeconds"), m_backupIntervalSpinBox->value());
-    root.insert(QStringLiteral("groupStyles"), groupStyles);
-    return QJsonDocument(root);
+    return preferencesFromUi().toJsonDocument();
 }
 
 void PreferenceDialog::updateJsonPreview()

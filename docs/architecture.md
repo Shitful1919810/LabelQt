@@ -8,7 +8,7 @@ LabelQt 是一个独立的 C++/Qt 6 Widgets 应用。它的核心目标是编辑
 
 ```text
 src/core       平台无关的数据模型、文件格式、偏好设置、撤销栈
-src/services   工程工作流、会话状态、自动化、图片缓存、密钥、压缩包等应用服务
+src/services   工程工作流、会话状态、自动化、图片缓存、密钥等应用服务
 src/ui         Qt Widgets 界面、模型/委托、画布、对话框和 UI 控制器
 scripts        官方/用户自动化脚本，以及官方脚本 SDK
 translations   Qt Linguist 翻译源文件
@@ -26,7 +26,7 @@ tests          Qt Test 测试
 
 ```text
 src/services/automation   自动化脚本发现、运行、Python 解析、密钥和操作应用
-src/services/io           压缩包读取、图片异步缓存等输入输出设施
+src/services/io           图片异步缓存等输入输出设施
 src/services/label        标签编辑、导航、复制剪切粘贴规划
 src/services/project      工程打开保存、合并、页序调整、来源信息、会话状态
 src/services/proofread    校对/工程对比、文本 diff、报告导出和修订元数据
@@ -86,7 +86,6 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `LabelEditController`：新增、删除、移动、改文本、改类别、批量切换、重排标签和分组编辑，并注册撤销/重做。
 - `LabelNavigator`：在当前分组筛选下查找上一条/下一条可见标签，跨页导航逻辑放这里而不是写在 UI 事件处理里。
 - `ImagePageCache`：异步加载图片、维护 LRU 缓存、预加载相邻页。UI 只请求“显示当前页”，不直接管理加载线程和缓存命中。
-- `ArchiveReader`：压缩包读取封装。检测到 libarchive 时支持更多格式。
 - `AutomationService`：发现自动化脚本、生成输入 JSON、运行外部 Python 进程、读取输出 JSON。
 - `AutomationManifestParser`：解析 `script.json`、参数声明、密钥声明和脚本输出。脚本清单的字段变更应集中在这里。
 - `AutomationPythonResolver`：根据偏好设置、内置候选和系统命令解析 Python 解释器，生成“Python 不可用”的用户提示。
@@ -110,6 +109,11 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `EditorStateController`：检测、提交和恢复当前活动文本编辑器。快捷键切换标签时保持编辑状态的逻辑放这里。
 - `MainWindowShortcutController`：主窗口快捷键路由，只匹配按键并调用回调，不直接改工程数据。
 - `AutomationController`：自动化菜单构建、脚本发现、脚本运行、日志窗口、取消运行和结果派发。不要再把自动化菜单和进程生命周期散落回 `MainWindow`。
+- `ProofreadingController`：校对基线启停、外部工程选择与异步比较、校对结果对话框启动和校对状态动作更新。`MainWindow` 只提供当前工程、偏好、选择跳转等回调。
+- `ProofreadChangeTableModel` / `ProofreadChangeFilterModel`：校对变更表唯一的数据与筛选/排序入口。对话框不得另存一份“过滤后行号”或用 `QTableWidgetItem` 复制业务状态。
+
+跨目录工程比较使用图片指纹补充页面匹配。指纹缓存是进程内、线程安全且有容量上限的 LRU 缓存；
+新增类似缓存时必须同时定义失效 key 和容量策略，不能使用无界静态 `QHash`。
 - `AutomationShortcutController`：自动化脚本快捷键匹配和失效脚本处理。
 - `AutomationRunDialog` / `AutomationParameterDialog`：自动化日志与运行前参数输入。
 - `LabelTableModel`：右侧标签表格模型。它持有当前页标签指针，维护可见行映射，发出编辑/重排请求，但不直接修改标签。
@@ -353,11 +357,10 @@ GUI 项目不应只依赖人工点击。当前测试集中在 `tests/LabelTests.
 
 - Qt Svg：可用时链接，让内置 Breeze SVG 图标显示更完整。
 - Qt LinguistTools：构建翻译资源时使用。
-- LibArchive：可用时启用更多压缩包读取格式。
 - Python 3：运行自动化脚本时需要，主程序本体不嵌入 Python。
 
 项目应保持在 LGPL 兼容的 Qt 模块范围内，除非明确决定改变发布策略。不要引入 Qt GPL-only 模块，除非已经记录许可影响并获得项目决策。
 
-发布源码仓库时不要提交 Qt SDK、Qt 源码或 Qt 运行时二进制文件。发布二进制包时，需要提供 Qt、QtKeychain、BreezeStyleSheets、LibArchive 以及随包脚本/资源的第三方声明。Windows `LabelQtStatic` 目标只是本地实验目标，不应在未做 Qt 许可证审查前作为官方发行产物。
+发布源码仓库时不要提交 Qt SDK、Qt 源码或 Qt 运行时二进制文件。发布二进制包时，需要提供 Qt、QtKeychain、BreezeStyleSheets 以及随包脚本/资源的第三方声明。正式二进制发布矩阵为 Windows 动态版、通过专项许可与重链接审查的 Windows 静态版，以及 Linux RPM。Linux 静态构建和 DEB 包仅为实验性方向，不作为受支持的正式发行产物。
 
 仓库内置 BreezeStyleSheets 资源位于 `resources/themes/breeze`，保留了上游 MIT 与 Apache 2.0 声明。更新这些资源时必须同步 `THIRD_PARTY_NOTICES.md` 和本地许可证文件。

@@ -1,7 +1,9 @@
 # 测试说明
 
-本目录目前提供一个 Qt Test 测试目标：`LabelQtTests`。测试入口在 `LabelTests.cpp`，由
-`tests/CMakeLists.txt` 注册到 CTest。
+本目录提供两个 Qt Test 测试目标，由 `tests/CMakeLists.txt` 注册到 CTest：
+
+- `LabelQtTests`：覆盖核心模型、服务和主要 Widget 交互。
+- `ProofreadChangeTableModelTests`：独立覆盖校对变更表的 model/proxy、组合筛选和稳定排序。
 
 ## 运行方式
 
@@ -31,6 +33,13 @@ python scripts/devtool.py check --mode fast
 ```
 
 测试目标已设置 `QT_QPA_PLATFORM=offscreen`，因此基础 Qt Widget 交互测试可以在无图形桌面的环境中运行。
+
+发行打包辅助逻辑另由 `scripts/test_release_packaging.py` 使用 Python 标准库测试，并自动纳入 fast/all
+检查。它覆盖 Windows shared/static 可执行文件选择、开发脚本与构建产物排除、原生依赖许可证收集、
+Qt 对应源码 notice、静态重链接 notice，以及 MSI 预发行版本的单调升级映射。
+
+OCR 纯后处理逻辑由 `scripts/test_ocr_postprocess.py` 覆盖，验证竖排阅读方向、检测框边界归一化和
+重复区域去除。测试不导入 PaddleOCR、模型或网络服务。
 
 ## 当前覆盖范围
 

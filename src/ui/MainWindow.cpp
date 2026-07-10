@@ -5,9 +5,7 @@
 #include "services/label/LabelClipboardService.h"
 #include "services/label/LabelNavigator.h"
 #include "services/label/LabelPastePlanner.h"
-#include "services/proofread/ProjectComparisonService.h"
 #include "services/project/ProjectImageValidator.h"
-#include "services/proofread/ReviewMetadataService.h"
 #include "services/project/SaveChangesDecision.h"
 #include "services/project/SessionStateStore.h"
 #include "services/proofread/TextDiffService.h"
@@ -25,7 +23,7 @@
 #include "ui/project/PageOrderDialog.h"
 #include "ui/project/PageSelectorComboBox.h"
 #include "ui/preferences/PreferenceDialog.h"
-#include "ui/proofread/ProofreadChangesDialog.h"
+#include "ui/proofread/ProofreadingController.h"
 #include "ui/project/ProjectMergeDialog.h"
 #include "ui/project/ProjectViewController.h"
 #include "ui/widgets/ThemeManager.h"
@@ -43,7 +41,6 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontMetrics>
-#include <QFutureWatcher>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
@@ -55,7 +52,6 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
-#include <QProgressBar>
 #include <QPushButton>
 #include <QScopedValueRollback>
 #include <QSet>
@@ -72,7 +68,6 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidgetAction>
-#include <QtConcurrent/QtConcurrent>
 
 #include <algorithm>
 #include <expected>
@@ -87,13 +82,6 @@ constexpr int defaultLabelGroupColumnWidth = 120;
 constexpr int minimumLabelNumberColumnWidth = 40;
 constexpr int minimumLabelTextColumnWidth = 120;
 constexpr int minimumLabelGroupColumnWidth = 60;
-
-struct ProjectComparisonTaskResult {
-    labelqt::services::ProjectComparisonPlan plan;
-    QVector<labelqt::services::ReviewChange> changes;
-    QString error;
-    bool unknownError{false};
-};
 
 QMessageBox::StandardButton showMainWindowMessageBox(QWidget* parent, QMessageBox::Icon icon, const QString& title,
                                                      const QString& text,
@@ -125,71 +113,6 @@ void showMainWindowWarning(QWidget* parent, const QString& title, const QString&
 void showMainWindowCritical(QWidget* parent, const QString& title, const QString& text)
 {
     showMainWindowMessageBox(parent, QMessageBox::Critical, title, text);
-}
-
-ProjectComparisonTaskResult buildProjectComparisonResult(labelqt::core::Project baselineProject,
-                                                         labelqt::core::Project currentProject,
-                                                         labelqt::services::ProjectPageMatchMode matchMode)
-{
-    ProjectComparisonTaskResult result;
-    try {
-        result.plan =
-            labelqt::services::ProjectComparisonService::planComparison(baselineProject, currentProject, matchMode);
-        result.changes = labelqt::services::ProjectComparisonService::changesBetweenProjects(currentProject,
-                                                                                            result.plan);
-    } catch (const std::exception& error) {
-        result.error = QString::fromLocal8Bit(error.what());
-    } catch (...) {
-        result.unknownError = true;
-    }
-    return result;
-}
-
-std::optional<ProjectComparisonTaskResult> runProjectComparisonTask(QWidget* parent, const QString& title,
-                                                                    const QString& labelText,
-                                                                    const QString& cancelText,
-                                                                    const labelqt::core::Project& baselineProject,
-                                                                    const labelqt::core::Project& currentProject,
-                                                                    labelqt::services::ProjectPageMatchMode matchMode)
-{
-    QDialog progress(parent);
-    progress.setWindowTitle(title);
-    progress.setWindowModality(Qt::ApplicationModal);
-    progress.setMinimumWidth(360);
-    labelqt::ui::configureBusyDialogWindow(progress);
-
-    auto* layout = new QVBoxLayout(&progress);
-    auto* label = new QLabel(labelText, &progress);
-    auto* progressBar = new QProgressBar(&progress);
-    progressBar->setRange(0, 0);
-    auto* buttonLayout = new QHBoxLayout;
-    auto* cancelButton = new QPushButton(cancelText, &progress);
-    buttonLayout->addStretch(1);
-    buttonLayout->addWidget(cancelButton);
-    layout->addWidget(label);
-    layout->addWidget(progressBar);
-    layout->addLayout(buttonLayout);
-    progress.adjustSize();
-    progress.setFixedSize(progress.sizeHint());
-
-    auto* watcher = new QFutureWatcher<ProjectComparisonTaskResult>(QApplication::instance());
-    QObject::connect(watcher, &QFutureWatcher<ProjectComparisonTaskResult>::finished, &progress,
-                     &QDialog::accept);
-    QObject::connect(cancelButton, &QPushButton::clicked, &progress, &QDialog::reject);
-    watcher->setFuture(QtConcurrent::run(buildProjectComparisonResult, baselineProject, currentProject, matchMode));
-
-    progress.exec();
-
-    if (!watcher->isFinished()) {
-        QObject::disconnect(watcher, nullptr, &progress, nullptr);
-        QObject::connect(watcher, &QFutureWatcher<ProjectComparisonTaskResult>::finished, watcher,
-                         &QObject::deleteLater);
-        return std::nullopt;
-    }
-
-    const ProjectComparisonTaskResult result = watcher->result();
-    watcher->deleteLater();
-    return result;
 }
 
 } // namespace
@@ -398,6 +321,23 @@ MainWindow::MainWindow(QWidget* parent)
     m_proofreadingStatusLabel->setToolTip(tr("Proofreading baseline is active."));
     m_proofreadingStatusLabel->setVisible(false);
     statusBar()->addPermanentWidget(m_proofreadingStatusLabel);
+    m_proofreadingController = new ProofreadingController(
+        this, m_undoStack,
+        {
+            [this]() -> labelqt::core::Project& { return project(); },
+            [this]() -> const labelqt::core::AppPreferences& { return m_preferences; },
+            [this]() { commitActiveTextInput(); },
+            [this]() { return isProjectEditingBlocked(); },
+            [this]() { markDirty(); },
+            [this](int imageIndex, int labelIndex) {
+                if (labelIndex >= 0) selectLabelAndCenter(imageIndex, labelIndex);
+                else selectImage(imageIndex);
+            },
+            [this](const QString& message, int timeoutMs) { statusBar()->showMessage(message, timeoutMs); },
+        },
+        this);
+    m_proofreadingController->setUi(m_startProofreadingAction, m_showProofreadingChangesAction,
+                                    m_compareWithProjectAction, m_proofreadingStatusLabel);
     statusBar()->showMessage(tr("Ready"));
     showPreferenceWarnings();
     restoreLayoutState();
@@ -1027,219 +967,17 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
 
 void MainWindow::startProofreadingBaseline()
 {
-    if (isProjectEditingBlocked()) {
-        return;
-    }
-
-    commitActiveTextInput();
-    if (project().images().isEmpty()) {
-        showMainWindowInformation(this, tr("Proofreading"), tr("Open a project before starting proofreading."));
-        return;
-    }
-
-    const labelqt::services::ReviewMetadata oldMetadata =
-        labelqt::services::ReviewMetadataService::metadataForProject(project());
-    if (oldMetadata.hasBaseline()) {
-        endProofreadingBaseline();
-        return;
-    }
-
-    const QStringList oldCommentLines = project().commentLines();
-    const labelqt::services::ReviewMetadata newMetadata =
-        labelqt::services::ReviewMetadataService::captureBaseline(project());
-    const QStringList newCommentLines =
-        labelqt::services::ReviewMetadataService::rewriteCommentLines(oldCommentLines, newMetadata);
-    if (oldCommentLines == newCommentLines) {
-        return;
-    }
-
-    project().setCommentLines(newCommentLines);
-    const QString message = tr("Start proofreading baseline");
-    m_undoStack.push(
-        message, message, message,
-        [this, oldCommentLines]() {
-            project().setCommentLines(oldCommentLines);
-            updateProofreadingStatusUi();
-            markDirty();
-        },
-        [this, newCommentLines]() {
-            project().setCommentLines(newCommentLines);
-            updateProofreadingStatusUi();
-            markDirty();
-        });
-    markDirty();
-    updateProofreadingStatusUi();
-    statusBar()->showMessage(tr("Proofreading baseline updated."), 4000);
-}
-
-void MainWindow::endProofreadingBaseline()
-{
-    if (isProjectEditingBlocked()) {
-        return;
-    }
-
-    commitActiveTextInput();
-    const QStringList oldCommentLines = project().commentLines();
-    const QStringList newCommentLines =
-        labelqt::services::ReviewMetadataService::rewriteCommentLines(oldCommentLines, {});
-    if (oldCommentLines == newCommentLines) {
-        updateProofreadingStatusUi();
-        return;
-    }
-
-    project().setCommentLines(newCommentLines);
-    const QString message = tr("End proofreading");
-    m_undoStack.push(
-        message, message, message,
-        [this, oldCommentLines]() {
-            project().setCommentLines(oldCommentLines);
-            updateProofreadingStatusUi();
-            markDirty();
-        },
-        [this, newCommentLines]() {
-            project().setCommentLines(newCommentLines);
-            updateProofreadingStatusUi();
-            markDirty();
-        });
-    markDirty();
-    updateProofreadingStatusUi();
-    statusBar()->showMessage(tr("Proofreading ended."), 4000);
+    if (m_proofreadingController != nullptr) m_proofreadingController->toggleBaseline();
 }
 
 void MainWindow::showProofreadingChanges()
 {
-    commitActiveTextInput();
-    if (project().images().isEmpty()) {
-        showMainWindowInformation(this, tr("Proofreading"), tr("Open a project before viewing proofreading changes."));
-        return;
-    }
-
-    const labelqt::services::ReviewMetadata metadata =
-        labelqt::services::ReviewMetadataService::metadataForProject(project());
-    if (!metadata.hasBaseline()) {
-        showMainWindowInformation(this, tr("Proofreading"),
-                                  tr("Start a proofreading baseline before viewing changes."));
-        return;
-    }
-
-    QVector<labelqt::services::ReviewChange> changes =
-        labelqt::services::ReviewMetadataService::changesForProject(project(), metadata);
-    if (changes.isEmpty()) {
-        showMainWindowInformation(this, tr("Proofreading"), tr("No proofreading changes since the baseline."));
-        return;
-    }
-
-    ProofreadChangesDialog dialog(project(), project(), m_preferences, metadata, std::move(changes), {}, this);
-    if (dialog.exec() != QDialog::Accepted) {
-        return;
-    }
-
-    const int imageIndex = dialog.selectedImageIndex();
-    const int labelIndex = dialog.selectedLabelIndex();
-    if (imageIndex < 0 || imageIndex >= project().images().size()) {
-        return;
-    }
-    if (labelIndex >= 0 && labelIndex < project().images().at(imageIndex).labels.size() &&
-        !project().images().at(imageIndex).labels.at(labelIndex).isDeleted()) {
-        selectLabelAndCenter(imageIndex, labelIndex);
-        return;
-    }
-    selectImage(imageIndex);
+    if (m_proofreadingController != nullptr) m_proofreadingController->showChanges();
 }
 
 void MainWindow::compareWithProject()
 {
-    commitActiveTextInput();
-    if (project().images().isEmpty()) {
-        showMainWindowInformation(this, tr("Compare Projects"), tr("Open a project before comparing."));
-        return;
-    }
-
-    const QString path =
-        QFileDialog::getOpenFileName(this, tr("Select project to compare"),
-                                     m_sessionStateStore.lastFileDialogDirectory(
-                                         labelqt::services::FileDialogScope::CompareProject),
-                                     tr("LabelPlus Text (*.txt);;All Files (*)"));
-    if (path.isEmpty()) {
-        return;
-    }
-    m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::CompareProject, path);
-
-    labelqt::core::Project targetProject;
-    try {
-        targetProject = labelqt::core::LabelPlusDocument::loadFromFile(path);
-    } catch (const std::exception& error) {
-        showMainWindowWarning(this, tr("Compare Projects"),
-                              tr("Failed to open comparison project: %1").arg(QString::fromLocal8Bit(error.what())));
-        return;
-    }
-
-    const labelqt::core::Project currentProjectSnapshot = project();
-    std::optional<ProjectComparisonTaskResult> comparisonResult =
-        runProjectComparisonTask(this, QString(), tr("Comparing projects..."), tr("Abort"), currentProjectSnapshot,
-                                 targetProject,
-                                 labelqt::services::ProjectPageMatchMode::ByName);
-    if (!comparisonResult.has_value()) {
-        return;
-    }
-    auto showComparisonFailure = [this](const ProjectComparisonTaskResult& result) {
-        const QString errorText = result.unknownError ? tr("Unknown error") : result.error;
-        showMainWindowWarning(this, tr("Compare Projects"),
-                              tr("Failed to compare projects: %1").arg(errorText));
-    };
-    if (!comparisonResult->error.isEmpty() || comparisonResult->unknownError) {
-        showComparisonFailure(*comparisonResult);
-        return;
-    }
-
-    if (labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(comparisonResult->plan)) {
-        const QMessageBox::StandardButton result =
-            showMainWindowMessageBox(this, QMessageBox::Question, tr("Compare Projects"),
-                                     tr("The selected project has very few page names in common with the current project, but both projects have the same number of pages. Compare pages by their current order instead?"),
-                                     QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-        if (result == QMessageBox::Yes) {
-            comparisonResult = runProjectComparisonTask(this, QString(), tr("Comparing projects..."), tr("Abort"),
-                                                        currentProjectSnapshot, targetProject,
-                                                        labelqt::services::ProjectPageMatchMode::ByOrder);
-            if (!comparisonResult.has_value()) {
-                return;
-            }
-            if (!comparisonResult->error.isEmpty() || comparisonResult->unknownError) {
-                showComparisonFailure(*comparisonResult);
-                return;
-            }
-        }
-    }
-
-    if (comparisonResult->changes.isEmpty()) {
-        showMainWindowInformation(this, tr("Compare Projects"), tr("No differences from the selected project."));
-        return;
-    }
-
-    ProofreadChangesDialog dialog(currentProjectSnapshot, targetProject, m_preferences,
-                                  std::move(comparisonResult->plan.baselineMetadata),
-                                  std::move(comparisonResult->changes),
-                                  {
-                                      .leftProjectTitle = tr("Current Project"),
-                                      .rightProjectTitle = tr("Target Project"),
-                                      .jumpToLeftProject = true,
-                                  },
-                                  this);
-    if (dialog.exec() != QDialog::Accepted) {
-        return;
-    }
-
-    const int imageIndex = dialog.selectedImageIndex();
-    const int labelIndex = dialog.selectedLabelIndex();
-    if (imageIndex < 0 || imageIndex >= project().images().size()) {
-        return;
-    }
-    if (labelIndex >= 0 && labelIndex < project().images().at(imageIndex).labels.size() &&
-        !project().images().at(imageIndex).labels.at(labelIndex).isDeleted()) {
-        selectLabelAndCenter(imageIndex, labelIndex);
-        return;
-    }
-    selectImage(imageIndex);
+    if (m_proofreadingController != nullptr) m_proofreadingController->compareWithProject();
 }
 
 void MainWindow::showAutomationDiscoveryWarnings(const QStringList& warnings)
@@ -1654,8 +1392,13 @@ void MainWindow::addLabel(QPointF normalizedPosition)
         return;
     }
 
-    const QString group =
-        m_insertGroupComboBox->currentText().isEmpty() ? QStringLiteral("框内") : m_insertGroupComboBox->currentText();
+    QString group = m_insertGroupComboBox->currentText();
+    if (group.isEmpty() && !project().groups().isEmpty()) {
+        group = project().groups().first();
+    }
+    if (group.isEmpty()) {
+        return;
+    }
     if (!isGroupVisibleByFilter(group)) {
         statusBar()->showMessage(tr("The insert group is hidden by the current filter."), 4000);
         return;
@@ -2653,15 +2396,7 @@ void MainWindow::replaceProjectImages(QVector<labelqt::core::ImageEntry> images,
     }
     refreshProjectUi();
 
-    int restoredImageIndex = -1;
-    if (!preferredImageName.isEmpty()) {
-        for (int i = 0; i < project().images().size(); ++i) {
-            if (project().images().at(i).name == preferredImageName) {
-                restoredImageIndex = i;
-                break;
-            }
-        }
-    }
+    int restoredImageIndex = project().imageIndexByName(preferredImageName);
     if (restoredImageIndex < 0 && !project().images().isEmpty()) {
         restoredImageIndex = std::clamp(fallbackImageIndex, 0, static_cast<int>(project().images().size()) - 1);
     }
@@ -2906,12 +2641,8 @@ void MainWindow::restoreProjectSessionState()
 
     int imageIndex = state.imageIndex;
     if (!state.imageName.isEmpty()) {
-        for (int i = 0; i < project().images().size(); ++i) {
-            if (project().images().at(i).name == state.imageName) {
-                imageIndex = i;
-                break;
-            }
-        }
+        const int namedImageIndex = project().imageIndexByName(state.imageName);
+        if (namedImageIndex >= 0) imageIndex = namedImageIndex;
     }
     if (imageIndex < 0 || imageIndex >= project().images().size()) {
         imageIndex = 0;
@@ -3240,7 +2971,7 @@ QStringList MainWindow::defaultProjectGroups() const
 
 bool MainWindow::isProofreadingModeActive() const
 {
-    return labelqt::services::ReviewMetadataService::projectHasBaseline(project());
+    return m_proofreadingController != nullptr && m_proofreadingController->isActive();
 }
 
 bool MainWindow::shouldCenterCanvasForTableSelection() const
@@ -3269,21 +3000,7 @@ void MainWindow::setDirty(bool dirty)
 
 void MainWindow::updateProofreadingStatusUi()
 {
-    const bool hasBaseline = labelqt::services::ReviewMetadataService::projectHasBaseline(project());
-    const bool hasProject = !project().isEmpty();
-    if (m_proofreadingStatusLabel != nullptr) {
-        m_proofreadingStatusLabel->setVisible(hasBaseline);
-    }
-    if (m_startProofreadingAction != nullptr) {
-        m_startProofreadingAction->setText(hasBaseline ? tr("End Proofreading") : tr("Start Proofreading Baseline"));
-        m_startProofreadingAction->setEnabled(!m_isAutomationRunning && hasProject);
-    }
-    if (m_showProofreadingChangesAction != nullptr) {
-        m_showProofreadingChangesAction->setEnabled(!m_isAutomationRunning && hasProject && hasBaseline);
-    }
-    if (m_compareWithProjectAction != nullptr) {
-        m_compareWithProjectAction->setEnabled(!m_isAutomationRunning && hasProject);
-    }
+    if (m_proofreadingController != nullptr) m_proofreadingController->updateUi(m_isAutomationRunning);
 }
 
 bool MainWindow::promptToSaveIfDirty()
@@ -3378,15 +3095,7 @@ QColor MainWindow::colorForGroup(const QString& group) const
 
 int MainWindow::labelCountForGroup(const QString& group) const
 {
-    int count = 0;
-    for (const labelqt::core::ImageEntry& image : project().images()) {
-        for (const labelqt::core::Label& label : image.labels) {
-            if (!label.isDeleted() && label.group() == group) {
-                ++count;
-            }
-        }
-    }
-    return count;
+    return project().activeLabelCountForGroup(group);
 }
 
 void MainWindow::setEditorEnabled(bool enabled)

@@ -52,6 +52,10 @@ cmake --build --preset windows-vs-release --target deploy_windows
 python scripts/package_windows_release.py \
   --source /path/to/deployed/Release \
   --version v0.1.0-alpha.2 \
+  --variant shared \
+  --dependency-license-dir /path/to/vcpkg/installed/x64-windows/share \
+  --qt-version 6.x.y \
+  --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz \
   --output-dir dist
 ```
 
@@ -65,7 +69,11 @@ Windows zip 应包含：
 - 空的 `scripts/custom` 目录
 - `LICENSE.txt`
 - `THIRD_PARTY_NOTICES.md`
+- `QT_SOURCE_OFFER.txt`
 - `licenses/` 下的第三方许可证文本
+
+打包脚本会拒绝缺少 `qtbase` 或 `qtkeychain` 许可证目录的依赖清单。仍需人工核对所传目录来自本次构建
+实际使用的 vcpkg triplet，并确认其中还包含所有随包分发的传递依赖许可证。
 
 不应包含：
 
@@ -74,8 +82,10 @@ Windows zip 应包含：
 - `.pdb`、`.ilk`、`.exp`、`.lib` 等开发产物
 - CMake 构建缓存
 - 用户本地脚本配置、API key、日志或模型缓存
+- 开发专用的 `scripts/official/test`
 
 打包后在一个干净目录里解压 zip，并从解压目录直接运行 `labelqt.exe`。不要只测试构建目录中的 exe。
+解压后先运行 `python scripts/devtool.py release-audit <解压根目录> --kind windows-dir` 做结构审计。
 
 可选：在 Windows 上安装 WiX Toolset v4+ 及其 UI 扩展后，可以基于同一个已部署的 Release 目录生成带标准安装向导的 MSI：
 
@@ -83,31 +93,72 @@ Windows zip 应包含：
 python scripts/package_windows_msi.py `
   --source path\to\Release `
   --version v0.1.0-alpha.2 `
+  --dependency-license-dir path\to\vcpkg\installed\x64-windows\share `
+  --qt-version 6.x.y `
+  --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz `
   --output-dir dist
 ```
 
 MSI 会显示“下一步、安装路径、完成”等标准界面，把程序安装到 `Program Files\LabelQt`，并携带与 zip 相同的运行时文件、默认 `preference.json` 和官方脚本。发布 MSI 前应额外在干净 Windows 环境中测试安装、启动、卸载和升级流程。
+打包脚本会把 `alpha.N`、`beta.N`、`rc.N` 和正式版映射到单调递增的 Windows Installer 数值版本，避免
+同一 `0.1.0` 系列预发行包被识别为相同版本。
 
-## Linux 原生包
+## Windows 静态链接包
+
+使用静态 Qt、静态 QtKeychain 和计划随包使用的其他静态依赖配置独立构建目录：
+
+```powershell
+cmake --preset windows-vs-static-release
+cmake --build --preset windows-vs-static-release
+```
+
+Windows 静态版使用同一个打包脚本的静态变体。示例中的 Qt 源码 URL 必须指向由 LabelQt 项目控制、
+与本次构建完全对应的源码归档：
+
+```powershell
+python scripts/package_windows_release.py `
+  --source path\to\static\Release `
+  --version v0.1.0-alpha.2 `
+  --variant static `
+  --dependency-license-dir path\to\vcpkg\installed\x64-windows-static\share `
+  --qt-version 6.x.y `
+  --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz `
+  --relinking-instructions-url https://github.com/Shitful1919810/LabelQt/blob/v0.1.0-alpha.2/docs/windows-static-relinking.md `
+  --output-dir dist
+```
+
+打包器会把 `labelqt-static.exe` 规范化为归档内的 `labelqt.exe`，写入
+`STATIC_LINKING_NOTICE.txt` 和 `RELINKING.md`，并拒绝缺少静态合规参数的打包请求。静态发布检查还包括：
+
+- 使用依赖检查工具确认没有意外的 Qt、QtKeychain 或 MSVC 运行库 DLL 依赖。
+- 验证 Windows 平台插件、PNG/JPEG/SVG、系统密钥环、主题、翻译和官方自动化脚本。
+- 附带实际静态链接版本对应的 Qt、QtKeychain 及其他依赖许可证。
+- 提供项目自身控制的 Qt 对应源码获取方式，并记录精确版本、构建参数、补丁和重链接步骤。
+- 实际修改一次 Qt 源码，按 `RELINKING.md` 从头构建并运行修改后的程序，验证重链接材料不是仅在纸面上成立。
+- 在未安装 Qt、vcpkg 和 Visual Studio 的干净 Windows 环境中完成启动及核心功能测试。
+- 静态 ZIP 仍需携带 `scripts/official`、空 `scripts/custom`、项目许可证和第三方声明；“静态”只表示原生运行库链接方式，不代表所有运行数据都嵌入 exe。
+- 解压后运行 `python scripts/devtool.py release-audit <解压根目录> --kind windows-static-dir`。
+
+## Linux RPM
 
 Linux release 构建：
 
 ```bash
-cmake --preset linux-release
+cmake --preset linux-release -DLABELQT_PRERELEASE=alpha.2 -DLABELQT_RPM_DIST_TAG=fc44
 cmake --build --preset linux-release
 ```
 
-生成本机安装包：
+生成正式 RPM：
 
 ```bash
-cmake --build --preset linux-release --target package
+cpack --config build/linux/release/CPackConfig.cmake -G RPM
 ```
 
-也可以单独生成某种格式：
+RPM 必须在目标 Fedora/openSUSE 系构建环境中生成，并检查依赖、包内容和安装/卸载行为。仓库保留以下
+DEB 命令用于实验和社区验证，但 DEB 不上传为正式 release 产物：
 
 ```bash
 cpack --config build/linux/release/CPackConfig.cmake -G DEB
-cpack --config build/linux/release/CPackConfig.cmake -G RPM
 ```
 
 安装包应遵循 Linux 文件布局：
@@ -118,12 +169,18 @@ cpack --config build/linux/release/CPackConfig.cmake -G RPM
 - 桌面入口：`/usr/share/applications/org.labelqt.LabelQt.desktop`
 - 图标：`/usr/share/icons/hicolor/scalable/apps/org.labelqt.LabelQt.svg`
 
-Linux 包不捆绑默认 `preference.json`、Python、OCR 模型或自动化脚本依赖；官方自动化脚本应安装到 `/usr/share/labelqt/scripts/official`。偏好设置默认值由程序内置提供；用户脚本应放在程序显示的用户脚本目录中。Windows 便携包可以携带 exe 旁边的 `preference.json`、`scripts/official` 和 `scripts/custom`，用于提供默认体验与便携脚本目录。
+Linux RPM 不捆绑默认 `preference.json`、Python、OCR 模型或自动化脚本依赖；官方自动化脚本应安装到 `/usr/share/labelqt/scripts/official`。偏好设置默认值由程序内置提供；用户脚本应放在程序显示的用户脚本目录中。Windows 便携包可以携带 exe 旁边的 `preference.json`、`scripts/official` 和 `scripts/custom`，用于提供默认体验与便携脚本目录。
+
+RPM 元数据应显示 `Shitful <shitful233@gmail.com>`、项目主页、完整描述和正确的预发行 Release 字段。
+正式包不应包含 `scripts/official/test`。运行 `rpm -qpi`、`rpm -qpR`、`rpm -qpl` 和 `rpmlint` 检查后，
+再对 RPM 及其 CPack 生成的 SHA-256 文件签名或发布校验信息。
+
+Linux 静态构建和 DEB 包均为实验性产物，不进入正式发布附件，也不应在 release note 中标记为受支持平台包。
 
 ## 发布到 GitHub
 
 - 在对应提交上创建 tag。
-- 上传 Windows zip。
+- 上传 Windows 动态 ZIP、Windows 静态 ZIP 和 Linux RPM；DEB 与 Linux 静态实验产物不上传为受支持附件。
 - 粘贴 release note。
 - 标记 alpha/beta/pre-release 状态。
 - 发布后下载 GitHub 页面上的附件，再做一次解压运行检查。

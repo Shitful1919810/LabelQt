@@ -21,7 +21,6 @@ set(LABELQT_SERVICE_SOURCES
     services/automation/AutomationPythonResolver.cpp
     services/automation/AutomationService.cpp
     services/automation/SecretStore.cpp
-    services/io/ArchiveReader.cpp
     services/io/ImagePageCache.cpp
     services/io/ImagePageCache.h
     services/label/LabelClipboardService.cpp
@@ -90,7 +89,11 @@ set(LABELQT_UI_SOURCES
     ui/project/ProjectMergeDialog.cpp
     ui/project/ProjectViewController.cpp
     ui/proofread/ProofreadChangesDialog.cpp
+    ui/proofread/ProofreadChangeTableModel.cpp
+    ui/proofread/ProofreadingController.cpp
     ui/widgets/CheckableFilterButton.cpp
+    ui/widgets/BusyTaskDialog.cpp
+    ui/widgets/BusyTaskDialog.h
     ui/widgets/DialogWindowUtils.cpp
     ui/widgets/DialogWindowUtils.h
     ui/widgets/GroupFilterComboBox.cpp
@@ -121,11 +124,6 @@ target_link_libraries(LabelQt PRIVATE DiffMatchPatch Qt6::Core Qt6::Gui Qt6::Wid
 
 if(TARGET Qt6::Svg)
     target_link_libraries(LabelQt PRIVATE Qt6::Svg)
-endif()
-
-if(LibArchive_FOUND)
-    target_link_libraries(LabelQt PRIVATE LibArchive::LibArchive)
-    target_compile_definitions(LabelQt PRIVATE LABELQT_HAS_LIBARCHIVE=1)
 endif()
 
 if(COMMAND qt_add_translations)
@@ -161,7 +159,7 @@ endfunction()
 
 labelqt_add_runtime_files(LabelQt LabelQtRuntimeFiles)
 
-if(WIN32)
+if(WIN32 AND NOT LABELQT_ENABLE_WINDOWS_STATIC_RELEASE)
     find_program(WINDEPLOYQT_EXECUTABLE
         NAMES windeployqt
         HINTS "${Qt6_DIR}/../../../bin"
@@ -190,112 +188,77 @@ set_target_properties(LabelQt PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
 )
 
-if(LABELQT_ENABLE_STATIC_QT_EXPERIMENT)
-    if(NOT WIN32)
-        message(FATAL_ERROR "LABELQT_ENABLE_STATIC_QT_EXPERIMENT is only supported on Windows.")
-    endif()
-    if(QT6_IS_SHARED_LIBS_BUILD)
-        message(FATAL_ERROR
-            "LABELQT_ENABLE_STATIC_QT_EXPERIMENT requires a static Qt build, but the current Qt package is shared. "
-            "Install or build static Qt and point CMAKE_PREFIX_PATH/Qt6_DIR to that static Qt before using the "
-            "windows-static-release or windows-vs-static-release preset. A normal Qt installer package will still "
-            "produce an executable that depends on Qt DLLs."
-        )
-    endif()
-
-    qt_add_executable(LabelQtStatic
-        WIN32
-        main.cpp
-        ${LABELQT_CORE_SOURCES}
-        ${LABELQT_SERVICE_SOURCES}
-        ${LABELQT_UI_SOURCES}
-        ${LABELQT_RESOURCE_SOURCES}
-    )
-
-    target_include_directories(LabelQtStatic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_compile_definitions(LabelQtStatic PRIVATE LABELQT_INSTALL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/labelqt")
-    target_link_libraries(LabelQtStatic PRIVATE DiffMatchPatchStatic Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6Keychain::Qt6Keychain)
-
-    if(TARGET Qt6::Svg)
-        target_link_libraries(LabelQtStatic PRIVATE Qt6::Svg)
-    endif()
-
-    if(LibArchive_FOUND)
-        target_link_libraries(LabelQtStatic PRIVATE LibArchive::LibArchive)
-        target_compile_definitions(LabelQtStatic PRIVATE LABELQT_HAS_LIBARCHIVE=1)
-    endif()
-
-    if(COMMAND qt_add_translations)
-        qt_add_translations(LabelQtStatic
-            TS_FILES
-                ${LABELQT_TRANSLATION_FILES}
-            RESOURCE_PREFIX "/i18n"
-        )
-    endif()
-
-    if(COMMAND qt_import_plugins AND TARGET Qt6::QWindowsIntegrationPlugin)
-        qt_import_plugins(LabelQtStatic INCLUDE Qt6::QWindowsIntegrationPlugin)
-    endif()
-
-    labelqt_add_runtime_files(LabelQtStatic LabelQtStaticRuntimeFiles)
-
-    if(MSVC)
-        set_target_properties(LabelQtStatic PROPERTIES
-            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-        )
-    else()
-        target_link_options(LabelQtStatic PRIVATE -static -static-libgcc -static-libstdc++)
-    endif()
-
-    labelqt_enable_warnings(LabelQtStatic)
-
-    set_target_properties(LabelQtStatic PROPERTIES
-        OUTPUT_NAME "labelqt-static"
+if(UNIX AND NOT APPLE)
+    set_target_properties(LabelQt PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+        INSTALL_RPATH ""
     )
 endif()
 
+if(LABELQT_ENABLE_WINDOWS_STATIC_RELEASE)
+    set_target_properties(LabelQt PROPERTIES OUTPUT_NAME "labelqt-static")
+
+    if(COMMAND qt_import_plugins AND TARGET Qt6::QWindowsIntegrationPlugin)
+        qt_import_plugins(LabelQt INCLUDE Qt6::QWindowsIntegrationPlugin)
+    endif()
+
+    if(MSVC)
+        set_target_properties(LabelQt PROPERTIES
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        )
+    else()
+        target_link_options(LabelQt PRIVATE -static -static-libgcc -static-libstdc++)
+    endif()
+endif()
+
+set(LABELQT_INSTALL_DOCDIR "${CMAKE_INSTALL_DATAROOTDIR}/doc/labelqt")
+set(LABELQT_INSTALL_LICENSEDIR "${LABELQT_INSTALL_DOCDIR}/licenses")
+set(LABELQT_INSTALL_APPDATADIR "${CMAKE_INSTALL_DATAROOTDIR}/labelqt")
+
 install(TARGETS LabelQt
     BUNDLE DESTINATION .
-    RUNTIME DESTINATION bin
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE.txt"
     "${CMAKE_CURRENT_SOURCE_DIR}/../THIRD_PARTY_NOTICES.md"
-    DESTINATION share/doc/labelqt
+    DESTINATION "${LABELQT_INSTALL_DOCDIR}"
 )
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/LICENSE.md"
-    DESTINATION share/doc/labelqt/licenses
+    DESTINATION "${LABELQT_INSTALL_LICENSEDIR}"
     RENAME BreezeStyleSheets-LICENSE.md
 )
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/MaterialUi.LICENSE"
-    DESTINATION share/doc/labelqt/licenses
+    DESTINATION "${LABELQT_INSTALL_LICENSEDIR}"
     RENAME MaterialUi-LICENSE.txt
 )
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/diff-match-patch/LICENSE"
-    DESTINATION share/doc/labelqt/licenses
+    DESTINATION "${LABELQT_INSTALL_LICENSEDIR}"
     RENAME diff-match-patch-LICENSE.txt
 )
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../resources/linux/org.labelqt.LabelQt.desktop"
-    DESTINATION share/applications
+    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications"
 )
 
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/../resources/linux/org.labelqt.LabelQt.svg"
-    DESTINATION share/icons/hicolor/scalable/apps
+    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps"
 )
 
 install(DIRECTORY
     "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/official"
-    DESTINATION share/labelqt/scripts
+    DESTINATION "${LABELQT_INSTALL_APPDATADIR}/scripts"
+    USE_SOURCE_PERMISSIONS
+    PATTERN "test" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE

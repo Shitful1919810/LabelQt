@@ -63,3 +63,15 @@ labelqt_enable_warnings(LabelQtTests)
 
 add_test(NAME LabelQtTests COMMAND $<TARGET_FILE:LabelQtTests>)
 set_tests_properties(LabelQtTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(ProofreadChangeTableModelTests
+    ProofreadChangeTableModelTests.cpp
+    ../src/services/proofread/ReviewChangeClassifier.cpp
+    ../src/services/proofread/TextDiffService.cpp
+    ../src/ui/proofread/ProofreadChangeTableModel.cpp
+)
+
+target_include_directories(ProofreadChangeTableModelTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+target_link_libraries(ProofreadChangeTableModelTests PRIVATE DiffMatchPatch Qt6::Core Qt6::Test)
+labelqt_enable_warnings(ProofreadChangeTableModelTests)
+add_test(NAME ProofreadChangeTableModelTests COMMAND $<TARGET_FILE:ProofreadChangeTableModelTests>)

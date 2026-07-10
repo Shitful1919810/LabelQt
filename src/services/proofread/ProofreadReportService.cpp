@@ -80,14 +80,6 @@ QString textDiffHtml(const ReviewChange& change, const ProofreadReportTexts& tex
     return escaped(texts.noTextChange);
 }
 
-const labelqt::core::ImageEntry* imageByName(const labelqt::core::Project& project, const QString& imageName)
-{
-    const auto it = std::ranges::find_if(project.images(), [&imageName](const labelqt::core::ImageEntry& image) {
-        return image.name == imageName;
-    });
-    return it == project.images().cend() ? nullptr : &(*it);
-}
-
 QString pageNameForChange(const ReviewChange& change)
 {
     return change.imageName.isEmpty() ? change.baselineImageName : change.imageName;
@@ -238,11 +230,11 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
     for (const int changeIndex : changeIndexes) {
         const ReviewChange& change = changes.at(changeIndex);
         if (beforeImage == nullptr) {
-            beforeImage = imageByName(beforeProject, change.baselineImageName.isEmpty() ? change.imageName
-                                                                                       : change.baselineImageName);
+            beforeImage = beforeProject.imageByName(change.baselineImageName.isEmpty() ? change.imageName
+                                                                                        : change.baselineImageName);
         }
         if (afterImage == nullptr) {
-            afterImage = imageByName(currentProject, change.imageName.isEmpty() ? change.baselineImageName
+            afterImage = currentProject.imageByName(change.imageName.isEmpty() ? change.baselineImageName
                                                                                 : change.imageName);
         }
         if (beforeImage != nullptr && afterImage != nullptr) {

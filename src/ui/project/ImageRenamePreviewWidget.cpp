@@ -1,5 +1,7 @@
 #include "ui/project/ImageRenamePreviewWidget.h"
 
+#include "services/project/ProjectImageRenameService.h"
+
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -89,31 +91,11 @@ public:
 protected:
     void highlightBlock(const QString& text) override
     {
-        qsizetype cursor = 0;
-        while (cursor < text.size()) {
-            const qsizetype open = text.indexOf(QLatin1Char('{'), cursor);
-            const qsizetype closeBeforeOpen = text.indexOf(QLatin1Char('}'), cursor);
-            if (closeBeforeOpen >= 0 && (open < 0 || closeBeforeOpen < open)) {
-                setFormat(static_cast<int>(closeBeforeOpen), 1, m_invalidFormat);
-                cursor = closeBeforeOpen + 1;
-                continue;
-            }
-            if (open < 0) {
-                break;
-            }
-
-            const qsizetype close = text.indexOf(QLatin1Char('}'), open + 1);
-            if (close < 0) {
-                setFormat(static_cast<int>(open), static_cast<int>(text.size() - open), m_invalidFormat);
-                break;
-            }
-
-            const QString token = text.sliced(open + 1, close - open - 1);
-            const bool isIndexPadding = QRegularExpression(QStringLiteral(R"(^index:0[1-9]\d*$)")).match(token).hasMatch();
-            const bool isValid = token == QStringLiteral("stem") || token == QStringLiteral("index") || isIndexPadding;
-            setFormat(static_cast<int>(open), static_cast<int>(close - open + 1),
-                      isValid ? m_validFormat : m_invalidFormat);
-            cursor = close + 1;
+        const labelqt::services::ProjectImageRenamePatternAnalysis analysis =
+            labelqt::services::ProjectImageRenameService::analyzePattern(text);
+        for (const labelqt::services::ProjectImageRenamePatternSpan& span : analysis.spans) {
+            setFormat(static_cast<int>(span.start), static_cast<int>(span.length),
+                      span.valid ? m_validFormat : m_invalidFormat);
         }
     }
 

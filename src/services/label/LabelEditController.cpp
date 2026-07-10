@@ -141,7 +141,7 @@ LabelEditResult LabelEditController::removeGroup(const QString& group, const QSt
 LabelEditResult LabelEditController::addLabel(int imageIndex, const labelqt::core::Label& label)
 {
     labelqt::core::ImageEntry* image = imageAt(imageIndex);
-    if (image == nullptr) {
+    if (image == nullptr || label.isDeleted() || !hasGroup(label.group())) {
         return {};
     }
 

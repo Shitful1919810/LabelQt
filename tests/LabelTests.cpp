@@ -532,6 +532,37 @@ private slots:
         QCOMPARE(result.warnings.size(), 2);
     }
 
+    void appPreferencesRejectsNumbersAboveDocumentedBounds()
+    {
+        const QByteArray json = R"({
+            "labelMarker": {"diameter": 100000},
+            "labelTable": {"maxTextRows": 100000},
+            "markerTextBubble": {"fontPointSize": 100000}
+        })";
+
+        const auto result = labelqt::core::AppPreferences::loadFromJson(json);
+        QCOMPARE(result.preferences.labelMarkerDiameterPixels(), 20.0);
+        QCOMPARE(result.preferences.labelTableMaxTextRows(), 3);
+        QCOMPARE(result.preferences.markerTextBubbleFontPointSize(), 0.0);
+        QCOMPARE(result.warnings.size(), 3);
+    }
+
+    void labelEditControllerRejectsLabelWithUnknownGroup()
+    {
+        labelqt::core::Project project;
+        project.setGroups({QStringLiteral("dialogue")});
+        project.images().append({QStringLiteral("001.png"), {}, {}});
+        labelqt::core::UndoStack undoStack;
+        labelqt::services::LabelEditController controller(project, undoStack, testCommandTexts());
+
+        const auto result = controller.addLabel(
+            0, Label(QStringLiteral("text"), QStringLiteral("unknown"), QPointF(0.5, 0.5)));
+
+        QVERIFY(!result.changed);
+        QVERIFY(project.images().first().labels.isEmpty());
+        QVERIFY(!undoStack.canUndo());
+    }
+
     void automationManifestRejectsInvalidOperationsOutput()
     {
         QJsonObject output;
@@ -1877,6 +1908,35 @@ private slots:
         QCOMPARE(migratedMetadata.baselineFor(QStringLiteral("p05.png"), 0).text, QStringLiteral("third"));
     }
 
+    void projectImageRenameServiceRollsBackEarlierFilesWhenALaterRenameFails()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString firstPath = QDir(dir.path()).filePath(QStringLiteral("a.png"));
+        const QString secondPath = QDir(dir.path()).filePath(QStringLiteral("b.png"));
+        for (const QString& path : {firstPath, secondPath}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("image");
+        }
+
+        labelqt::core::Project project;
+        project.images().append({QStringLiteral("a.png"), firstPath, {}});
+        project.images().append({QStringLiteral("b.png"), secondPath, {}});
+        const auto plan = labelqt::services::ProjectImageRenameService::createPlan(
+            project, imageRenameOptions(QStringLiteral("page_{index}"), 1));
+        QVERIFY(plan.isValid());
+        QVERIFY(QFile::remove(secondPath));
+
+        const auto result = labelqt::services::ProjectImageRenameService::applyPlan(project, plan);
+
+        QVERIFY(!result.has_value());
+        QVERIFY(QFileInfo::exists(firstPath));
+        QVERIFY(!QFileInfo::exists(QDir(dir.path()).filePath(QStringLiteral("page_1.png"))));
+        QCOMPARE(project.images().at(0).name, QStringLiteral("a.png"));
+        QCOMPARE(project.images().at(1).name, QStringLiteral("b.png"));
+    }
+
     void projectImageRenameServiceRenamesFilesAndMigratesMetadata()
     {
         QTemporaryDir dir;
@@ -2609,8 +2669,8 @@ private slots:
     {
         labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Semantic);
         const QVector<labelqt::services::TextDiffChunk> chunks =
-            labelqt::services::TextDiffService::diff(QStringLiteral("这么一说"),
-                                                     QStringLiteral("这么说来确实"));
+            labelqt::services::TextDiffService::diff(QStringLiteral("The cat in the hat."),
+                                                     QStringLiteral("The dog in a hat."));
 
         QVERIFY(!chunks.isEmpty());
         QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
@@ -2619,6 +2679,19 @@ private slots:
         QVERIFY(std::ranges::any_of(chunks, [](const labelqt::services::TextDiffChunk& chunk) {
             return chunk.operation == labelqt::services::TextDiffOperation::Insert;
         }));
+        labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Auto);
+    }
+
+    void textDiffServiceNeverRunsUnsafeSemanticCleanupForCjk()
+    {
+        const QString before = QStringLiteral("登顶所见绝美风景的代价是");
+        const QString after = QStringLiteral("登顶见到绝美风景的代价是");
+        labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Raw);
+        const auto raw = labelqt::services::TextDiffService::diff(before, after);
+        labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Semantic);
+        const auto guardedSemantic = labelqt::services::TextDiffService::diff(before, after);
+
+        QCOMPARE(guardedSemantic, raw);
         labelqt::services::TextDiffService::setCleanupMode(labelqt::core::TextDiffCleanupMode::Auto);
     }
 

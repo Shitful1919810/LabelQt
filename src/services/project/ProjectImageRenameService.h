@@ -37,12 +37,26 @@ struct ProjectImageRenamePlan {
     bool hasChanges() const noexcept;
 };
 
+struct ProjectImageRenamePatternSpan {
+    qsizetype start{0};
+    qsizetype length{0};
+    bool valid{false};
+};
+
+struct ProjectImageRenamePatternAnalysis {
+    QVector<ProjectImageRenamePatternSpan> spans;
+    QString error;
+
+    bool isValid() const noexcept { return error.isEmpty(); }
+};
+
 class ProjectImageRenameService final {
 public:
     static ProjectImageRenamePlan createPlan(const labelqt::core::Project& project,
                                              const ProjectImageRenameOptions& options);
     static ProjectImageRenamePlan mergePlans(ProjectImageRenamePlan currentPlan,
                                              const ProjectImageRenamePlan& incomingPlan);
+    static ProjectImageRenamePatternAnalysis analyzePattern(const QString& pattern);
     static std::expected<void, QString> applyPlan(labelqt::core::Project& project,
                                                   const ProjectImageRenamePlan& plan);
 

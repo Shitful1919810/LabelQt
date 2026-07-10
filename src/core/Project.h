@@ -22,6 +22,10 @@ public:
 
     const QVector<ImageEntry>& images() const noexcept;
     QVector<ImageEntry>& images() noexcept;
+    int imageIndexByName(const QString& imageName) const noexcept;
+    const ImageEntry* imageByName(const QString& imageName) const noexcept;
+    ImageEntry* imageByName(const QString& imageName) noexcept;
+    int activeLabelCountForGroup(const QString& group) const noexcept;
 
     const QStringList& groups() const noexcept;
     QStringList& groups() noexcept;

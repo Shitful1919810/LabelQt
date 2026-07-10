@@ -42,6 +42,11 @@
       "displayName": "Linux Release",
       "inherits": "release-base",
       "binaryDir": "${sourceDir}/build/linux/release",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "/usr",
+        "LABELQT_REQUIRE_LINGUIST_TOOLS": "ON",
+        "LABELQT_REQUIRE_QT_SVG": "ON"
+      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -64,6 +69,10 @@
       "displayName": "Windows Release",
       "inherits": "release-base",
       "binaryDir": "${sourceDir}/build/windows/release",
+      "cacheVariables": {
+        "LABELQT_REQUIRE_LINGUIST_TOOLS": "ON",
+        "LABELQT_REQUIRE_QT_SVG": "ON"
+      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -72,12 +81,14 @@
     },
     {
       "name": "windows-static-release",
-      "displayName": "Windows Static Release (Experimental)",
+      "displayName": "Windows Static Release",
       "inherits": "release-base",
       "binaryDir": "${sourceDir}/build/windows/static-release",
       "cacheVariables": {
-        "LABELQT_ENABLE_STATIC_QT_EXPERIMENT": "ON",
-        "LABELQT_ENABLE_TESTS": "OFF"
+        "LABELQT_ENABLE_WINDOWS_STATIC_RELEASE": "ON",
+        "LABELQT_ENABLE_TESTS": "OFF",
+        "LABELQT_REQUIRE_LINGUIST_TOOLS": "ON",
+        "LABELQT_REQUIRE_QT_SVG": "ON"
       },
       "condition": {
         "type": "equals",
@@ -109,7 +120,9 @@
       "binaryDir": "${sourceDir}/build/windows-vs/release",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "OFF",
-        "LABELQT_ENABLE_TESTS": "ON"
+        "LABELQT_ENABLE_TESTS": "ON",
+        "LABELQT_REQUIRE_LINGUIST_TOOLS": "ON",
+        "LABELQT_REQUIRE_QT_SVG": "ON"
       },
       "condition": {
         "type": "equals",
@@ -119,14 +132,16 @@
     },
     {
       "name": "windows-vs-static-release",
-      "displayName": "Windows Static Release (Visual Studio, Experimental)",
+      "displayName": "Windows Static Release (Visual Studio)",
       "generator": "Visual Studio 17 2022",
       "architecture": "x64",
       "binaryDir": "${sourceDir}/build/windows-vs/static-release",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "OFF",
-        "LABELQT_ENABLE_STATIC_QT_EXPERIMENT": "ON",
-        "LABELQT_ENABLE_TESTS": "OFF"
+        "LABELQT_ENABLE_WINDOWS_STATIC_RELEASE": "ON",
+        "LABELQT_ENABLE_TESTS": "OFF",
+        "LABELQT_REQUIRE_LINGUIST_TOOLS": "ON",
+        "LABELQT_REQUIRE_QT_SVG": "ON"
       },
       "condition": {
         "type": "equals",
@@ -178,7 +193,7 @@
       "name": "windows-static-release",
       "configurePreset": "windows-static-release",
       "targets": [
-        "LabelQtStatic"
+        "LabelQt"
       ]
     },
     {
@@ -196,7 +211,7 @@
       "configurePreset": "windows-vs-static-release",
       "configuration": "Release",
       "targets": [
-        "LabelQtStatic"
+        "LabelQt"
       ]
     },
     {

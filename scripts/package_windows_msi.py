@@ -16,7 +16,12 @@ import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from release_packaging import copy_release_notices, copy_release_tree, validate_deployed_release
+from release_packaging import (
+    copy_native_dependency_licenses,
+    copy_release_notices,
+    prepare_windows_release_tree,
+    write_qt_source_offer,
+)
 
 
 WIX_NAMESPACE = "http://wixtoolset.org/schemas/v4/wxs"
@@ -44,13 +49,30 @@ def stable_guid(relative_path: Path) -> str:
 
 
 def msi_version(version: str) -> str:
-    numeric_part = version.strip().removeprefix("v").split("-", 1)[0]
+    normalized = version.strip().removeprefix("v")
+    numeric_part, separator, prerelease = normalized.partition("-")
     parts = numeric_part.split(".")
-    if not 1 <= len(parts) <= 3:
-        raise ValueError(f"MSI version must contain one to three numeric fields: {version}")
+    if len(parts) != 3:
+        raise ValueError(f"Release version must contain three numeric fields: {version}")
     if not all(part.isdigit() for part in parts):
-        raise ValueError(f"MSI version fields must be numeric: {version}")
-    return ".".join(parts)
+        raise ValueError(f"Release version fields must be numeric: {version}")
+
+    major, minor, patch = (int(part) for part in parts)
+    channel_offset = 999
+    sequence = 0
+    if separator:
+        prerelease_match = re.fullmatch(r"(alpha|beta|rc)\.(\d+)", prerelease)
+        if prerelease_match is None:
+            raise ValueError(f"Unsupported prerelease for MSI version mapping: {version}")
+        channel_offset = {"alpha": 0, "beta": 300, "rc": 600}[prerelease_match.group(1)]
+        sequence = int(prerelease_match.group(2))
+        if sequence >= 300:
+            raise ValueError(f"MSI prerelease sequence must be below 300: {version}")
+
+    build = patch * 1000 + channel_offset + sequence
+    if major > 255 or minor > 255 or build > 65535:
+        raise ValueError(f"Version exceeds Windows Installer numeric limits: {version}")
+    return f"{major}.{minor}.{build}"
 
 
 def rtf_escape(text: str) -> str:
@@ -180,7 +202,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wix", default="wix", help="WiX command path. Defaults to wix from PATH.")
     parser.add_argument("--wix-ui-extension", default="WixToolset.UI.wixext",
                         help="WiX UI extension passed to wix build. Defaults to WixToolset.UI.wixext.")
-    parser.add_argument("--manufacturer", default="LabelQt contributors", help="MSI manufacturer.")
+    parser.add_argument("--manufacturer", default="Shitful", help="MSI manufacturer.")
+    parser.add_argument("--dependency-license-dir", required=True, type=Path,
+                        help="Directory containing native dependency license files, such as a vcpkg triplet share directory.")
+    parser.add_argument("--qt-version", required=True, help="Exact Qt version distributed by this release.")
+    parser.add_argument("--qt-source-url", required=True,
+                        help="Project-controlled URL for the corresponding Qt source archive.")
     return parser.parse_args()
 
 
@@ -193,10 +220,9 @@ def main() -> int:
     repository_root = args.repo_root.resolve()
     output_dir = args.output_dir.resolve()
     version = msi_version(args.version)
-    package_name = f"LabelQt-{args.version}-windows-x64"
+    package_name = f"LabelQt-{args.version}-windows-x64-shared"
     msi_path = output_dir / f"{package_name}.msi"
 
-    validate_deployed_release(source)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix="labelqt-msi-package-") as temporary_directory:
@@ -204,8 +230,10 @@ def main() -> int:
         package_root = temporary_root / "LabelQt"
         wxs_path = temporary_root / "LabelQt.wxs"
         license_rtf_path = temporary_root / "LICENSE.rtf"
-        copy_release_tree(source, package_root)
+        prepare_windows_release_tree(source, package_root, "shared")
         copy_release_notices(repository_root, package_root)
+        copy_native_dependency_licenses(args.dependency_license_dir.resolve(), package_root)
+        write_qt_source_offer(package_root, qt_version=args.qt_version, qt_source_url=args.qt_source_url)
         write_license_rtf(repository_root, license_rtf_path)
         write_wxs(package_root, wxs_path, "LabelQt", args.manufacturer, version, license_rtf_path)
         subprocess.run(

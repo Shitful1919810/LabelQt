@@ -88,5 +88,7 @@ See `docs/devtools.md` for the current helper commands.
 - User-configurable shortcuts should go through `AppPreferences`, `preference.json` and the preference dialog.
 - Automation script secrets such as API keys must go through QtKeychain-backed keychain storage. Do not write secrets to
   `script.json`, `config.json`, automation `input.json`/`output.json`, logs or preference files.
-- The Windows `LabelQtStatic` target is experimental and local-only; do not make it an official release artifact without Qt license review.
+- Windows dynamic and static builds, plus the Linux RPM, are the intended official binary release artifacts. A Windows
+  static release must pass the dedicated Qt/static-dependency license and relinking review before publication.
+- Linux static builds and DEB packages are experimental and must not be presented as supported release artifacts.
 - Do not commit bundled Qt SDK files, Qt source code or Qt runtime binaries into the repository.

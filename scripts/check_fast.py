@@ -17,6 +17,8 @@ def main() -> int:
     repo = repo_root()
 
     run([sys.executable, str(repo / "scripts" / "check_translations.py")], repo)
+    run([sys.executable, str(repo / "scripts" / "test_release_packaging.py")], repo)
+    run([sys.executable, str(repo / "scripts" / "test_ocr_postprocess.py")], repo)
 
     if not compileall.compile_dir(repo / "scripts" / "official", quiet=1):
         return 1

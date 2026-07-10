@@ -50,8 +50,9 @@ LabelQt 的早期产品方向、基础编辑工作流以及部分 OCR 流程设�
 二进制文件；发布二进制包时，应优先采用动态链接 Qt 的方式，并随包提供 Qt 使用声明、Qt 许可证文本、
 Qt 模块与版本信息，以及其他第三方依赖的许可证说明。
 
-仓库提供一个默认关闭的 Windows 静态链接实验目标，仅用于本地构建验证。官方发布版本仍应优先采用
-动态链接 Qt 的方式。任何人如果要分发静态链接 Qt 的单 exe 产物，必须自行确认并满足 Qt LGPL、
+项目计划同时发布 Windows 动态版和静态版。Windows 静态版只有在完成 Qt 与全部静态依赖的许可文本、
+对应源码、重链接说明和干净环境验证后，才能作为正式发行产物。Linux 官方二进制发布物为 RPM；Linux
+静态构建和 DEB 包仅保留为实验性方向。任何人分发静态链接 Qt 的产物时，都必须确认并满足 Qt LGPL、
 GPL 或商业授权要求。
 
 除非项目明确决定切换到 GPL 兼容的发布策略，否则不要引入 Qt 的 GPL-only 模块，例如 Qt Graphs、
@@ -60,7 +61,7 @@ Qt GRPC、Qt HTTP Server、Qt MQTT、Qt Virtual Keyboard、Qt Wayland Compositor
 
 仓库内置的 BreezeStyleSheets 主题资源位于 `resources/themes/breeze`，遵循 MIT 许可证；其中部分 SVG
 图标资源带有 Apache License 2.0 notice。校对文本差异使用的 `diff-match-patch` 位于
-`third_party/diff-match-patch`，遵循 Apache License 2.0。QtKeychain、可选 LibArchive、内置主题资源、
+`third_party/diff-match-patch`，遵循 Apache License 2.0。QtKeychain、内置主题资源、
 官方 Python 脚本依赖和外部 API 的说明见 `THIRD_PARTY_NOTICES.md`。发布包应随带 `licenses/` 目录中的
 第三方许可证文本；如果发布包选择捆绑 Python 运行时、OCR 模型或 Python wheel，还需要额外附带这些组件自己的
 许可证与 notice。
@@ -72,7 +73,6 @@ Qt GRPC、Qt HTTP Server、Qt MQTT、Qt Virtual Keyboard、Qt Wayland Compositor
 - 支持 C++23 的编译器。
 - Qt 6.5 或更高版本，至少需要 Qt Core、Gui、Widgets、Concurrent；建议安装 Qt Svg 以完整显示内置 Breeze 主题图标；开发翻译资源时还需要 Qt Linguist Tools。
 - QtKeychain，用于通过系统密钥环保存自动化脚本所需的 API key 等敏感信息。
-- LibArchive 为可选依赖，用于扩展压缩包读取格式。
 - Python 3 为自动化脚本运行时依赖；只使用主程序基础编辑功能时不是必需项。
 
 ## 构建
@@ -94,23 +94,30 @@ cmake --preset linux-release
 cmake --build --preset linux-release
 ```
 
-生成 Linux 原生安装包：
+正式预发行 RPM 应在配置时传入版本通道和目标发行版，例如
+`-DLABELQT_PRERELEASE=alpha.4 -DLABELQT_RPM_DIST_TAG=fc44`。支持 `alpha.N`、`beta.N`、`rc.N`；正式版将
+`LABELQT_PRERELEASE` 留空。
+
+生成正式发布使用的 Linux RPM：
 
 ```bash
-cmake --build --preset linux-release --target package
-```
-
-该命令会调用 CPack，根据当前 Linux 环境生成 `.deb` 和 `.rpm`。如果只想生成其中一种格式，可以直接调用
-构建目录里的 CPack 配置：
-
-```bash
-cpack --config build/linux/release/CPackConfig.cmake -G DEB
 cpack --config build/linux/release/CPackConfig.cmake -G RPM
 ```
 
-生成 `.deb` 通常需要 `dpkg-dev` / `fakeroot`，生成 `.rpm` 通常需要 `rpm-build`。安装包会包含
+RPM 应在目标 Fedora/openSUSE 系环境中构建和验证。仓库仍保留 DEB 生成器用于实验和社区测试，但 DEB
+不属于受支持的正式发布矩阵。默认 `package` 目标只生成 RPM；需要让它同时生成实验性 DEB 时，可在配置
+阶段开启 `-DLABELQT_ENABLE_EXPERIMENTAL_DEB_PACKAGE=ON`，也可以单独运行：
+
+```bash
+cpack --config build/linux/release/CPackConfig.cmake -G DEB
+```
+
+生成实验性 `.deb` 通常需要 Debian/Ubuntu 环境中的 `dpkg-dev` / `fakeroot`，生成正式 `.rpm` 通常需要
+`rpm-build`。安装包会包含
 `labelqt` 可执行文件、桌面入口、图标、许可证和第三方声明。默认偏好设置由程序内置提供；Python、OCR 模型、
-官方自动化脚本与自动化脚本依赖不会被打包进安装包。
+Python 运行时、OCR 模型与自动化脚本依赖不会被打包；官方自动化脚本会安装到
+`/usr/share/labelqt/scripts/official`。Linux 静态构建目前没有受支持的正式目标，后续即使加入也应先作为
+实验性便携构建验证。
 
 ### Windows
 
@@ -153,16 +160,22 @@ DLL 和 Qt 插件目录，去掉测试程序 `LabelQtTests.exe` 与 `Qt6Test.dll
 `THIRD_PARTY_NOTICES.md` 以及 `licenses/` 目录中的第三方许可证文本应随包发布。推荐使用统一打包脚本：
 
 ```powershell
-python scripts/package_windows_release.py --source path\to\Release --version v0.1.0-alpha.2 --output-dir dist
+python scripts/package_windows_release.py --source path\to\Release --version v0.1.0-alpha.2 `
+  --variant shared --dependency-license-dir path\to\vcpkg\installed\x64-windows\share `
+  --qt-version 6.x.y --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz `
+  --output-dir dist
 ```
 
 如果需要生成带安装向导的 Windows MSI 安装包，可在 Windows 上安装 WiX Toolset v4+ 及其 UI 扩展，然后运行：
 
 ```powershell
-python scripts/package_windows_msi.py --source path\to\Release --version v0.1.0-alpha.2 --output-dir dist
+python scripts/package_windows_msi.py --source path\to\Release --version v0.1.0-alpha.2 `
+  --dependency-license-dir path\to\vcpkg\installed\x64-windows\share `
+  --qt-version 6.x.y --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz `
+  --output-dir dist
 ```
 
-实验性 Windows 静态单 exe 构建：
+Windows 静态构建：
 
 ```powershell
 cmake --preset windows-static-release
@@ -176,11 +189,14 @@ cmake --preset windows-vs-static-release
 cmake --build --preset windows-vs-static-release
 ```
 
-这些 preset 只启用 `LabelQtStatic` 目标，并要求当前 CMake 能找到静态构建的 Qt。使用普通动态 Qt
+这些 preset 在独立构建目录中使用同一个 `LabelQt` 应用目标，并要求当前 CMake 能找到静态构建的 Qt。使用普通动态 Qt
 安装包时，CMake 会直接报错，因为动态 Qt 无法生成真正脱离 Qt DLL 的单 exe。即便 Qt 本身是静态构建，
-QtKeychain、LibArchive 等第三方依赖也需要提供静态库，否则最终产物仍可能依赖额外 DLL。该目标仅供
-本地实验，不作为官方 release 推荐路径。若使用 Ninja preset，请先进入 “x64 Native Tools Command Prompt
-for VS 2022” 或手动设置 MSVC 编译器环境；VS preset 则会直接使用 Visual Studio 2022 生成器。
+QtKeychain 等第三方依赖也需要提供静态库，否则最终产物仍可能依赖额外 DLL。Windows 静态版
+计划作为正式 release 产物，但发布前必须完成静态依赖审计、Qt 许可与重链接材料准备，并在干净 Windows
+环境中验证。静态 ZIP 使用 `package_windows_release.py --variant static` 打包，并强制要求依赖许可证目录、
+Qt 精确版本、项目控制的 Qt 对应源码地址和重链接说明地址；详细流程见
+`docs/windows-static-relinking.md`。若使用 Ninja preset，请先进入 “x64 Native Tools Command Prompt for
+VS 2022” 或手动设置 MSVC 编译器环境；VS preset 则会直接使用 Visual Studio 2022 生成器。
 
 ### macOS
 
@@ -649,11 +665,11 @@ python script.py --input input.json --output output.json
 
 仓库提供的官方示例脚本包括：
 
-- `scripts/official/test`：测试用脚本目录，会在自动化菜单中显示为 `Test` 子菜单，包含字数统计、分组互换和等待 5 秒等脚本。
+- `scripts/official/test`：仅供开发构建测试自动化框架和展示推荐写法，会在本地自动化菜单中显示为 `Test` 子菜单；正式 ZIP、MSI 和 RPM 会排除该目录。
 - `scripts/official/ocr_preview`：对当前选区、当前页或指定页码区间运行 OCR。`Configure OCR` 会通过参数窗口写入用户配置目录下的本机配置，用于保存 OCR 引擎、语言、设备、本地 manga-ocr 模型目录、默认标签分组、排序方向以及非预览入口完成后是否弹出结果报告等设置。预览入口会展示后处理后的文本块；生成标签入口会复用同一套后处理结果并输出 `addLabel` 操作。选区 OCR 会合并为一个 label，整页和跨页 OCR 会为每个文本块生成一个 label。
 - `scripts/official/ai_translate`：通过 DeepSeek API 翻译当前选中的 label；如果没有选中 label，则翻译当前页所有 label。`Configure AI Translation` 会将 API key 保存到系统 keychain，并在用户配置目录下保存 API base URL、模型、目标语言、翻译风格、自定义 prompt 以及应用翻译后是否弹出结果报告等非敏感设置。预览入口只展示译文或译文加分析；应用入口会输出 `setLabelText` 操作并由主程序注册撤销/重做；跨页入口会让用户输入 1-based 页码区间，并把整个区间的 label 一次性提交给模型作为上下文，再应用返回的译文。
 
-自动化脚本来源分为一个官方来源和一个用户来源。官方来源优先使用 exe 旁边的 `scripts/official`，否则使用 Linux 安装包中的 `/usr/share/labelqt/scripts/official`；用户来源优先使用 exe 旁边的 `scripts/custom`，否则使用程序打开的用户脚本目录。这样便携版可以直接携带脚本，DEB/RPM 用户也能看到系统安装的官方脚本，同时不会重复加载两套 official 或 custom。
+自动化脚本来源分为一个官方来源和一个用户来源。官方来源优先使用 exe 旁边的 `scripts/official`，否则使用 Linux 安装包中的 `/usr/share/labelqt/scripts/official`；用户来源优先使用 exe 旁边的 `scripts/custom`，否则使用程序打开的用户脚本目录。这样便携版可以直接携带脚本，RPM（以及实验性 DEB）用户也能看到系统安装的官方脚本，同时不会重复加载两套 official 或 custom。
 
 ## 开发检查
 
@@ -686,7 +702,7 @@ find src tests -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) -prin
 ```text
 src/core        平台无关的数据模型、LabelPlus 解析与保存、偏好设置、撤销栈
 src/ui          Qt Widgets 用户界面
-src/services    工程工作流、会话状态、自动备份、OCR 与压缩包等服务层
+src/services    工程工作流、会话状态、自动备份、OCR 与图片缓存等服务层
 translations    Qt Linguist 翻译源文件
 tests           Qt Test 单元测试
 docs            架构与开发文档

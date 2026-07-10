@@ -14,19 +14,16 @@ LabelQt's own source code is licensed under the MIT License. See `LICENSE.txt`.
 
 Qt source code, Qt SDK files and Qt runtime binaries are not committed to this repository. Binary releases that bundle Qt runtime files must include the required Qt license texts, module/version information and any notices required by the selected Qt license.
 
-The experimental Windows static target is for local validation only. Do not distribute a static Qt build without a separate Qt license review.
+The Windows static build is an intended official release artifact. Each static release must include the applicable Qt
+and statically linked dependency license texts, exact component/version information, corresponding-source offer and
+relinking instructions required by the selected licenses. Linux static builds remain experimental and are not official
+release artifacts.
 
 ## QtKeychain
 
 - Source: <https://github.com/frankosterfeld/qtkeychain>
 - Usage: linked as an external library to store automation script secrets in the operating system keychain.
 - License: BSD-style license. Use the exact license text shipped with the QtKeychain package used for a binary release.
-
-## LibArchive
-
-- Source: <https://www.libarchive.org/>
-- Usage: optional external library for archive reading support when available at build time.
-- License: BSD-style license. Include the exact license text from the package used for a binary release when LibArchive is bundled.
 
 ## BreezeStyleSheets
 
@@ -61,13 +58,17 @@ Release packages should include third-party license texts under a `licenses/` di
 - `licenses/MaterialUi-LICENSE.txt`
 - `licenses/diff-match-patch-LICENSE.txt`
 
+Windows shared and static packages additionally collect the exact vcpkg triplet's native dependency notices under
+`licenses/native/` and include `QT_SOURCE_OFFER.txt` pointing to the corresponding Qt source archive controlled by the
+LabelQt project for that release. Static packages additionally include `STATIC_LINKING_NOTICE.txt` and `RELINKING.md`.
+
 ## Official Automation Scripts
 
 The repository includes official Python automation scripts under `scripts/official`. These scripts are launched as external Python processes and are not embedded into the C++ application binary.
 
 Current script groups:
 
-- `scripts/official/test`: framework examples using only the Python standard library.
+- `scripts/official/test`: development-only framework examples using the Python standard library; excluded from release packages.
 - `scripts/official/ocr_preview`: OCR configuration, preview and label-generation scripts.
 - `scripts/official/ai_translate`: DeepSeek-compatible AI translation scripts.
 - `scripts/official/sdk`: small helper library for LabelQt automation scripts.

@@ -94,10 +94,13 @@ MODULE_TOPICS = (
             "src/services/proofread/TextDiffService.*",
             "src/services/proofread/TextDiffHtmlRenderer.*",
             "src/services/proofread/ProofreadReportService.*",
+            "src/ui/proofread/ProofreadingController.*",
+            "src/ui/proofread/ProofreadChangeTableModel.*",
             "src/ui/proofread/ProofreadChangesDialog.*",
         ),
         notes=(
             "工程对比、页匹配和 label 对齐属于 services，UI 只展示结构化结果。",
+            "校对入口流程属于 ProofreadingController，表格状态只通过 model/proxy 维护。",
             "HTML 报告导出属于 ProofreadReportService。",
         ),
         docs=("docs/proofreading-diff.md",),
@@ -155,11 +158,14 @@ MODULE_TOPICS = (
             "scripts/package_windows_release.py",
             "scripts/package_windows_msi.py",
             "scripts/release_packaging.py",
+            "scripts/test_release_packaging.py",
             "docs/release-checklist.md",
+            "docs/windows-static-relinking.md",
             "THIRD_PARTY_NOTICES.md",
         ),
         notes=(
-            "发行包需要包含许可证和第三方声明。",
+            "正式发行矩阵为 Windows shared/static 与 Linux RPM；DEB 和 Linux static 仅为实验性。",
+            "发行包需要包含许可证和第三方声明，Windows static 还必须包含源码与重链接信息。",
             "Windows 便携包与 Linux 安装包的脚本来源路径不同，修改前先查 release checklist。",
         ),
         docs=("docs/release-checklist.md",),
@@ -378,8 +384,8 @@ def release_audit_command(args: argparse.Namespace) -> int:
     issues: list[str] = []
     if not root.exists():
         issues.append(f"Path does not exist: {root}")
-    elif args.kind == "windows-dir":
-        required = ("labelqt.exe", "LICENSE.txt", "THIRD_PARTY_NOTICES.md")
+    elif args.kind in {"windows-dir", "windows-static-dir"}:
+        required = ("labelqt.exe", "LICENSE.txt", "THIRD_PARTY_NOTICES.md", "QT_SOURCE_OFFER.txt")
         for name in required:
             if not (root / name).exists():
                 issues.append(f"Missing {name} in {root}")
@@ -387,6 +393,20 @@ def release_audit_command(args: argparse.Namespace) -> int:
             issues.append("Missing scripts/official directory")
         if not ((root / "scripts" / "custom").is_dir()):
             issues.append("Missing scripts/custom directory")
+        if (root / "scripts" / "official" / "test").exists():
+            issues.append("Development scripts/official/test must not be included")
+        native_licenses = root / "licenses" / "native"
+        if not native_licenses.is_dir():
+            issues.append("Missing native dependency licenses")
+        else:
+            for package_name in ("qtbase", "qtkeychain"):
+                package_root = native_licenses / package_name
+                if not package_root.is_dir() or not any(path.is_file() for path in package_root.rglob("*")):
+                    issues.append(f"Missing native dependency license for {package_name}")
+        if args.kind == "windows-static-dir":
+            for name in ("STATIC_LINKING_NOTICE.txt", "RELINKING.md"):
+                if not (root / name).is_file():
+                    issues.append(f"Missing {name} in static release")
         for forbidden in root.rglob("*"):
             if forbidden.name == "__pycache__" or forbidden.suffix.lower() in {".pdb", ".ilk", ".lib", ".exp"}:
                 issues.append(f"Unexpected release artifact: {forbidden.relative_to(root)}")
@@ -395,6 +415,10 @@ def release_audit_command(args: argparse.Namespace) -> int:
             issues.append("Missing usr/bin/labelqt")
         if not (root / "usr" / "share" / "labelqt" / "scripts" / "official").is_dir():
             issues.append("Missing usr/share/labelqt/scripts/official")
+        if (root / "usr" / "share" / "labelqt" / "scripts" / "official" / "test").exists():
+            issues.append("Development scripts/official/test must not be included")
+        if not (root / "usr" / "share" / "doc" / "labelqt" / "licenses").is_dir():
+            issues.append("Missing usr/share/doc/labelqt/licenses")
     else:
         raise SystemExit(f"Unknown release audit kind: {args.kind}")
 
@@ -472,7 +496,7 @@ def build_parser() -> argparse.ArgumentParser:
     release_parser = subparsers.add_parser("release-audit", help="Validate a packaged release tree.")
     release_parser.add_argument("path", type=Path)
     release_parser.add_argument(
-        "--kind", choices=("windows-dir", "linux-install-root"), default="windows-dir"
+        "--kind", choices=("windows-dir", "windows-static-dir", "linux-install-root"), default="windows-dir"
     )
     release_parser.set_defaults(func=release_audit_command)
 

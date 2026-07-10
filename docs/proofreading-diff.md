@@ -77,7 +77,7 @@ LabelQt 不再为 label 引入稳定 ID。经典 LabelPlus txt 主体中没有�
      - 解码为 `32x16` 的低分辨率缩略图。
      - 计算 512 个像素的平均灰度。
      - 每个像素是否大于等于平均值形成一位，最终得到 512-bit average hash。
-     - 指纹结果按图片路径、文件大小和修改时间缓存在内存中；同一次比较流程里不会重复读取同一张图片。
+     - 指纹结果按图片路径、文件大小和修改时间保存在进程级、有容量上限的线程安全 LRU 缓存中；重复比较不会反复读取同一张未变化的图片，也不会让缓存无限增长。
    - 自动匹配要求：
      - 两张图原始尺寸相同。
      - 两个 hash 的 Hamming 距离不超过当前阈值。
@@ -191,7 +191,7 @@ LabelQt 短期继续使用 `diff-match-patch` 处理单个 label 内部的文本
 `proofreading.textDiffCleanup` 控制文本 diff 的 cleanup 策略：
 
 - `auto`：默认策略。统计修改前后文本中的非空白字符，如果 CJK 字符占比大于等于 30%，使用 raw diff；否则使用 semantic cleanup。这个策略适合中文、日文漫画文本和英文文本混用的场景。
-- `semantic`：强制使用 `diff_cleanupSemantic()`。英文等空格分词语言通常更易读，但中文、日文短句可能被合并成过粗的整段替换。
+- `semantic`：对非 CJK 文本使用 `diff_cleanupSemantic()`。英文等空格分词语言通常更易读；CJK 占比达到安全阈值时仍强制使用 raw diff，不能绕过内存安全保护。
 - `raw`：强制只使用 `diff_main()` 原始结果。中文、日文通常更细，但英文可能更碎。
 
 ### 已知恶性问题
@@ -208,7 +208,7 @@ Qt/C++ 版 `diff-match-patch` 的 `diff_cleanupSemanticLossless()` 不能在本�
 上述中文文本对的回归测试，否则不要恢复 `diff_cleanupSemanticLossless()`。
 
 注意：这个 Qt/C++ port 的 `diff_cleanupSemantic()` 内部也会调用 `diff_cleanupSemanticLossless()`。因此 LabelQt
-只在自动模式判定为非 CJK 文本，或用户显式强制开启时才调用 semantic cleanup，并且调用后必须再次校验输出是否能还原输入。
+只在判定为非 CJK 文本时调用 semantic cleanup；该安全门不允许被偏好设置绕过。调用后还必须再次校验输出是否能还原输入。
 
 如果未来需要替换 diff 引擎，应满足这些约束：
 

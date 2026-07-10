@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QImageReader>
+#include <QList>
 #include <QMutex>
 #include <QMutexLocker>
 #include <QSet>
@@ -14,7 +15,9 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <tuple>
+#include <utility>
 
 namespace labelqt::services {
 namespace {
@@ -49,26 +52,6 @@ bool isModified(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& 
 {
     return baseline.text != current.text || baseline.group != current.group ||
            !samePosition(baseline.position, current.position);
-}
-
-int imageIndexByName(const labelqt::core::Project& project, const QString& imageName)
-{
-    for (int i = 0; i < project.images().size(); ++i) {
-        if (project.images().at(i).name == imageName) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-const labelqt::core::ImageEntry* imageByName(const labelqt::core::Project& project, const QString& imageName)
-{
-    for (const labelqt::core::ImageEntry& image : project.images()) {
-        if (image.name == imageName) {
-            return &image;
-        }
-    }
-    return nullptr;
 }
 
 QString normalizedPageName(const QString& imageName)
@@ -107,9 +90,35 @@ QString fingerprintCacheKey(const labelqt::core::ImageEntry& image)
         .arg(fileInfo.lastModified().toMSecsSinceEpoch());
 }
 
-QHash<QString, PageFingerprint>& fingerprintCache()
+constexpr qsizetype maximumFingerprintCacheEntries = 128;
+
+struct FingerprintCache {
+    QHash<QString, PageFingerprint> entries;
+    QList<QString> usageOrder;
+
+    std::optional<PageFingerprint> find(const QString& key)
+    {
+        const auto it = entries.constFind(key);
+        if (it == entries.cend()) return std::nullopt;
+        usageOrder.removeOne(key);
+        usageOrder.append(key);
+        return it.value();
+    }
+
+    void insert(QString key, PageFingerprint fingerprint)
+    {
+        entries.insert(key, std::move(fingerprint));
+        usageOrder.removeOne(key);
+        usageOrder.append(key);
+        while (usageOrder.size() > maximumFingerprintCacheEntries) {
+            entries.remove(usageOrder.takeFirst());
+        }
+    }
+};
+
+FingerprintCache& fingerprintCache()
 {
-    static QHash<QString, PageFingerprint> cache;
+    static FingerprintCache cache;
     return cache;
 }
 
@@ -124,9 +133,7 @@ PageFingerprint fingerprintForImage(const labelqt::core::ImageEntry& image)
     const QString cacheKey = fingerprintCacheKey(image);
     {
         QMutexLocker locker(&fingerprintCacheMutex());
-        if (fingerprintCache().contains(cacheKey)) {
-            return fingerprintCache().value(cacheKey);
-        }
+        if (const auto cached = fingerprintCache().find(cacheKey)) return *cached;
     }
 
     PageFingerprint fingerprint;
@@ -151,7 +158,7 @@ PageFingerprint fingerprintForImage(const labelqt::core::ImageEntry& image)
 
     qsizetype total = 0;
     QVector<int> values;
-    values.reserve(imageHashWidth * imageHashHeight);
+    values.reserve(static_cast<qsizetype>(imageHashWidth) * imageHashHeight);
     for (int y = 0; y < thumbnail.height(); ++y) {
         const uchar* line = thumbnail.constScanLine(y);
         for (int x = 0; x < thumbnail.width(); ++x) {
@@ -367,7 +374,7 @@ ReviewChange changeFromEntry(const labelqt::core::Project& currentProject, const
     ReviewChange change;
     change.imageName = currentImageName;
     change.baselineImageName = baselineImageName;
-    change.imageIndex = imageIndexByName(currentProject, currentImageName);
+    change.imageIndex = currentProject.imageIndexByName(currentImageName);
     change.baselineLabelIndex = entry.baselineLabelIndex;
     change.currentLabelIndex = entry.currentLabelIndex;
     change.labelIndex = change.currentLabelIndex >= 0 ? change.currentLabelIndex : change.baselineLabelIndex;
@@ -401,7 +408,7 @@ QVector<ReviewChange> changesForPagePairs(const labelqt::core::Project& currentP
         const QVector<ReviewLabelSnapshot> baselineLabels =
             baselineSnapshotsForImage(metadata, pagePair.baselineImageName);
         QVector<ReviewLabelSnapshot> currentLabels;
-        if (const labelqt::core::ImageEntry* currentImage = imageByName(currentProject, pagePair.currentImageName);
+        if (const labelqt::core::ImageEntry* currentImage = currentProject.imageByName(pagePair.currentImageName);
             currentImage != nullptr) {
             currentLabels = currentSnapshotsForImage(*currentImage);
         }
@@ -520,7 +527,7 @@ QVector<labelqt::core::Label> ProjectComparisonService::baselineImageLabels(cons
 {
     int maxLabelIndex = -1;
     QVector<labelqt::core::Label> currentLabels;
-    if (const labelqt::core::ImageEntry* currentImage = imageByName(currentProject, currentImageName);
+    if (const labelqt::core::ImageEntry* currentImage = currentProject.imageByName(currentImageName);
         currentImage != nullptr) {
         currentLabels = currentImage->labels;
         maxLabelIndex = std::max(maxLabelIndex, static_cast<int>(currentImage->labels.size()) - 1);

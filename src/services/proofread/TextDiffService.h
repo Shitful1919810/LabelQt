@@ -16,6 +16,8 @@ enum class TextDiffOperation {
 struct TextDiffChunk {
     TextDiffOperation operation{TextDiffOperation::Equal};
     QString text;
+
+    bool operator==(const TextDiffChunk&) const = default;
 };
 
 class TextDiffService final {

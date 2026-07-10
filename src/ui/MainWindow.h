@@ -50,6 +50,7 @@ class ImagePageViewController;
 class MainWindowShortcutController;
 class PageSelectorComboBox;
 class ProjectViewController;
+class ProofreadingController;
 class ViewportFittedTableColumns;
 
 namespace labelqt::services {
@@ -81,7 +82,6 @@ private:
     void reorderPages();
     bool executeImageRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan);
     void startProofreadingBaseline();
-    void endProofreadingBaseline();
     void showProofreadingChanges();
     void compareWithProject();
     void showAutomationDiscoveryWarnings(const QStringList& warnings);
@@ -213,6 +213,7 @@ private:
     MainWindowShortcutController* m_shortcutController{nullptr};
     AutomationController* m_automationController{nullptr};
     AutomationShortcutController* m_automationShortcutController{nullptr};
+    ProofreadingController* m_proofreadingController{nullptr};
     ImagePageViewController* m_imagePageViewController{nullptr};
     ProjectViewController* m_projectViewController{nullptr};
     PageSelectorComboBox* m_imageComboBox{nullptr};

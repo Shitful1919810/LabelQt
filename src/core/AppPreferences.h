@@ -105,6 +105,48 @@ struct LabelGroupStyle {
     MarkerShape markerShape{MarkerShape::Circle};
 };
 
+QVector<LabelGroupStyle> defaultLabelGroupStyles();
+
+struct AppPreferencesValues {
+    double labelMarkerDiameterPixels{20.0};
+    double labelMarkerFontPointSize{10.0};
+    int labelTableMaxTextRows{3};
+    QString labelTableFontFamily;
+    double labelTableFontPointSize{0.0};
+    QString labelTextEditorFontFamily;
+    double labelTextEditorFontPointSize{0.0};
+    QString markerTextBubbleFontFamily;
+    double markerTextBubbleFontPointSize{0.0};
+    double markerTextBubbleOpacity{1.0};
+    int markerTextBubbleMaxLineCharacters{defaultMarkerTextBubbleMaxLineCharacters};
+    double canvasLabelTextEditorOpacity{1.0};
+    QString applicationStyle;
+    QString applicationTheme;
+    QString applicationLanguage;
+    TextDiffCleanupMode textDiffCleanupMode{TextDiffCleanupMode::Auto};
+    bool showAutomationRunLog{false};
+    QString automationPythonCommand;
+    QStringList automationPythonArguments;
+    bool automationAutoInstallRequirements{false};
+    QString automationPipIndexUrl;
+    QMap<QString, QKeySequence> automationShortcuts;
+    Qt::KeyboardModifiers moveLabelModifiers{Qt::ControlModifier};
+    Qt::KeyboardModifiers previousLabelModifiers{Qt::ControlModifier};
+    QKeySequence undoShortcut{QStringLiteral("Ctrl+Z")};
+    QKeySequence redoShortcut{QStringLiteral("Ctrl+Y")};
+    QKeySequence nextLabelShortcut{QStringLiteral("Tab")};
+    QKeySequence alternatePreviousLabelShortcut{QStringLiteral("Ctrl+Up")};
+    QKeySequence alternateNextLabelShortcut{QStringLiteral("Ctrl+Down")};
+    QKeySequence previousPageShortcut{QStringLiteral("Alt+Left")};
+    QKeySequence nextPageShortcut{QStringLiteral("Alt+Right")};
+    QKeySequence editLabelTextShortcut{QStringLiteral("Return")};
+    QKeySequence commitLabelTextShortcut{QStringLiteral("Ctrl+Return")};
+    QKeySequence deleteLabelShortcut{QStringLiteral("Del")};
+    QString backupPath{QStringLiteral("bak")};
+    int backupIntervalSeconds{60};
+    QVector<LabelGroupStyle> groupStyles{defaultLabelGroupStyles()};
+};
+
 class AppPreferences {
 public:
     static QString defaultFilePath();
@@ -112,8 +154,10 @@ public:
     static AppPreferencesLoadResult loadWithDiagnostics();
     static AppPreferencesLoadResult loadFromFile(const QString& path);
     static AppPreferencesLoadResult loadFromJson(const QByteArray& json);
+    static AppPreferences fromValues(AppPreferencesValues values);
 
     QJsonDocument toJsonDocument() const;
+    AppPreferencesValues values() const;
 
     double labelMarkerDiameterPixels() const noexcept;
     double labelMarkerFontPointSize() const noexcept;
@@ -154,7 +198,6 @@ public:
     const QVector<LabelGroupStyle>& groupStyles() const noexcept;
 
 private:
-    static QVector<LabelGroupStyle> defaultGroupStyles();
     static AppPreferencesLoadResult loadFromDocument(const QJsonDocument& document, const QJsonParseError* parseError);
 
     double m_labelMarkerDiameterPixels{20.0};
@@ -193,7 +236,7 @@ private:
     QKeySequence m_deleteLabelShortcut{QStringLiteral("Del")};
     QString m_backupPath{QStringLiteral("bak")};
     int m_backupIntervalSeconds{60};
-    QVector<LabelGroupStyle> m_groupStyles{defaultGroupStyles()};
+    QVector<LabelGroupStyle> m_groupStyles{defaultLabelGroupStyles()};
 };
 
 struct AppPreferencesLoadResult {

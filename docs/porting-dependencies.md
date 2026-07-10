@@ -35,7 +35,9 @@ ctest --preset linux-debug
 
 - Qt Svg：可用时会链接，用于更完整地显示内置 Breeze 主题中的 SVG 图标。项目应能在没有 Qt Svg 时构建。
 - Qt LinguistTools：构建翻译资源时使用。`.ts` 文件在 `translations/`，`.qm` 会通过 Qt 资源编进程序。
-- LibArchive：可用时启用压缩包读取能力，支持 zip、7z、rar 等多种格式；不可用时相关能力受限。
+
+日常 debug 构建仍允许缺少可选增强依赖；正式 Windows 与 Linux release presets 会强制要求 Qt Svg、
+Qt LinguistTools，避免同一版本因构建机器差异而缺少主题图标或翻译。
 - Qt Test：测试目标使用，普通运行不需要。
 
 Qt Concurrent 目前用于把外部工程对比中的页面匹配和 diff 计算放到后台线程，避免大图工程比较时主界面无响应。图片加载缓存仍使用项目自己的 `ImagePageCache`。
@@ -95,35 +97,49 @@ cmake --build --preset windows-vs-release --target deploy_windows
 推荐使用统一打包脚本：
 
 ```bash
-python scripts/package_windows_release.py --source /path/to/deployed/Release --version v0.1.0-alpha.2 --output-dir dist
+python scripts/package_windows_release.py --source /path/to/deployed/Release --version v0.1.0-alpha.2 \
+  --variant shared --dependency-license-dir /path/to/vcpkg/installed/x64-windows/share \
+  --qt-version 6.x.y --qt-source-url https://github.com/Shitful1919810/LabelQt/releases/download/v0.1.0-alpha.2/qt-everywhere-src-6.x.y.tar.xz \
+  --output-dir dist
 ```
 
-仓库还提供 `LabelQtStatic` / `windows-vs-static-release` 等实验目标，但它们只适合本地验证：
+仓库还提供 `windows-vs-static-release` 静态 preset。它在独立构建目录中复用 `LabelQt` 应用目标，避免
+静态版与动态版维护两份源文件和依赖配置。Windows 静态版计划作为正式发行产物：
 
 - 必须使用真正静态构建的 Qt。
-- QtKeychain、LibArchive 等依赖也需要有静态库，否则仍可能出现额外 DLL。
-- 未做 Qt 许可证审查前，不要把静态单 exe 当作官方发行物。
+- QtKeychain 等依赖也需要有静态库，否则仍可能出现额外 DLL。
+- 每次发布前必须完成 Qt 与静态依赖的许可证、对应源码、重链接说明和干净环境验证。
+- 静态 ZIP 打包器会强制要求原生依赖许可证、Qt 精确版本、项目控制的对应源码地址和重链接说明地址。
 
-## Linux DEB/RPM 打包
+完整重链接流程见 `docs/windows-static-relinking.md`。动态 ZIP 和 MSI 同样要求传入对应 vcpkg triplet 的
+`share` 目录、Qt 精确版本和项目控制的对应源码 URL，确保随包 DLL 的许可证与源码义务不会遗漏。
 
-普通 Linux release 构建生成的是动态链接可执行文件。项目现在使用 CPack 生成 Linux 原生安装包：
+## Linux RPM 与实验性 DEB 打包
+
+普通 Linux release 构建生成的是动态链接可执行文件。正式 Linux 二进制发布物为 RPM，应在目标
+Fedora/openSUSE 系环境中生成：
 
 ```bash
-cmake --build --preset linux-release --target package
+cmake --preset linux-release -DLABELQT_PRERELEASE=alpha.4 -DLABELQT_RPM_DIST_TAG=fc44
+cmake --build --preset linux-release
+cpack --config build/linux/release/CPackConfig.cmake -G RPM
 ```
 
-该目标会根据 `cmake/Packaging.cmake` 生成 `.deb` 和 `.rpm`。如果只想生成其中一种格式，可以直接调用
-构建目录中的 CPack 配置：
+`LABELQT_PRERELEASE` 支持 `alpha.N`、`beta.N` 和 `rc.N`，正式版留空；`LABELQT_RPM_DIST_TAG` 应对应实际
+构建和验证环境，不要把在较新 Fedora 上构建的 RPM 标成通用 Linux 包。
+
+仓库保留 DEB 生成器用于实验和社区验证，但它不属于受支持的正式发布矩阵。DEB 必须在 Debian/Ubuntu
+环境中生成，不能使用 Fedora 上缺少 Debian 包数据库的构建结果作为发行物。默认 `package` 目标只生成
+RPM；配置时开启 `-DLABELQT_ENABLE_EXPERIMENTAL_DEB_PACKAGE=ON` 才会把 DEB 加入默认生成器，也可以单独运行：
 
 ```bash
 cpack --config build/linux/release/CPackConfig.cmake -G DEB
-cpack --config build/linux/release/CPackConfig.cmake -G RPM
 ```
 
 打包工具要求：
 
-- `.deb`：通常需要 `dpkg-dev`、`fakeroot`，并依赖 `dpkg-shlibdeps` 自动分析动态库依赖。
-- `.rpm`：通常需要 `rpm-build`。
+- 实验性 `.deb`：通常需要 `dpkg-dev`、`fakeroot`，并依赖 `dpkg-shlibdeps` 自动分析动态库依赖。
+- 正式 `.rpm`：通常需要 `rpm-build`，发布前应检查自动生成的 SONAME 依赖并在目标系统安装测试。
 
 安装包内容：
 
@@ -132,10 +148,14 @@ cpack --config build/linux/release/CPackConfig.cmake -G RPM
 - `/usr/share/icons/hicolor/scalable/apps/org.labelqt.LabelQt.svg`
 - `/usr/share/doc/labelqt/LICENSE.txt`
 - `/usr/share/doc/labelqt/THIRD_PARTY_NOTICES.md`
+- `/usr/share/doc/labelqt/licenses/` 下的内置第三方资源许可证
 
-DEB/RPM 不会把默认 `preference.json`、Python 解释器、OCR 模型或自动化脚本依赖打包进去；官方自动化脚本会作为只读资源安装到 `/usr/share/labelqt/scripts/official`。
-自动化脚本依赖仍由用户按脚本目录中的 `requirements.txt` 安装。DEB/RPM 也不会捆绑整套 Qt 运行库，实际依赖由
-目标发行版的包管理器解析和安装。因此，最好分别在 Debian/Ubuntu 系和 Fedora/openSUSE 系环境里构建并测试对应格式。
+RPM 和实验性 DEB 不会把默认 `preference.json`、Python 解释器、OCR 模型或自动化脚本依赖打包进去；官方自动化脚本会作为只读资源安装到 `/usr/share/labelqt/scripts/official`。
+自动化脚本依赖仍由用户按脚本目录中的 `requirements.txt` 安装。Linux 原生包也不会捆绑整套 Qt 运行库，实际依赖由目标发行版的包管理器解析和安装。
+开发用 `scripts/official/test` 不进入正式 RPM 或实验性 DEB，其余官方脚本和 SDK 正常安装。
+
+Linux 静态构建目前不在正式发布矩阵中。若后续加入，仅作为实验性便携构建；它不应替代动态链接 RPM，
+也不能在未验证 glibc、XCB/Wayland、OpenGL、QtKeychain 和静态插件依赖的情况下宣称为完全静态或跨发行版通用。
 
 ## 国际化工作流
 
@@ -170,7 +190,6 @@ cmake --build --preset linux-debug --target release_translations
 只在 Qt 不擅长或已有专门库明显更合适时添加依赖：
 
 - 密钥存储：QtKeychain。
-- 压缩包：LibArchive。
 - OCR/AI：外部 Python 脚本和 JSON 桥接，不嵌入到 C++ 主程序。
 
 新增依赖前必须检查：
@@ -184,7 +203,7 @@ cmake --build --preset linux-debug --target release_translations
 
 LabelQt 源码使用仓库根目录 `LICENSE.txt` 的 MIT 许可证。第三方内容分三类：
 
-- 链接或运行时依赖：Qt、QtKeychain、LibArchive 等，发布二进制时需要带对应第三方声明。
+- 链接或运行时依赖：Qt、QtKeychain 等，发布二进制时需要带对应第三方声明。
 - 仓库内置资源：BreezeStyleSheets 位于 `resources/themes/breeze`，本地保留 MIT 和 Apache 2.0 声明。
 - 用户运行时安装/调用的脚本依赖和服务：PaddleOCR、manga-ocr、Pillow、Transformers、DeepSeek API 等，不随 C++ 主程序一起编译进二进制；用户或发行包如果选择捆绑这些依赖，应另行遵守其许可证和服务条款。
 

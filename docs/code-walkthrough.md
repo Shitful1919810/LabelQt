@@ -15,13 +15,14 @@
 7. 创建并显示 `MainWindow`。
 8. 如果命令行给了工程文件，就打开该文件；否则尝试恢复最近一次工程。
 
-可执行目标在 `src/CMakeLists.txt` 中定义。源码按三组加入目标：
+可执行目标在 `src/CMakeLists.txt` 中定义。Windows 动态与静态 preset 在各自构建目录中复用同一个
+`LabelQt` 目标；静态 preset 只增加静态 Qt 校验、插件和运行库配置，不再复制整套应用目标。源码按三组加入目标：
 
 - `LABELQT_CORE_SOURCES`：数据、格式、偏好、翻译、撤销。
-- `LABELQT_SERVICE_SOURCES`：工程、自动化、图片缓存、会话、密钥、压缩包等服务。
+- `LABELQT_SERVICE_SOURCES`：工程、自动化、图片缓存、会话、密钥等服务。
 - `LABELQT_UI_SOURCES`：Qt Widgets 界面和 UI 控制器。
 
-CMake 会把根目录 `preference.json` 和 `scripts/official` 同步到构建出的可执行文件目录，方便开发构建和 Windows 便携包直接使用默认配置与官方脚本。运行时找不到 exe 旁边的官方脚本时，会使用安装到 `/usr/share/labelqt/scripts/official` 的只读脚本；用户自定义脚本则回退到用户数据目录。Linux 安装包不安装可编辑的 `preference.json`。翻译 `.qm` 通过 Qt 资源编进程序，不依赖运行目录下的 `i18n` 文件夹。
+CMake 会把根目录 `preference.json` 和 `scripts/official` 同步到构建出的可执行文件目录，方便开发构建和 Windows 便携包直接使用默认配置与官方脚本。发行打包阶段会排除开发专用的 `scripts/official/test`。运行时找不到 exe 旁边的官方脚本时，会使用安装到 `/usr/share/labelqt/scripts/official` 的只读脚本；用户自定义脚本则回退到用户数据目录。Linux 安装包不安装可编辑的 `preference.json`。翻译 `.qm` 通过 Qt 资源编进程序，不依赖运行目录下的 `i18n` 文件夹。
 
 ## 推荐阅读顺序
 
@@ -151,6 +152,10 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 - 执行图片文件重命名工作流，成功后清空普通撤销历史并标记工程已修改。
 
 `MainWindow` 在这里的职责是弹出 `ProjectMergeDialog` / `PageOrderDialog`，然后把用户选择交给控制器。
+
+校对相关入口由 `ProofreadingController` 承接：它负责启停基线、后台比较外部工程并打开结果窗口。
+结果表使用 `ProofreadChangeTableModel` 和 `ProofreadChangeFilterModel`，筛选与排序始终映射回同一份
+`ReviewChange` 数据，不再由对话框维护平行的行号数组。
 
 ### `ProjectImageRenameService` / `ImageRenamePreviewWidget`
 

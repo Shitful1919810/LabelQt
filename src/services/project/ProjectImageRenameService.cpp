@@ -87,7 +87,8 @@ bool isWindowsReservedName(const QString& stem)
     return reservedNames.contains(stem.toUpper());
 }
 
-std::expected<QString, QString> renderPattern(const QString& pattern, int index, const QString& stem)
+std::expected<QString, QString> parsePattern(const QString& pattern, int index, const QString& stem,
+                                             QVector<ProjectImageRenamePatternSpan>* spans)
 {
     if (pattern.trimmed().isEmpty()) {
         return std::unexpected(serviceText("Pattern cannot be empty."));
@@ -99,6 +100,9 @@ std::expected<QString, QString> renderPattern(const QString& pattern, int index,
         const qsizetype open = pattern.indexOf(QLatin1Char('{'), cursor);
         const qsizetype closeBeforeOpen = pattern.indexOf(QLatin1Char('}'), cursor);
         if (closeBeforeOpen >= 0 && (open < 0 || closeBeforeOpen < open)) {
+            if (spans != nullptr) {
+                spans->append({closeBeforeOpen, 1, false});
+            }
             return std::unexpected(serviceText("Unexpected '}' in pattern."));
         }
         if (open < 0) {
@@ -109,6 +113,9 @@ std::expected<QString, QString> renderPattern(const QString& pattern, int index,
         output += pattern.sliced(cursor, open - cursor);
         const qsizetype close = pattern.indexOf(QLatin1Char('}'), open + 1);
         if (close < 0) {
+            if (spans != nullptr) {
+                spans->append({open, pattern.size() - open, false});
+            }
             return std::unexpected(serviceText("Missing '}' in pattern."));
         }
 
@@ -122,12 +129,21 @@ std::expected<QString, QString> renderPattern(const QString& pattern, int index,
             static const QRegularExpression paddedIndexRegex(QStringLiteral(R"(^0([1-9]\d*)$)"));
             const QRegularExpressionMatch match = paddedIndexRegex.match(format);
             if (!match.hasMatch()) {
+                if (spans != nullptr) {
+                    spans->append({open, close - open + 1, false});
+                }
                 return std::unexpected(serviceText("Only {index:03}-style zero padding is supported."));
             }
             const int width = match.captured(1).toInt();
             output += QString::number(index).rightJustified(width, QLatin1Char('0'));
         } else {
+            if (spans != nullptr) {
+                spans->append({open, close - open + 1, false});
+            }
             return std::unexpected(serviceText("Unknown token {%1}.").arg(token));
+        }
+        if (spans != nullptr) {
+            spans->append({open, close - open + 1, true});
         }
         cursor = close + 1;
     }
@@ -138,15 +154,29 @@ std::expected<QString, QString> renderPattern(const QString& pattern, int index,
     return output;
 }
 
+std::expected<QString, QString> renderPattern(const QString& pattern, int index, const QString& stem)
+{
+    return parsePattern(pattern, index, stem, nullptr);
+}
+
 QString uniqueTemporaryPath(const QString& directoryPath, const QString& oldName)
 {
     const QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
     return QDir(directoryPath).filePath(QStringLiteral(".labelqt-rename-%1-%2.tmp").arg(uuid, oldName));
 }
 
+QString pathComparisonKey(const QString& path)
+{
+    QString key = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+#ifdef Q_OS_WIN
+    key = key.toCaseFolded();
+#endif
+    return key;
+}
+
 bool samePath(const QString& lhs, const QString& rhs)
 {
-    return QFileInfo(lhs).absoluteFilePath() == QFileInfo(rhs).absoluteFilePath();
+    return pathComparisonKey(lhs) == pathComparisonKey(rhs);
 }
 
 bool isTargetValidationError(const QString& error)
@@ -219,7 +249,8 @@ void rewriteReviewMetadata(labelqt::core::Project& project, const ProjectImageRe
     for (ReviewLabelSnapshot snapshot : oldMetadata.baselineLabels()) {
         const QString newImageName = newNameByOldName.value(snapshot.imageName, snapshot.imageName);
         snapshot.imageName = newImageName;
-        newMetadata.setBaseline(newImageName, snapshot.labelIndex, std::move(snapshot));
+        const int labelIndex = snapshot.labelIndex;
+        newMetadata.setBaseline(newImageName, labelIndex, std::move(snapshot));
     }
     project.setCommentLines(ReviewMetadataService::rewriteCommentLines(project.commentLines(), newMetadata));
 }
@@ -231,19 +262,34 @@ struct RenameStep {
     QString targetPath;
 };
 
-void rollbackRenames(const QVector<RenameStep>& steps, const QSet<int>& movedToTemporary, const QSet<int>& movedToTarget)
+QStringList rollbackRenames(const QVector<RenameStep>& steps, const QSet<int>& movedToTemporary,
+                            const QSet<int>& movedToTarget)
 {
+    QStringList failures;
     for (auto it = steps.crbegin(); it != steps.crend(); ++it) {
         const RenameStep& step = *it;
         if (movedToTarget.contains(step.itemIndex) && QFileInfo::exists(step.targetPath) &&
             !QFileInfo::exists(step.sourcePath)) {
-            QFile::rename(step.targetPath, step.sourcePath);
+            if (!QFile::rename(step.targetPath, step.sourcePath)) {
+                failures.append(serviceText("Failed to rename %1 to %2.").arg(step.targetPath, step.sourcePath));
+            }
         }
         if (movedToTemporary.contains(step.itemIndex) && QFileInfo::exists(step.temporaryPath) &&
             !QFileInfo::exists(step.sourcePath)) {
-            QFile::rename(step.temporaryPath, step.sourcePath);
+            if (!QFile::rename(step.temporaryPath, step.sourcePath)) {
+                failures.append(serviceText("Failed to rename %1 to %2.").arg(step.temporaryPath, step.sourcePath));
+            }
         }
     }
+    return failures;
+}
+
+QString renameFailureWithRollbackDetails(QString failure, const QStringList& rollbackFailures)
+{
+    if (!rollbackFailures.isEmpty()) {
+        failure += QStringLiteral("\n\n") + rollbackFailures.join(QLatin1Char('\n'));
+    }
+    return failure;
 }
 
 void validatePlanTargets(ProjectImageRenamePlan& plan)
@@ -259,7 +305,7 @@ void validatePlanTargets(ProjectImageRenamePlan& plan)
     for (const ProjectImageRenameItem& item : plan.items) {
         const QString finalPath = finalImagePathForConflictCheck(item);
         if (!finalPath.isEmpty()) {
-            targetPathCounts[finalPath] += 1;
+            targetPathCounts[pathComparisonKey(finalPath)] += 1;
         }
     }
 
@@ -267,7 +313,7 @@ void validatePlanTargets(ProjectImageRenamePlan& plan)
         if (!item.included || !item.error.isEmpty()) {
             continue;
         }
-        if (targetPathCounts.value(item.newPath) > 1) {
+        if (targetPathCounts.value(pathComparisonKey(item.newPath)) > 1) {
             item.error = serviceText("Duplicate target file name.");
             continue;
         }
@@ -469,6 +515,16 @@ ProjectImageRenamePlan ProjectImageRenameService::mergePlans(ProjectImageRenameP
     return currentPlan;
 }
 
+ProjectImageRenamePatternAnalysis ProjectImageRenameService::analyzePattern(const QString& pattern)
+{
+    ProjectImageRenamePatternAnalysis analysis;
+    const std::expected<QString, QString> result = parsePattern(pattern, 0, QStringLiteral("stem"), &analysis.spans);
+    if (!result) {
+        analysis.error = result.error();
+    }
+    return analysis;
+}
+
 std::expected<void, QString> ProjectImageRenameService::applyPlan(labelqt::core::Project& project,
                                                                   const ProjectImageRenamePlan& plan)
 {
@@ -495,16 +551,18 @@ std::expected<void, QString> ProjectImageRenameService::applyPlan(labelqt::core:
     QSet<int> movedToTarget;
     for (const RenameStep& step : std::as_const(steps)) {
         if (!QFile::rename(step.sourcePath, step.temporaryPath)) {
-            rollbackRenames(steps, movedToTemporary, movedToTarget);
-            return std::unexpected(serviceText("Failed to rename %1 to a temporary file.").arg(step.sourcePath));
+            const QStringList rollbackFailures = rollbackRenames(steps, movedToTemporary, movedToTarget);
+            return std::unexpected(renameFailureWithRollbackDetails(
+                serviceText("Failed to rename %1 to a temporary file.").arg(step.sourcePath), rollbackFailures));
         }
         movedToTemporary.insert(step.itemIndex);
     }
 
     for (const RenameStep& step : std::as_const(steps)) {
         if (!QFile::rename(step.temporaryPath, step.targetPath)) {
-            rollbackRenames(steps, movedToTemporary, movedToTarget);
-            return std::unexpected(serviceText("Failed to rename %1 to %2.").arg(step.temporaryPath, step.targetPath));
+            const QStringList rollbackFailures = rollbackRenames(steps, movedToTemporary, movedToTarget);
+            return std::unexpected(renameFailureWithRollbackDetails(
+                serviceText("Failed to rename %1 to %2.").arg(step.temporaryPath, step.targetPath), rollbackFailures));
         }
         movedToTemporary.remove(step.itemIndex);
         movedToTarget.insert(step.itemIndex);

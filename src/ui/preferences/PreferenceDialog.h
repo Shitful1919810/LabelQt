@@ -52,7 +52,8 @@ private:
     QWidget* createJsonPage(QWidget* parent);
     void connectPreferenceChangeSignals();
     void loadFromDisk();
-    void loadDocument(const QJsonDocument& document);
+    void loadPreferences(const labelqt::core::AppPreferences& preferences);
+    labelqt::core::AppPreferences preferencesFromUi() const;
     QJsonDocument documentFromUi() const;
     void updateJsonPreview();
     void setMessage(const QString& message, bool warning = false);

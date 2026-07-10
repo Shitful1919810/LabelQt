@@ -39,8 +39,12 @@ See `docs/architecture.md` for more detail.
 - Keep the application on LGPL-available Qt modules unless the project intentionally changes to a GPL-compatible release strategy.
 - Current required Qt dependencies should stay limited to `Qt6::Core`, `Qt6::Gui` and `Qt6::Widgets` unless a new module is reviewed. `Qt6::Svg` is an optional enhancement for bundled stylesheet icons.
 - Do not introduce Qt GPL-only modules without documenting the license impact and getting an explicit project decision.
-- Prefer dynamic linking for Qt in release packaging.
-- The Windows `LabelQtStatic` target is experimental and local-only. Do not publish static Qt binaries without a Qt license review.
+- Keep dynamic Qt as the baseline release path; the official Windows static variant must additionally satisfy the
+  repository's static-linking checklist and relinking requirements.
+- Windows dynamic and static builds, plus the Linux RPM, are the intended official binary release artifacts. Do not
+  publish a static Qt binary until its Qt/static-dependency licenses, source offer and relinking instructions have been
+  reviewed for that release.
+- Linux static builds and DEB packages are experimental and are not part of the supported release matrix.
 - Do not commit Qt source code, Qt SDK files or bundled Qt binaries into this repository.
 - Binary releases must include Qt license notices, Qt module/version information and third-party dependency notices.
 - When adding a third-party dependency, document its license and keep it compatible with the intended project license.

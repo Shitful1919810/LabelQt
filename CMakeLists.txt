@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.24)
 project(LabelQt
     VERSION 0.1.0
     DESCRIPTION "Cross-platform image labeling and translation assistant"
+    HOMEPAGE_URL "https://github.com/Shitful1919810/LabelQt"
     LANGUAGES CXX
 )
 
@@ -12,9 +13,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json for clangd")
 
 option(LABELQT_ENABLE_TESTS "Build tests" ON)
-option(LABELQT_REQUIRE_LIBARCHIVE "Fail configure when libarchive is unavailable" OFF)
-option(LABELQT_ENABLE_STATIC_QT_EXPERIMENT
-    "Enable the experimental Windows-only static Qt single-exe target for local builds. Do not use for official releases without Qt license review."
+option(LABELQT_REQUIRE_QT_SVG "Fail configure when Qt Svg is unavailable" OFF)
+option(LABELQT_REQUIRE_LINGUIST_TOOLS "Fail configure when Qt LinguistTools is unavailable" OFF)
+option(LABELQT_ENABLE_WINDOWS_STATIC_RELEASE
+    "Build the official Windows release target against a fully static Qt dependency set."
+    OFF
+)
+option(LABELQT_ENABLE_EXPERIMENTAL_DEB_PACKAGE
+    "Include the experimental DEB generator in the default CPack generator list."
     OFF
 )
 
@@ -25,12 +31,25 @@ include(DiffMatchPatch)
 include(ProjectWarnings)
 include(GNUInstallDirs)
 
+if(UNIX AND NOT APPLE)
+    include(CheckPIESupported)
+    check_pie_supported()
+endif()
+
 labelqt_add_diff_match_patch(DiffMatchPatch)
 
-if(LABELQT_ENABLE_STATIC_QT_EXPERIMENT AND WIN32)
-    labelqt_add_diff_match_patch(DiffMatchPatchStatic)
+if(LABELQT_ENABLE_WINDOWS_STATIC_RELEASE)
+    if(NOT WIN32)
+        message(FATAL_ERROR "LABELQT_ENABLE_WINDOWS_STATIC_RELEASE is only supported on Windows.")
+    endif()
+    if(QT6_IS_SHARED_LIBS_BUILD)
+        message(FATAL_ERROR
+            "LABELQT_ENABLE_WINDOWS_STATIC_RELEASE requires a static Qt build. Install or build static Qt and point "
+            "CMAKE_PREFIX_PATH/Qt6_DIR to it before configuring a Windows static release preset."
+        )
+    endif()
     if(MSVC)
-        set_target_properties(DiffMatchPatchStatic PROPERTIES
+        set_target_properties(DiffMatchPatch PROPERTIES
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
         )
     endif()

@@ -13,9 +13,11 @@ class ImageCanvas;
 class CheckableFilterButton;
 class QLabel;
 class QPushButton;
-class QTableWidget;
+class QTableView;
 class QTextBrowser;
 class ViewportFittedTableColumns;
+class ProofreadChangeFilterModel;
+class ProofreadChangeTableModel;
 
 namespace labelqt::services {
 struct ProofreadReportTexts;
@@ -46,7 +48,6 @@ public slots:
 
 private:
     void buildUi();
-    void populateRows();
     void rebuildFilters();
     void applyFilters();
     void restoreTableColumnWidths();
@@ -59,8 +60,6 @@ private:
     void updateJumpButton();
     void resizeTableRowsToContents();
     void resizeTableRowToContent(int row);
-    QString changeKindText(labelqt::services::ReviewChangeKind kind) const;
-    QString changeSummary(const labelqt::services::ReviewChange& change) const;
     QString facetText(labelqt::services::ReviewChangeFacet facet) const;
     QVector<labelqt::services::ReviewChange> filteredChanges() const;
     QString reportFilterDescription() const;
@@ -74,9 +73,9 @@ private:
     labelqt::services::ReviewMetadata m_metadata;
     labelqt::services::SessionStateStore m_sessionStateStore;
     ProofreadChangesDialogLabels m_labels;
-    QVector<labelqt::services::ReviewChange> m_changes;
-    QVector<int> m_filteredChangeIndexes;
-    QTableWidget* m_table{nullptr};
+    QTableView* m_table{nullptr};
+    ProofreadChangeTableModel* m_tableModel{nullptr};
+    ProofreadChangeFilterModel* m_filterModel{nullptr};
     QLabel* m_summaryLabel{nullptr};
     CheckableFilterButton* m_pageFilterButton{nullptr};
     CheckableFilterButton* m_kindFilterButton{nullptr};

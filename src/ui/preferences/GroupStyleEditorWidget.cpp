@@ -8,7 +8,6 @@
 #include <QDoubleSpinBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QJsonObject>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -24,21 +23,6 @@ constexpr int diameterColumn = 1;
 constexpr int fontColumn = 2;
 constexpr int shapeColumn = 3;
 
-QColor colorFromStyleObject(const QJsonObject& style)
-{
-    const QJsonValue value = style.value(QStringLiteral("groupColor"));
-    if (value.isString()) {
-        const QColor color(value.toString());
-        return color.isValid() ? color : QColor(QStringLiteral("#000000"));
-    }
-    return QColor(QStringLiteral("#000000"));
-}
-
-QString markerStyleFromObject(const QJsonObject& style)
-{
-    const QString markerStyle = style.value(QStringLiteral("markerStyle")).toString(QStringLiteral("circle"));
-    return markerStyle == QStringLiteral("square") ? QStringLiteral("square") : QStringLiteral("circle");
-}
 } // namespace
 
 GroupStyleEditorWidget::GroupStyleEditorWidget(QWidget* parent) : QWidget(parent)
@@ -79,17 +63,17 @@ void GroupStyleEditorWidget::setMarkerDefaults(double markerDiameter, double fon
     m_defaultFontPointSize = fontPointSize;
 }
 
-void GroupStyleEditorWidget::loadStyles(const QJsonArray& styles)
+void GroupStyleEditorWidget::loadStyles(const QVector<labelqt::core::LabelGroupStyle>& styles)
 {
     m_table->setRowCount(0);
-    for (const QJsonValue& value : styles) {
-        addStyleRow(value.toObject());
+    for (const labelqt::core::LabelGroupStyle& style : styles) {
+        addStyleRow(style);
     }
 }
 
-QJsonArray GroupStyleEditorWidget::styles() const
+QVector<labelqt::core::LabelGroupStyle> GroupStyleEditorWidget::styles() const
 {
-    QJsonArray groupStyles;
+    QVector<labelqt::core::LabelGroupStyle> groupStyles;
     for (int row = 0; row < m_table->rowCount(); ++row) {
         auto* colorButton = qobject_cast<QPushButton*>(m_table->cellWidget(row, colorColumn));
         auto* diameterSpinBox = qobject_cast<QDoubleSpinBox*>(m_table->cellWidget(row, diameterColumn));
@@ -100,45 +84,46 @@ QJsonArray GroupStyleEditorWidget::styles() const
             continue;
         }
 
-        QJsonObject style;
-        style.insert(QStringLiteral("groupColor"), colorButton->property("color").toString());
-        style.insert(QStringLiteral("markerDiameter"), diameterSpinBox->value());
-        style.insert(QStringLiteral("fontPointSize"), fontSpinBox->value());
-        style.insert(QStringLiteral("markerStyle"), shapeComboBox->currentData().toString());
-        groupStyles.append(style);
+        groupStyles.append({
+            QColor(colorButton->property("color").toString()),
+            diameterSpinBox->value(),
+            fontSpinBox->value(),
+            shapeComboBox->currentData().toString() == QStringLiteral("square")
+                ? labelqt::core::MarkerShape::Square
+                : labelqt::core::MarkerShape::Circle,
+        });
     }
     return groupStyles;
 }
 
 void GroupStyleEditorWidget::addStyleRow()
 {
-    addStyleRow(QJsonObject{});
+    addStyleRow({QColor(QStringLiteral("#000000")), m_defaultMarkerDiameter, m_defaultFontPointSize,
+                 labelqt::core::MarkerShape::Circle});
 }
 
-void GroupStyleEditorWidget::addStyleRow(const QJsonObject& style)
+void GroupStyleEditorWidget::addStyleRow(const labelqt::core::LabelGroupStyle& style)
 {
     const int row = m_table->rowCount();
     m_table->insertRow(row);
     m_table->setVerticalHeaderItem(row, new QTableWidgetItem(QString::number(row + 1)));
 
-    const QColor color = colorFromStyleObject(style);
+    const QColor color = style.groupColor.isValid() ? style.groupColor : QColor(QStringLiteral("#000000"));
     auto* colorButton = new QPushButton(color.name(), m_table);
     colorButton->setProperty("color", color.name());
     colorButton->setStyleSheet(QStringLiteral("QPushButton { color: %1; }").arg(color.name()));
     m_table->setCellWidget(row, colorColumn, colorButton);
 
-    auto* diameterSpinBox = makePositiveDoubleSpinBox(
-        style.value(QStringLiteral("markerDiameter")).toDouble(m_defaultMarkerDiameter), 1.0, 256.0);
+    auto* diameterSpinBox = makePositiveDoubleSpinBox(style.markerDiameter, 1.0, 256.0);
     m_table->setCellWidget(row, diameterColumn, diameterSpinBox);
 
-    auto* fontSpinBox = makePositiveDoubleSpinBox(
-        style.value(QStringLiteral("fontPointSize")).toDouble(m_defaultFontPointSize), 0.1, 256.0);
+    auto* fontSpinBox = makePositiveDoubleSpinBox(style.fontPointSize, 0.1, 256.0);
     m_table->setCellWidget(row, fontColumn, fontSpinBox);
 
     auto* shapeComboBox = new QComboBox(m_table);
     shapeComboBox->addItem(tr("Circle"), QStringLiteral("circle"));
     shapeComboBox->addItem(tr("Square"), QStringLiteral("square"));
-    shapeComboBox->setCurrentIndex(markerStyleFromObject(style) == QStringLiteral("square") ? 1 : 0);
+    shapeComboBox->setCurrentIndex(style.markerShape == labelqt::core::MarkerShape::Square ? 1 : 0);
     m_table->setCellWidget(row, shapeColumn, shapeComboBox);
 
     connect(colorButton, &QPushButton::clicked, this, [this, row]() { chooseColor(row); });

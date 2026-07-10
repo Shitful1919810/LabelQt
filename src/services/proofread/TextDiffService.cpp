@@ -79,9 +79,6 @@ bool isCjkCharacter(QChar ch)
 bool shouldUseSemanticCleanup(const QString& beforeText, const QString& afterText)
 {
     const labelqt::core::TextDiffCleanupMode mode = g_cleanupMode.load(std::memory_order_relaxed);
-    if (mode == labelqt::core::TextDiffCleanupMode::Semantic) {
-        return true;
-    }
     if (mode == labelqt::core::TextDiffCleanupMode::Raw) {
         return false;
     }
@@ -99,10 +96,11 @@ bool shouldUseSemanticCleanup(const QString& beforeText, const QString& afterTex
         }
     }
 
-    if (textCount == 0) {
+    const bool isCjkHeavy = textCount > 0 && static_cast<double>(cjkCount) / static_cast<double>(textCount) >= 0.3;
+    if (isCjkHeavy) {
         return false;
     }
-    return static_cast<double>(cjkCount) / static_cast<double>(textCount) < 0.3;
+    return mode == labelqt::core::TextDiffCleanupMode::Semantic || textCount > 0;
 }
 
 } // namespace

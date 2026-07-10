@@ -16,6 +16,8 @@ CMakeUserPresets.json
 dist/
 *.deb
 *.rpm
+*.rpm.sha256
+_CPack_Packages/
 
 # Python cache files from automation scripts
 __pycache__/

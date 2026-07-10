@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <utility>
 
 namespace labelqt::core {
 
@@ -58,12 +59,12 @@ double positiveNumberFromJsonValue(const QJsonObject& object, const QString& key
     }
 
     const double size = value.toDouble();
-    if (size <= 0.0) {
+    if (size < minimum || size > maximum) {
         warnings.append(makeWarning(outOfRange, QStringLiteral("%1.%2").arg(displayPrefix, key)));
         return fallback;
     }
 
-    return std::clamp(size, minimum, maximum);
+    return size;
 }
 
 int positiveIntegerFromJsonValue(const QJsonObject& object, const QString& key, const QString& displayKey, int fallback,
@@ -81,12 +82,12 @@ int positiveIntegerFromJsonValue(const QJsonObject& object, const QString& key, 
     }
 
     const double number = value.toDouble();
-    if (number <= 0.0 || std::floor(number) != number) {
+    if (number < minimum || number > maximum || std::floor(number) != number) {
         warnings.append(makeWarning(outOfRange, displayKey));
         return fallback;
     }
 
-    return std::clamp(static_cast<int>(number), minimum, maximum);
+    return static_cast<int>(number);
 }
 
 double nonNegativeNumberFromJsonValue(const QJsonObject& object, const QString& key, const QString& displayKey,
@@ -104,12 +105,12 @@ double nonNegativeNumberFromJsonValue(const QJsonObject& object, const QString& 
     }
 
     const double number = value.toDouble();
-    if (number < 0.0) {
+    if (number < 0.0 || number > maximum) {
         warnings.append(makeWarning(outOfRange, displayKey));
         return fallback;
     }
 
-    return std::clamp(number, 0.0, maximum);
+    return number;
 }
 
 double boundedNumberFromJsonValue(const QJsonObject& object, const QString& key, const QString& displayKey,
@@ -351,12 +352,98 @@ QJsonArray groupStylesToJsonArray(const QVector<LabelGroupStyle>& groupStyles)
 }
 } // namespace
 
-QVector<LabelGroupStyle> AppPreferences::defaultGroupStyles()
+QVector<LabelGroupStyle> defaultLabelGroupStyles()
 {
     return {
         {QColor(QStringLiteral("#ef4444")), 20.0, 10.0, MarkerShape::Circle},
         {QColor(QStringLiteral("#2563eb")), 20.0, 10.0, MarkerShape::Square},
         {QColor(QStringLiteral("#10b981")), 20.0, 10.0, MarkerShape::Circle},
+    };
+}
+
+AppPreferences AppPreferences::fromValues(AppPreferencesValues values)
+{
+    AppPreferences preferences;
+    preferences.m_labelMarkerDiameterPixels = values.labelMarkerDiameterPixels;
+    preferences.m_labelMarkerFontPointSize = values.labelMarkerFontPointSize;
+    preferences.m_labelTableMaxTextRows = values.labelTableMaxTextRows;
+    preferences.m_labelTableFontFamily = std::move(values.labelTableFontFamily);
+    preferences.m_labelTableFontPointSize = values.labelTableFontPointSize;
+    preferences.m_labelTextEditorFontFamily = std::move(values.labelTextEditorFontFamily);
+    preferences.m_labelTextEditorFontPointSize = values.labelTextEditorFontPointSize;
+    preferences.m_markerTextBubbleFontFamily = std::move(values.markerTextBubbleFontFamily);
+    preferences.m_markerTextBubbleFontPointSize = values.markerTextBubbleFontPointSize;
+    preferences.m_markerTextBubbleOpacity = values.markerTextBubbleOpacity;
+    preferences.m_markerTextBubbleMaxLineCharacters = values.markerTextBubbleMaxLineCharacters;
+    preferences.m_canvasLabelTextEditorOpacity = values.canvasLabelTextEditorOpacity;
+    preferences.m_applicationStyle = std::move(values.applicationStyle);
+    preferences.m_applicationTheme = std::move(values.applicationTheme);
+    preferences.m_applicationLanguage = std::move(values.applicationLanguage);
+    preferences.m_textDiffCleanupMode = values.textDiffCleanupMode;
+    preferences.m_showAutomationRunLog = values.showAutomationRunLog;
+    preferences.m_automationPythonCommand = std::move(values.automationPythonCommand);
+    preferences.m_automationPythonArguments = std::move(values.automationPythonArguments);
+    preferences.m_automationAutoInstallRequirements = values.automationAutoInstallRequirements;
+    preferences.m_automationPipIndexUrl = std::move(values.automationPipIndexUrl);
+    preferences.m_automationShortcuts = std::move(values.automationShortcuts);
+    preferences.m_moveLabelModifiers = values.moveLabelModifiers;
+    preferences.m_previousLabelModifiers = values.previousLabelModifiers;
+    preferences.m_undoShortcut = std::move(values.undoShortcut);
+    preferences.m_redoShortcut = std::move(values.redoShortcut);
+    preferences.m_nextLabelShortcut = std::move(values.nextLabelShortcut);
+    preferences.m_alternatePreviousLabelShortcut = std::move(values.alternatePreviousLabelShortcut);
+    preferences.m_alternateNextLabelShortcut = std::move(values.alternateNextLabelShortcut);
+    preferences.m_previousPageShortcut = std::move(values.previousPageShortcut);
+    preferences.m_nextPageShortcut = std::move(values.nextPageShortcut);
+    preferences.m_editLabelTextShortcut = std::move(values.editLabelTextShortcut);
+    preferences.m_commitLabelTextShortcut = std::move(values.commitLabelTextShortcut);
+    preferences.m_deleteLabelShortcut = std::move(values.deleteLabelShortcut);
+    preferences.m_backupPath = std::move(values.backupPath);
+    preferences.m_backupIntervalSeconds = values.backupIntervalSeconds;
+    preferences.m_groupStyles = std::move(values.groupStyles);
+    return preferences;
+}
+
+AppPreferencesValues AppPreferences::values() const
+{
+    return {
+        .labelMarkerDiameterPixels = m_labelMarkerDiameterPixels,
+        .labelMarkerFontPointSize = m_labelMarkerFontPointSize,
+        .labelTableMaxTextRows = m_labelTableMaxTextRows,
+        .labelTableFontFamily = m_labelTableFontFamily,
+        .labelTableFontPointSize = m_labelTableFontPointSize,
+        .labelTextEditorFontFamily = m_labelTextEditorFontFamily,
+        .labelTextEditorFontPointSize = m_labelTextEditorFontPointSize,
+        .markerTextBubbleFontFamily = m_markerTextBubbleFontFamily,
+        .markerTextBubbleFontPointSize = m_markerTextBubbleFontPointSize,
+        .markerTextBubbleOpacity = m_markerTextBubbleOpacity,
+        .markerTextBubbleMaxLineCharacters = m_markerTextBubbleMaxLineCharacters,
+        .canvasLabelTextEditorOpacity = m_canvasLabelTextEditorOpacity,
+        .applicationStyle = m_applicationStyle,
+        .applicationTheme = m_applicationTheme,
+        .applicationLanguage = m_applicationLanguage,
+        .textDiffCleanupMode = m_textDiffCleanupMode,
+        .showAutomationRunLog = m_showAutomationRunLog,
+        .automationPythonCommand = m_automationPythonCommand,
+        .automationPythonArguments = m_automationPythonArguments,
+        .automationAutoInstallRequirements = m_automationAutoInstallRequirements,
+        .automationPipIndexUrl = m_automationPipIndexUrl,
+        .automationShortcuts = m_automationShortcuts,
+        .moveLabelModifiers = m_moveLabelModifiers,
+        .previousLabelModifiers = m_previousLabelModifiers,
+        .undoShortcut = m_undoShortcut,
+        .redoShortcut = m_redoShortcut,
+        .nextLabelShortcut = m_nextLabelShortcut,
+        .alternatePreviousLabelShortcut = m_alternatePreviousLabelShortcut,
+        .alternateNextLabelShortcut = m_alternateNextLabelShortcut,
+        .previousPageShortcut = m_previousPageShortcut,
+        .nextPageShortcut = m_nextPageShortcut,
+        .editLabelTextShortcut = m_editLabelTextShortcut,
+        .commitLabelTextShortcut = m_commitLabelTextShortcut,
+        .deleteLabelShortcut = m_deleteLabelShortcut,
+        .backupPath = m_backupPath,
+        .backupIntervalSeconds = m_backupIntervalSeconds,
+        .groupStyles = m_groupStyles,
     };
 }
 

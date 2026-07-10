@@ -11,7 +11,7 @@ scripts/
   custom/        用户脚本
 ```
 
-仓库中的 `scripts/official` 是官方脚本和示例模板。开发构建和 Windows 便携包通常会把它同步到 exe 旁边；Linux DEB/RPM 会把官方脚本安装到 `/usr/share/labelqt/scripts/official`。每个脚本组一个目录。目录里至少包含 `script.json` 和入口 Python 文件，也可以包含 `requirements.txt` 和资源文件等。需要持久化本机配置时，优先使用 SDK 提供的用户配置目录辅助函数。
+仓库中的 `scripts/official` 是官方脚本和示例模板。开发构建和 Windows 便携包通常会把它同步到 exe 旁边；正式发布的 Linux RPM（以及实验性 DEB）会把官方脚本安装到 `/usr/share/labelqt/scripts/official`。每个脚本组一个目录。目录里至少包含 `script.json` 和入口 Python 文件，也可以包含 `requirements.txt` 和资源文件等。需要持久化本机配置时，优先使用 SDK 提供的用户配置目录辅助函数。
 
 ```text
 scripts/custom/my_tool/
@@ -248,7 +248,8 @@ python run.py --input /tmp/input.json --output /tmp/output.json
 
 ## 示例职责
 
-`scripts/official/test` 既用于测试自动化框架，也用于展示推荐写法：
+`scripts/official/test` 既用于开发阶段测试自动化框架，也用于展示推荐写法。该目录会同步到本地开发构建，
+但不会进入正式 Windows ZIP/MSI 或 Linux RPM：
 
 - 用 `AutomationContext.from_file()` 读 `input.json`，用 `ctx.write_output()` 写 `output.json`。
 - 用 `ctx.parameters` 接收用户参数。

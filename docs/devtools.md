@@ -10,7 +10,8 @@
 python scripts/devtool.py check --mode fast
 ```
 
-这会复用 `scripts/check_fast.py`，检查翻译、官方脚本 Python 语法和 `git diff --check`。
+这会复用 `scripts/check_fast.py`，检查翻译、官方脚本 Python 语法、Windows shared/static 发行树筛选与
+许可证收集逻辑，以及 `git diff --check`。
 
 完整检查：
 
@@ -73,6 +74,9 @@ Windows 便携包目录：
 ```bash
 python scripts/devtool.py release-audit build/Release --kind windows-dir
 ```
+
+Windows 静态包使用 `--kind windows-static-dir`，会额外检查静态链接 notice 和重链接文档。两种 Windows
+审计都会要求 Qt 对应源码 notice、原生依赖许可证，并拒绝开发专用的 `scripts/official/test`。
 
 Linux 安装根目录：
 

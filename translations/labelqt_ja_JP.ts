@@ -2100,8 +2100,8 @@ Last error: %1</source>
     </message>
     <message>
         <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="335"/>
-        <source>Always use semantic cleanup</source>
-        <translation>常に意味的クリーンアップを使用</translation>
+        <source>Use semantic cleanup for non-CJK text</source>
+        <translation>CJK 以外のテキストで意味的クリーンアップを使用</translation>
     </message>
     <message>
         <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="336"/>
