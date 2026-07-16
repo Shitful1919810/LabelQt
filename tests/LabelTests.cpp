@@ -26,6 +26,8 @@
 #include "services/proofread/TextDiffService.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
 #include "ui/canvas/CanvasLabelItems.h"
+#include "ui/canvas/CanvasLabelTextEditController.h"
+#include "ui/canvas/CanvasLabelTextEditor.h"
 #include "ui/canvas/ImageCanvas.h"
 #include "ui/labeltable/LabelEditDelegates.h"
 #include "ui/labeltable/LabelSelectionController.h"
@@ -1287,6 +1289,40 @@ private slots:
                                     .arg(sceneAfter.y())));
             QCOMPARE(canvas.zoomPercent(), 280);
         }
+    }
+
+    void canvasLabelTextEditorFollowsMarkerDuringWheelZoom()
+    {
+        ImageCanvas canvas;
+        const QVector<Label> labels{
+            Label(QStringLiteral("text"), QStringLiteral("框内"), QPointF(0.5, 0.5)),
+        };
+        QVERIFY(showCanvasWithLabels(canvas, labels, QSize(400, 400)));
+        canvas.setZoomPercent(100);
+
+        CanvasLabelTextEditController controller;
+        controller.open(&canvas, 0, 0, labels.first().text(), canvas.font());
+        auto* editor = canvas.viewport()->findChild<CanvasLabelTextEditor*>();
+        QVERIFY(editor != nullptr);
+
+        const auto expectedEditorPosition = [&]() {
+            QPoint position = canvas.viewport()->mapFromGlobal(canvas.globalPositionForLabel(0) + QPoint(12, 18));
+            position.setX(std::clamp(position.x(), 0, canvas.viewport()->width() - editor->width()));
+            position.setY(std::clamp(position.y(), 0, canvas.viewport()->height() - editor->height()));
+            return position;
+        };
+        QCOMPARE(editor->pos(), expectedEditorPosition());
+        const QPoint initialEditorPosition = editor->pos();
+
+        const QPointF zoomAnchor(80.0, 80.0);
+        QWheelEvent event(zoomAnchor, canvas.viewport()->mapToGlobal(zoomAnchor.toPoint()), QPoint(), QPoint(0, 120),
+                          Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(canvas.viewport(), &event);
+        QCoreApplication::processEvents();
+
+        QCOMPARE(editor->pos(), expectedEditorPosition());
+        QVERIFY(editor->pos() != initialEditorPosition);
+        controller.cancel();
     }
 
     void imageCanvasResizeKeepsVisualCenterAfterManualZoom()

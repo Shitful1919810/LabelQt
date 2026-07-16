@@ -1918,7 +1918,7 @@ void MainWindow::clearLabelTextPreviewFromTableEditor(QPersistentModelIndex inde
     }
 }
 
-void MainWindow::openCanvasLabelTextEditor(int index, QPoint globalPosition)
+void MainWindow::openCanvasLabelTextEditor(int index)
 {
     if (isProjectEditingBlocked()) {
         return;
@@ -1935,8 +1935,8 @@ void MainWindow::openCanvasLabelTextEditor(int index, QPoint globalPosition)
     m_canvas->setSelectedLabelTextBubblesVisible(false);
     selectLabel(index);
 
-    m_canvasTextEditController->open(m_canvas->viewport(), m_currentImageIndex, index, image->labels.at(index).text(),
-                                     m_textEdit != nullptr ? m_textEdit->font() : font(), globalPosition);
+    m_canvasTextEditController->open(m_canvas, m_currentImageIndex, index, image->labels.at(index).text(),
+                                     m_textEdit != nullptr ? m_textEdit->font() : font());
 }
 
 void MainWindow::commitCanvasLabelTextEditor()
@@ -2273,7 +2273,7 @@ void MainWindow::openCanvasLabelTextEditorForCurrentLabel()
         return;
     }
 
-    openCanvasLabelTextEditor(m_currentLabelIndex, m_canvas->globalPositionForLabel(m_currentLabelIndex));
+    openCanvasLabelTextEditor(m_currentLabelIndex);
 }
 
 void MainWindow::selectLabelAndCenter(int imageIndex, int labelIndex)

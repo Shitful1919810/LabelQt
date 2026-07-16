@@ -1,6 +1,7 @@
 #include "ui/canvas/CanvasLabelTextEditController.h"
 
 #include "ui/canvas/CanvasLabelTextEditor.h"
+#include "ui/canvas/ImageCanvas.h"
 #include "ui/ShortcutUtils.h"
 
 #include <QApplication>
@@ -13,6 +14,11 @@
 #include <utility>
 
 CanvasLabelTextEditController::CanvasLabelTextEditController(QObject* parent) : QObject(parent) {}
+
+CanvasLabelTextEditController::~CanvasLabelTextEditController()
+{
+    tearDownEditor(false);
+}
 
 void CanvasLabelTextEditController::setCommitShortcut(QKeySequence shortcut)
 {
@@ -54,21 +60,30 @@ int CanvasLabelTextEditController::labelIndex() const noexcept
     return m_labelIndex;
 }
 
-void CanvasLabelTextEditController::open(QWidget* parent, int imageIndex, int labelIndex, const QString& text,
-                                         const QFont& font, const QPoint& globalPosition)
+void CanvasLabelTextEditController::open(ImageCanvas* canvas, int imageIndex, int labelIndex, const QString& text,
+                                         const QFont& font)
 {
     close();
+    if (canvas == nullptr) {
+        return;
+    }
 
-    auto* editor = new CanvasLabelTextEditor(parent);
+    auto* editor = new CanvasLabelTextEditor(canvas->viewport());
     editor->setEditorOpacity(m_editorOpacity);
     editor->setEditorFont(font);
     editor->setText(text);
     editor->editor()->installEventFilter(this);
     qApp->installEventFilter(this);
 
+    m_canvas = canvas;
     m_editor = editor;
     m_imageIndex = imageIndex;
     m_labelIndex = labelIndex;
+
+    m_viewportStateConnection = connect(canvas, &ImageCanvas::viewportStateChanged, this, [this]() {
+        repositionEditor();
+        scheduleEditorReposition();
+    });
 
     connect(editor, &CanvasLabelTextEditor::textChanged, this, [this](const QString& changedText) {
         if (m_editor != nullptr) {
@@ -76,7 +91,7 @@ void CanvasLabelTextEditController::open(QWidget* parent, int imageIndex, int la
         }
     });
 
-    editor->moveNearGlobalPosition(globalPosition);
+    repositionEditor();
     editor->show();
     editor->raise();
     editor->editor()->setFocus(Qt::MouseFocusReason);
@@ -103,7 +118,16 @@ void CanvasLabelTextEditController::cancel()
 
 void CanvasLabelTextEditController::close()
 {
+    tearDownEditor(true);
+}
+
+void CanvasLabelTextEditController::tearDownEditor(bool notifyClosed)
+{
     const int labelIndex = m_labelIndex;
+
+    disconnect(m_viewportStateConnection);
+    m_viewportStateConnection = {};
+    m_canvas = nullptr;
 
     if (m_editor != nullptr) {
         m_editor->editor()->removeEventFilter(this);
@@ -114,14 +138,42 @@ void CanvasLabelTextEditController::close()
     m_editor = nullptr;
     m_imageIndex = -1;
     m_labelIndex = -1;
+    m_editorRepositionScheduled = false;
 
-    if (labelIndex >= 0) {
+    if (notifyClosed && labelIndex >= 0) {
         emit closed(labelIndex);
     }
 }
 
+void CanvasLabelTextEditController::repositionEditor()
+{
+    if (m_canvas == nullptr || m_editor == nullptr || m_labelIndex < 0) {
+        return;
+    }
+
+    m_editor->moveNearGlobalPosition(m_canvas->globalPositionForLabel(m_labelIndex));
+}
+
+void CanvasLabelTextEditController::scheduleEditorReposition()
+{
+    if (m_editorRepositionScheduled) {
+        return;
+    }
+
+    m_editorRepositionScheduled = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_editorRepositionScheduled = false;
+        repositionEditor();
+    });
+}
+
 bool CanvasLabelTextEditController::eventFilter(QObject* watched, QEvent* event)
 {
+    if (m_canvas != nullptr && watched == m_canvas->viewport() &&
+        (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+        scheduleEditorReposition();
+    }
+
     if (m_editor != nullptr &&
         (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick ||
          event->type() == QEvent::WindowDeactivate)) {

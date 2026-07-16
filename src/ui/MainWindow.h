@@ -121,7 +121,7 @@ private:
     void updateLabelFromTable(int sourceIndex, int column, QVariant newValue);
     void previewLabelTextFromTableEditor(QPersistentModelIndex index, const QString& text);
     void clearLabelTextPreviewFromTableEditor(QPersistentModelIndex index);
-    void openCanvasLabelTextEditor(int index, QPoint globalPosition);
+    void openCanvasLabelTextEditor(int index);
     void commitCanvasLabelTextEditor();
     void cancelCanvasLabelTextEditor();
     void closeCanvasLabelTextEditor();

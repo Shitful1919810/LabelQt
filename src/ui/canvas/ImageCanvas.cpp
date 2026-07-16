@@ -541,7 +541,7 @@ void ImageCanvas::mouseDoubleClickEvent(QMouseEvent* event)
         const int labelIndex = labelIndexAt(event->pos());
         if (labelIndex >= 0 && labelIndex < m_labels.size() && isLabelVisible(m_labels.at(labelIndex))) {
             emit labelSelected(labelIndex);
-            emit labelTextEditRequested(labelIndex, event->globalPosition().toPoint());
+            emit labelTextEditRequested(labelIndex);
             hideHoveredLabelToolTip();
             event->accept();
             return;

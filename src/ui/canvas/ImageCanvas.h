@@ -79,7 +79,7 @@ signals:
     void labelSelected(int index);
     void labelClicked(int index, Qt::KeyboardModifiers modifiers);
     void emptyAreaClicked();
-    void labelTextEditRequested(int index, QPoint globalPosition);
+    void labelTextEditRequested(int index);
     void labelDeleteRequested(int index);
     void labelHovered(int index);
     void zoomPercentChanged(int percent);

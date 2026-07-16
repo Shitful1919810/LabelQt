@@ -36,6 +36,8 @@ qt_add_executable(LabelQtTests
     ../src/services/proofread/TextDiffHtmlRenderer.cpp
     ../src/services/proofread/TextDiffService.cpp
     ../src/ui/canvas/CanvasLabelItems.cpp
+    ../src/ui/canvas/CanvasLabelTextEditController.cpp
+    ../src/ui/canvas/CanvasLabelTextEditor.cpp
     ../src/ui/labeltable/CurrentPageLabelContext.cpp
     ../src/ui/canvas/ImageCanvas.cpp
     ../src/ui/labeltable/LabelEditDelegates.cpp
