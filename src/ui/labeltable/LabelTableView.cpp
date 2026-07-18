@@ -6,6 +6,7 @@
 #include <QDragLeaveEvent>
 #include <QDragMoveEvent>
 #include <QDropEvent>
+#include <QFocusEvent>
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QMimeData>
@@ -61,6 +62,18 @@ void LabelTableView::dropEvent(QDropEvent* event)
 
     clearDropIndicator();
     QTableView::dropEvent(event);
+}
+
+void LabelTableView::focusInEvent(QFocusEvent* event)
+{
+    QTableView::focusInEvent(event);
+    refreshSelectionAppearance();
+}
+
+void LabelTableView::focusOutEvent(QFocusEvent* event)
+{
+    QTableView::focusOutEvent(event);
+    refreshSelectionAppearance();
 }
 
 void LabelTableView::paintEvent(QPaintEvent* event)
@@ -254,6 +267,13 @@ void LabelTableView::clearDropIndicator()
     }
     m_dropIndicatorRow = -1;
     if (viewport() != nullptr) {
+        viewport()->update();
+    }
+}
+
+void LabelTableView::refreshSelectionAppearance()
+{
+    if (viewport() != nullptr && selectionModel() != nullptr && selectionModel()->hasSelection()) {
         viewport()->update();
     }
 }

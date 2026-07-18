@@ -43,6 +43,7 @@ qt_add_executable(LabelQtTests
     ../src/ui/labeltable/LabelEditDelegates.cpp
     ../src/ui/labeltable/LabelSelectionController.cpp
     ../src/ui/labeltable/LabelTableModel.cpp
+    ../src/ui/labeltable/LabelTableView.cpp
     ../src/ui/project/PageOrderListModel.cpp
 )
 

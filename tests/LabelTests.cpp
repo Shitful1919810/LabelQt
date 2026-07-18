@@ -32,6 +32,7 @@
 #include "ui/labeltable/LabelEditDelegates.h"
 #include "ui/labeltable/LabelSelectionController.h"
 #include "ui/labeltable/LabelTableModel.h"
+#include "ui/labeltable/LabelTableView.h"
 #include "ui/project/PageOrderListModel.h"
 
 #include <QAbstractItemModelTester>
@@ -51,6 +52,7 @@
 #include <QStandardItemModel>
 #include <QTableView>
 #include <QTextStream>
+#include <QVBoxLayout>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QUuid>
@@ -66,6 +68,20 @@ using labelqt::core::Label;
 using labelqt::core::LabelPlusDocument;
 
 namespace {
+
+class PaintEventCounter final : public QObject {
+public:
+    int count{0};
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Paint) {
+            ++count;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
 
 labelqt::services::LabelEditCommandTexts testCommandTexts()
 {
@@ -874,6 +890,37 @@ private slots:
         QCOMPARE(reorderSpy.count(), 1);
         QCOMPARE(qvariant_cast<QVector<int>>(reorderSpy.first().at(0)), QVector<int>({0, 2}));
         QCOMPARE(reorderSpy.first().at(1).toInt(), 1);
+    }
+
+    void labelTableViewRepaintsSelectionWhenFocusMovesToBottomEditor()
+    {
+        QWidget window;
+        auto* layout = new QVBoxLayout(&window);
+        auto* table = new LabelTableView(&window);
+        auto* editor = new QPlainTextEdit(&window);
+        QStandardItemModel model(1, 3, &window);
+        model.setData(model.index(0, 0), QStringLiteral("1"));
+        model.setData(model.index(0, 1), QStringLiteral("text"));
+        model.setData(model.index(0, 2), QStringLiteral("group"));
+        table->setModel(&model);
+        table->setSelectionBehavior(QAbstractItemView::SelectRows);
+        table->selectRow(0);
+        layout->addWidget(table);
+        layout->addWidget(editor);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+        table->setFocus();
+        QCoreApplication::processEvents();
+        PaintEventCounter paintCounter;
+        table->viewport()->installEventFilter(&paintCounter);
+
+        editor->setFocus();
+        QCoreApplication::processEvents();
+
+        QVERIFY(table->selectionModel()->isRowSelected(0, QModelIndex()));
+        QVERIFY(paintCounter.count > 0);
+        table->viewport()->removeEventFilter(&paintCounter);
     }
 
     void pageOrderListModelPassesModelTesterAndKeepsPagesAfterDragDrop()
