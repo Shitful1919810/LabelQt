@@ -19,7 +19,8 @@ public:
         std::function<void()> detachViews;
         std::function<void(bool)> refreshViews;
         std::function<bool()> saveCopy;
-        std::function<bool(const QString&)> reloadProject;
+        std::function<bool(const QString&, std::optional<labelqt::services::FileRevision>)> reloadProject;
+        std::function<void()> commitEditors;
     };
     ProjectRecoveryController(QWidget* window, labelqt::services::ProjectController& project, Callbacks callbacks,
                               QObject* parent = nullptr);
@@ -27,6 +28,7 @@ public:
     QPushButton* notice() const;
     void check(const QString& projectPath);
     bool resolveSaveConflict(const labelqt::services::ProjectFileConflict& conflict);
+    bool resolveDiskChange(std::optional<labelqt::services::FileRevision> revision, const QString& error = {});
     void open();
 
 private:

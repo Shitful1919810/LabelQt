@@ -54,6 +54,22 @@ struct Host {
 class AutomationTaskTests : public QObject {
     Q_OBJECT
 private slots:
+    void reloadInvalidatesOutstandingResults()
+    {
+        QTemporaryDir directory;
+        Host host;
+        const auto path = directory.filePath("project.txt");
+        host.project().setFilePath(path);
+        QVERIFY(AtomicFileWriter::write(path, LabelPlusDocument::serialize(host.project()).toUtf8()));
+        const auto task = host.tasks.capture(host.request());
+        QVERIFY(task);
+        const auto change = host.change();
+        host.controller.loadFromFile(path);
+        QVERIFY(!host.tasks.submit(task->taskId, {change}, "old session"));
+        QCOMPARE(host.project().images()[0].labels[0].text(), QStringLiteral("a"));
+        QVERIFY(!host.undo.canUndo());
+    }
+
     void emptyTextAndLineEndingsKeepIds()
     {
         for (const QString& text : {QString(), QStringLiteral(""), QStringLiteral("\n"), QStringLiteral("\r\n"),

@@ -64,20 +64,22 @@ QJsonObject checkedMetadata(const Project& project)
     return *result;
 }
 
-QString readTextFile(const QString& filePath)
+QByteArray readFileBytes(const QString& filePath)
 {
+    const QFileInfo info(filePath);
+    if ((info.exists() && !info.isFile()) || (info.isSymLink() && !info.exists()))
+        throw std::runtime_error(
+            QCoreApplication::translate("AtomicFileWriter", "Not a regular file: %1").arg(filePath).toStdString());
     QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (!file.open(QIODevice::ReadOnly)) {
         throw std::runtime_error(QStringLiteral("Cannot open %1").arg(filePath).toStdString());
     }
 
-    QTextStream stream(&file);
-    stream.setEncoding(QStringConverter::Utf8);
-    const QString text = stream.readAll();
-    if (stream.status() != QTextStream::Ok || file.error() != QFileDevice::NoError) {
+    const auto bytes = file.readAll();
+    if (file.error() != QFileDevice::NoError) {
         throw std::runtime_error(file.errorString().toStdString());
     }
-    return text;
+    return bytes;
 }
 
 void writeTextFile(const QString& filePath, const QString& content)
@@ -193,7 +195,19 @@ void validateSerializable(const Project& project)
 
 Project LabelPlusDocument::loadFromFile(const QString& filePath)
 {
-    return parse(readTextFile(filePath), filePath);
+    return readFromFile(filePath).project;
+}
+
+LoadedProjectDocument LabelPlusDocument::readFromFile(const QString& filePath)
+{
+    const auto bytes = readFileBytes(filePath);
+    QTextStream stream(bytes);
+    stream.setEncoding(QStringConverter::Utf8);
+    const auto text = stream.readAll();
+    if (stream.status() != QTextStream::Ok)
+        invalidDocument();
+    // Hash the same raw bytes we parsed, including BOM and original line endings.
+    return {parse(text, filePath), QCryptographicHash::hash(bytes, QCryptographicHash::Sha256)};
 }
 
 void LabelPlusDocument::saveToFile(const Project& project, const QString& filePath)

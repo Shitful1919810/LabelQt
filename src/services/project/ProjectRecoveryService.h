@@ -23,6 +23,8 @@ public:
     static QString backupDirectory(const QString& projectPath, const labelqt::core::AppPreferences& preferences);
     static std::expected<void, QString> writeBackup(const labelqt::core::Project& project, const QString& path,
                                                     bool automatic = false);
+    static std::expected<QString, QString> preserveLocalEdits(const labelqt::core::Project& project,
+                                                              const labelqt::core::AppPreferences& preferences);
     static void pruneAutomaticBackups(const QString& projectPath, const labelqt::core::AppPreferences& preferences);
     static QVector<ProjectRecoveryEntry> entries(const QString& projectPath,
                                                  const labelqt::core::AppPreferences& preferences);

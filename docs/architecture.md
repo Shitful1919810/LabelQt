@@ -338,6 +338,18 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 
 解析和重写都由 `PageSourceInfoService` / `ProjectPageOrderService` 负责。UI 只消费结构化结果，例如在左侧图像下边栏显示当前页来源。
 
+## 外部工程文件变化
+
+- `ProjectFileMonitor`：文件/目录监听、防抖、后台摘要和解析校验、轮询补查，以及过期结果丢弃。
+- `ProjectController::storageChanged`：成功持久化或加载后的通知。只有工程控制器能推进加载/保存基线。
+- `LabelPlusDocument::readFromFile`：返回同一次字节读取对应的解析工程和摘要，供加载、监听和备份校验复用。
+- `ProjectExternalChangeController`：状态栏入口与提示时机，不读取工程文本、不提交修改。
+- `ProjectRecoveryController`：复用主动提示和保存冲突的交互；重载前备份交给 `ProjectRecoveryService`。
+- `SessionStateStore`：保存本机页面/Label ID，恢复时优先使用身份，而非外部重排前的行号。
+
+监听不得直接从文件事件槽重载工程；主窗口只连接编辑提交、受版本约束的加载和视图恢复。
+自动化运行和模态工作流中延迟询问，具体失败语义见 [持久化安全](persistence-safety.md)。
+
 ## 国际化
 
 项目使用 Qt Linguist：
@@ -359,8 +371,9 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 重命名后的工程保存必须属于事务提交步骤，成功前不发布候选工程，也不清空撤销历史。
 
 GUI 项目不应只依赖人工点击。当前测试包括 `LabelQtTests`、`ProofreadChangeTableModelTests`、
-`PersistenceSafetyTests`、`ProductWorkflowTests`、`AutomationTaskTests` 和 `AutomationProtocolTests`，覆盖主要功能、校对表格合约、
-持久化失败路径、跨模块工作流及自动化身份/并发提交。主要覆盖：
+`PersistenceSafetyTests`、`ProductWorkflowTests`、`AutomationTaskTests`、`AutomationProtocolTests`、
+`RiskRegressionTests` 和 `ExternalProjectChangeTests`，覆盖主要功能、校对表格合约、
+持久化失败路径、生命周期、外部文件变化、跨模块工作流及自动化身份/并发提交。主要覆盖：
 
 - LabelPlus 读写 round-trip。
 - `AppPreferences` 默认值、错误回退和序列化。

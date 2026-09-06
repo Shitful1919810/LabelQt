@@ -42,10 +42,12 @@ class ModuleTopic:
 MODULE_TOPICS = (
     ModuleTopic(
         name="recovery",
-        keywords=("recovery", "backup", "save conflict", "file revision"),
+        keywords=("recovery", "backup", "save conflict", "file revision", "external change", "file monitor"),
         files=("src/services/project/ProjectRecoveryService.*", "src/services/project/ProjectLocationService.*",
                "src/services/project/ProjectController.*", "src/services/io/FileRevision.*",
-               "src/services/io/FileRenameTransaction.*", "src/ui/project/ProjectRecovery*"),
+               "src/services/io/FileRenameTransaction.*", "src/services/io/ProjectFileTransaction.*",
+               "src/services/io/ProjectFileMonitor.*", "src/ui/project/ProjectRecovery*",
+               "src/ui/project/ProjectExternalChangeController.*"),
         notes=("恢复先校验全部文件身份；不确定时保留材料，不猜测。",),
         docs=("docs/persistence-safety.md", "docs/product-workflows.md"),
     ),

@@ -2899,6 +2899,26 @@ Last error: %1</translation>
 <context>
     <name>ProjectRecoveryController</name>
     <message>
+        <source>The disk version differs from this session. Continuing to edit will not overwrite it automatically.</source>
+        <translation>The disk version differs from this session. Continuing to edit will not overwrite it automatically.</translation>
+    </message>
+    <message>
+        <source>Local edits will be backed up to %1. Backup failure cancels reloading.</source>
+        <translation>Local edits will be backed up to %1. Backup failure cancels reloading.</translation>
+    </message>
+    <message>
+        <source>Reload the disk version? Undo history will be cleared.</source>
+        <translation>Reload the disk version? Undo history will be cleared.</translation>
+    </message>
+    <message>
+        <source>Reload canceled</source>
+        <translation>Reload canceled</translation>
+    </message>
+    <message>
+        <source>Keep current version</source>
+        <translation>Keep current version</translation>
+    </message>
+    <message>
         <source>Backup and Recovery...</source>
         <translation>Backup and Recovery...</translation>
     </message>
@@ -2909,10 +2929,6 @@ Last error: %1</translation>
     <message>
         <source>Current edits</source>
         <translation>Current edits</translation>
-    </message>
-    <message>
-        <source>Discard current unsaved edits and reload the project?</source>
-        <translation>Discard current unsaved edits and reload the project?</translation>
     </message>
     <message>
         <source>Disk version</source>
@@ -3068,6 +3084,10 @@ Missing images: %2</translation>
 </context>
 <context>
     <name>ProjectRecoveryService</name>
+    <message>
+        <source>Could not create backup directory: %1</source>
+        <translation>Could not create backup directory: %1</translation>
+    </message>
     <message>
         <source>Files recovered, but the recovery record could not be removed.</source>
         <translation>Files recovered, but the recovery record could not be removed.</translation>
@@ -3317,6 +3337,13 @@ Missing images: %2</translation>
     <message>
         <source>Could not lock the project for writing: %1</source>
         <translation>Could not lock the project for writing: %1</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectExternalChangeController</name>
+    <message>
+        <source>Project changed on disk...</source>
+        <translation>Project changed on disk...</translation>
     </message>
 </context>
 </TS>

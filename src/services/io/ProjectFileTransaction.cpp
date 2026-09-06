@@ -42,6 +42,11 @@ QString ProjectFileTransaction::lockPath(const QString& path)
     return canonicalTarget(path) + QStringLiteral(".labelqt-write.lock");
 }
 
+bool ProjectFileTransaction::sameTarget(const QString& left, const QString& right)
+{
+    return !left.isEmpty() && !right.isEmpty() && canonicalTarget(left) == canonicalTarget(right);
+}
+
 QString ProjectFileTransaction::previousVersionPath(const QString& path)
 {
     return canonicalTarget(path) + QStringLiteral(".labelqt-previous");

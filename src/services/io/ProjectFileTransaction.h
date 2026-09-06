@@ -19,6 +19,7 @@ public:
     FileRevision write(const QByteArray& bytes, const FileRevision& expected);
     static QString lockPath(const QString& path);
     static QString previousVersionPath(const QString& path);
+    static bool sameTarget(const QString& left, const QString& right);
 
 private:
     QString m_path;

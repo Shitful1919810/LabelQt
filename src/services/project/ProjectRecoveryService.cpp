@@ -34,7 +34,7 @@ std::expected<void, QString> ProjectRecoveryService::writeBackup(const labelqt::
     try {
         const auto output = ProjectLocationService::forOutput(project, path);
         const auto bytes = labelqt::core::LabelPlusDocument::serialize(output).toUtf8();
-        const auto written = labelqt::core::AtomicFileWriter::write(path, bytes);
+        const auto written = labelqt::core::AtomicFileWriter::writeNew(path, bytes);
         if (!written)
             return written;
         const QJsonObject record{
@@ -44,12 +44,29 @@ std::expected<void, QString> ProjectRecoveryService::writeBackup(const labelqt::
             {"snapshot", QFileInfo(path).absoluteFilePath()},
             {"created", QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},
             {"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())}};
-        return labelqt::core::AtomicFileWriter::write(path + QStringLiteral(".labelqt-backup.json"),
-                                                      QJsonDocument(record).toJson());
+        return labelqt::core::AtomicFileWriter::writeNew(path + QStringLiteral(".labelqt-backup.json"),
+                                                         QJsonDocument(record).toJson());
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));
     }
+}
+
+std::expected<QString, QString>
+ProjectRecoveryService::preserveLocalEdits(const labelqt::core::Project& project,
+                                           const labelqt::core::AppPreferences& preferences)
+{
+    const QDir directory(backupDirectory(project.filePath(), preferences));
+    if (!QDir().mkpath(directory.absolutePath()))
+        return std::unexpected(
+            QCoreApplication::translate("ProjectRecoveryService", "Could not create backup directory: %1")
+                .arg(directory.absolutePath()));
+    const auto path = directory.filePath(
+        QStringLiteral("before-reload-%1.txt").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+    const auto written = writeBackup(project, path);
+    if (!written)
+        return std::unexpected(written.error());
+    return path;
 }
 
 QVector<ProjectRecoveryEntry> ProjectRecoveryService::entries(const QString& projectPath,
@@ -102,12 +119,12 @@ std::expected<labelqt::core::Project, QString> ProjectRecoveryService::preview(c
     if (!revision || !revision->exists || entry.digest.size() != 32 || revision->sha256 != entry.digest)
         return std::unexpected(QCoreApplication::translate("ProjectRecoveryService", "The backup cannot be verified."));
     try {
-        auto project = labelqt::core::LabelPlusDocument::loadFromFile(entry.snapshotPath);
+        auto loaded = labelqt::core::LabelPlusDocument::readFromFile(entry.snapshotPath);
         const auto after = FileRevision::read(entry.snapshotPath);
-        if (!after || !after->sameContent(*revision))
+        if (!after || !after->sameContent(*revision) || loaded.sha256 != entry.digest)
             return std::unexpected(
                 QCoreApplication::translate("ProjectRecoveryService", "The backup cannot be verified."));
-        return project;
+        return std::move(loaded.project);
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));

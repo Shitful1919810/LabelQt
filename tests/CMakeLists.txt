@@ -21,6 +21,7 @@ add_library(LabelQtTestSupport STATIC
     ../src/services/io/FileRenameTransaction.cpp
     ../src/services/io/FileRevision.cpp
     ../src/services/io/ProjectFileTransaction.cpp
+    ../src/services/io/ProjectFileMonitor.cpp
     ../src/services/io/ImagePageCache.cpp
     ../src/services/label/LabelClipboardService.cpp
     ../src/services/label/LabelEditController.cpp
@@ -63,6 +64,8 @@ add_library(LabelQtTestSupport STATIC
     ../src/ui/project/PageOrderDialog.cpp
     ../src/ui/project/ImageRenamePreviewWidget.cpp
     ../src/ui/project/ProjectRecoveryDialog.cpp
+    ../src/ui/project/ProjectRecoveryController.cpp
+    ../src/ui/project/ProjectExternalChangeController.cpp
     ../src/ui/search/ProjectSearchPanel.cpp
     ../src/ui/proofread/ProofreadChangesDialog.cpp
     ../src/ui/proofread/ProofreadReviewPanel.cpp
@@ -111,6 +114,11 @@ labelqt_enable_warnings(AutomationProtocolTests)
 add_test(NAME AutomationProtocolTests COMMAND $<TARGET_FILE:AutomationProtocolTests>)
 
 qt_add_executable(PersistenceSafetyTests PersistenceSafetyTests.cpp)
+qt_add_executable(ExternalProjectChangeTests ExternalProjectChangeTests.cpp)
+target_link_libraries(ExternalProjectChangeTests PRIVATE LabelQtTestSupport)
+labelqt_enable_warnings(ExternalProjectChangeTests)
+add_test(NAME ExternalProjectChangeTests COMMAND $<TARGET_FILE:ExternalProjectChangeTests>)
+set_tests_properties(ExternalProjectChangeTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
 qt_add_executable(RiskRegressionTests RiskRegressionTests.cpp)
 target_link_libraries(RiskRegressionTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(RiskRegressionTests)

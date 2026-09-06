@@ -19,6 +19,10 @@ ProjectRecoveryController::ProjectRecoveryController(QWidget* window, ProjectCon
     m_notice->hide();
     connect(m_action, &QAction::triggered, this, &ProjectRecoveryController::open);
     connect(m_notice, &QPushButton::clicked, this, &ProjectRecoveryController::open);
+    connect(&project, &ProjectController::storageChanged, this, [this] {
+        if (m_recoveryPath != m_project.project().filePath())
+            check(m_project.project().filePath());
+    });
 }
 
 QAction* ProjectRecoveryController::action() const
@@ -54,7 +58,7 @@ void ProjectRecoveryController::open()
         m_callbacks.prepareRecovery, m_window);
     connect(&dialog, &ProjectRecoveryDialog::projectRecovered, this, [this](const QString& path) {
         if (QFileInfo(path).absoluteFilePath() == QFileInfo(m_project.project().filePath()).absoluteFilePath())
-            m_callbacks.reloadProject(path);
+            m_callbacks.reloadProject(path, {});
     });
     dialog.exec();
     check(m_recoveryPath);
@@ -62,29 +66,57 @@ void ProjectRecoveryController::open()
 
 bool ProjectRecoveryController::resolveSaveConflict(const ProjectFileConflict& conflict)
 {
+    return resolveDiskChange(conflict.revision);
+}
+
+bool ProjectRecoveryController::resolveDiskChange(std::optional<FileRevision> revision, const QString& error)
+{
+    if (m_callbacks.blocked())
+        return false;
+    m_callbacks.commitEditors();
     QMessageBox box(m_window);
     box.setWindowTitle(tr("Project changed on disk"));
     box.setText(tr("Loaded/saved: %1\nDisk version: %2")
                     .arg(m_project.savedRevision().modified.toLocalTime().toString(Qt::ISODate),
-                         conflict.revision.modified.isValid()
-                             ? conflict.revision.modified.toLocalTime().toString(Qt::ISODate)
+                         !error.isEmpty() ? error
+                         : revision && revision->modified.isValid()
+                             ? revision->modified.toLocalTime().toString(Qt::ISODate)
                              : tr("File missing")));
     box.setIcon(QMessageBox::Warning);
     auto* compare = box.addButton(tr("Compare"), QMessageBox::ActionRole);
     auto* copy = box.addButton(tr("Save current edits as..."), QMessageBox::ActionRole);
     auto* reload = box.addButton(tr("Reload disk version..."), QMessageBox::DestructiveRole);
     auto* overwrite = box.addButton(tr("Overwrite disk version..."), QMessageBox::DestructiveRole);
+    compare->setEnabled(revision && revision->exists && error.isEmpty());
+    reload->setEnabled(revision && revision->exists && error.isEmpty());
+    overwrite->setEnabled(revision.has_value());
+    box.setInformativeText(
+        tr("The disk version differs from this session. Continuing to edit will not overwrite it automatically."));
     box.setStandardButtons(QMessageBox::Cancel);
+    box.button(QMessageBox::Cancel)->setText(tr("Keep current version"));
     box.setDefaultButton(QMessageBox::Cancel);
     box.exec();
     if (box.clickedButton() == copy)
         return m_callbacks.saveCopy();
     if (box.clickedButton() == reload) {
-        if (QMessageBox::warning(m_window, tr("Reload disk version"),
-                                 tr("Discard current unsaved edits and reload the project?"),
-                                 QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) == QMessageBox::Yes)
-            return m_callbacks.reloadProject(m_project.project().filePath());
-        return false;
+        QString message = tr("Reload the disk version? Undo history will be cleared.");
+        if (m_project.isDirty()) {
+            message += QLatin1Char('\n') + tr("Local edits will be backed up to %1. Backup failure cancels reloading.")
+                                               .arg(ProjectRecoveryService::backupDirectory(
+                                                   m_project.project().filePath(), m_callbacks.preferences()));
+        }
+        if (QMessageBox::warning(m_window, tr("Reload disk version"), message, QMessageBox::Yes | QMessageBox::Cancel,
+                                 QMessageBox::Cancel) != QMessageBox::Yes)
+            return false;
+        if (m_project.isDirty()) {
+            const auto backup =
+                ProjectRecoveryService::preserveLocalEdits(m_project.project(), m_callbacks.preferences());
+            if (!backup) {
+                QMessageBox::warning(m_window, tr("Reload canceled"), backup.error());
+                return false;
+            }
+        }
+        return m_callbacks.reloadProject(m_project.project().filePath(), revision);
     }
     try {
         if (box.clickedButton() == overwrite) {
@@ -92,7 +124,7 @@ bool ProjectRecoveryController::resolveSaveConflict(const ProjectFileConflict& c
                                      tr("Replace the disk version with the current edits?"),
                                      QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes)
                 return false;
-            m_project.save(conflict.revision);
+            m_project.save(revision);
             return true;
         }
         if (box.clickedButton() == compare) {

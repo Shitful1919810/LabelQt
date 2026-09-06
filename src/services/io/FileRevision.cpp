@@ -1,5 +1,6 @@
 #include "services/io/FileRevision.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFile>
 #include <QFileInfo>
@@ -14,6 +15,8 @@ bool FileRevision::sameContent(const FileRevision& other) const
 std::expected<FileRevision, QString> FileRevision::read(const QString& path)
 {
     const QFileInfo info(path);
+    if ((info.exists() && !info.isFile()) || (info.isSymLink() && !info.exists()))
+        return std::unexpected(QCoreApplication::translate("AtomicFileWriter", "Not a regular file: %1").arg(path));
     if (!info.exists())
         return FileRevision{};
     QFile file(path);

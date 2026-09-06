@@ -2886,6 +2886,26 @@ Last error: %1</source>
 <context>
     <name>ProjectRecoveryController</name>
     <message>
+        <source>The disk version differs from this session. Continuing to edit will not overwrite it automatically.</source>
+        <translation>磁碟版本與目前工作階段不同。繼續編輯不會自動覆寫磁碟版本。</translation>
+    </message>
+    <message>
+        <source>Local edits will be backed up to %1. Backup failure cancels reloading.</source>
+        <translation>本機修改將備份至 %1。備份失敗時將取消重新載入。</translation>
+    </message>
+    <message>
+        <source>Reload the disk version? Undo history will be cleared.</source>
+        <translation>重新載入磁碟版本？復原歷程將被清空。</translation>
+    </message>
+    <message>
+        <source>Reload canceled</source>
+        <translation>已取消重新載入</translation>
+    </message>
+    <message>
+        <source>Keep current version</source>
+        <translation>保留目前版本</translation>
+    </message>
+    <message>
         <source>Backup and Recovery...</source>
         <translation>備份與復原…</translation>
     </message>
@@ -2896,10 +2916,6 @@ Last error: %1</source>
     <message>
         <source>Current edits</source>
         <translation>目前編輯稿</translation>
-    </message>
-    <message>
-        <source>Discard current unsaved edits and reload the project?</source>
-        <translation>放棄目前未儲存的編輯並重新載入工程？</translation>
     </message>
     <message>
         <source>Disk version</source>
@@ -3055,6 +3071,10 @@ Missing images: %2</source>
 </context>
 <context>
     <name>ProjectRecoveryService</name>
+    <message>
+        <source>Could not create backup directory: %1</source>
+        <translation>無法建立備份目錄：%1</translation>
+    </message>
     <message>
         <source>Files recovered, but the recovery record could not be removed.</source>
         <translation>檔案已復原，但無法刪除復原記錄。</translation>
@@ -3304,6 +3324,13 @@ Missing images: %2</source>
     <message>
         <source>Could not lock the project for writing: %1</source>
         <translation>無法鎖定專案以寫入，請檢查是否有其他執行個體正在儲存以及目錄權限：%1</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectExternalChangeController</name>
+    <message>
+        <source>Project changed on disk...</source>
+        <translation>磁碟工程發生變化…</translation>
     </message>
 </context>
 </TS>

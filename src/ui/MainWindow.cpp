@@ -23,6 +23,7 @@
 #include "ui/preferences/PreferenceDialog.h"
 #include "ui/project/PageOrderDialog.h"
 #include "ui/project/PageSelectorComboBox.h"
+#include "ui/project/ProjectExternalChangeController.h"
 #include "ui/project/ProjectMergeDialog.h"
 #include "ui/project/ProjectRecoveryController.h"
 #include "ui/project/ProjectViewController.h"
@@ -310,7 +311,11 @@ MainWindow::MainWindow(QWidget* parent)
              refreshProjectUi();
          },
          [this] { return saveProjectAs(); },
-         [this](const QString& path) { return loadProjectFile(path, true, tr("Loaded %1").arg(path)); }},
+         [this](const QString& path, std::optional<labelqt::services::FileRevision> revision) {
+             saveProjectSessionState();
+             return loadProjectFile(path, true, tr("Loaded %1").arg(path), revision);
+         },
+         [this] { commitActiveTextInput(); }},
         this);
     createMenus();
     createCentralWidget();
@@ -352,6 +357,15 @@ MainWindow::MainWindow(QWidget* parent)
                                     m_compareWithProjectAction, m_proofreadingStatusLabel);
     statusBar()->showMessage(tr("Ready"));
     statusBar()->addPermanentWidget(m_recoveryController->notice());
+    m_externalChangeController = new ProjectExternalChangeController(
+        this, m_projectController,
+        {[this] { return isProjectEditingBlocked(); },
+         [this](std::optional<labelqt::services::FileRevision> revision, const QString& error) {
+             m_recoveryController->resolveDiskChange(revision, error);
+             updateWindowTitle();
+         }},
+        this);
+    statusBar()->addPermanentWidget(m_externalChangeController->notice());
     showPreferenceWarnings();
     restoreLayoutState();
     m_backupTimer = new QTimer(this);
@@ -362,6 +376,8 @@ MainWindow::MainWindow(QWidget* parent)
 
 MainWindow::~MainWindow()
 {
+    delete m_externalChangeController;
+    m_externalChangeController = nullptr;
     m_labelModel->setLabelsProvider({});
     delete m_automationController;
     m_automationController = nullptr;
@@ -1072,12 +1088,13 @@ bool MainWindow::openMostRecentProject()
     return loadProjectFile(path, false, tr("Loaded recent project: %1").arg(path));
 }
 
-bool MainWindow::loadProjectFile(const QString& path, bool showErrors, const QString& successMessage)
+bool MainWindow::loadProjectFile(const QString& path, bool showErrors, const QString& successMessage,
+                                 std::optional<labelqt::services::FileRevision> expectedRevision)
 {
     m_recoveryController->check(path);
     try {
         detachProjectViewsFromProjectData();
-        m_projectController.loadFromFile(path);
+        m_projectController.loadFromFile(path, expectedRevision);
         m_undoStack.clear();
         refreshProjectUi();
         restoreProjectSessionState();
@@ -1096,7 +1113,10 @@ bool MainWindow::loadProjectFile(const QString& path, bool showErrors, const QSt
     }
     catch (const std::exception& error) {
         refreshProjectUi();
-        m_sessionStateStore.removeRecentProjectPath(path);
+        if (expectedRevision)
+            restoreProjectSessionState();
+        else
+            m_sessionStateStore.removeRecentProjectPath(path);
         updateRecentProjectsMenu();
         if (showErrors) {
             showMainWindowCritical(this, tr("Open failed"), QString::fromUtf8(error.what()));
@@ -2689,14 +2709,7 @@ void MainWindow::restoreProjectSessionState()
         return;
     }
 
-    int imageIndex = state.imageIndex;
-    if (!state.imageName.isEmpty()) {
-        const int namedImageIndex = project().imageIndexByName(state.imageName);
-        if (namedImageIndex >= 0) imageIndex = namedImageIndex;
-    }
-    if (imageIndex < 0 || imageIndex >= project().images().size()) {
-        imageIndex = 0;
-    }
+    const int imageIndex = state.resolveImageIndex(project());
 
     m_currentImageIndex = imageIndex;
     m_currentLabelIndex = -1;
@@ -2708,16 +2721,15 @@ void MainWindow::restoreProjectSessionState()
     const labelqt::core::ImageEntry* image = currentImage();
     QVector<int> selectedLabelIndexes;
     selectedLabelIndexes.reserve(state.selectedLabelIndexes.size());
-    for (int labelIndex : state.selectedLabelIndexes) {
+    for (int labelIndex : state.resolveLabelIndexes(project())) {
         if (image != nullptr && labelIndex >= 0 && labelIndex < image->labels.size() &&
             !image->labels.at(labelIndex).isDeleted() && m_labelModel->rowForSourceIndex(labelIndex) >= 0) {
             selectedLabelIndexes.append(labelIndex);
         }
     }
     if (!selectedLabelIndexes.isEmpty()) {
-        const int primaryLabelIndex = selectedLabelIndexes.contains(state.selectedLabelIndex)
-                                          ? state.selectedLabelIndex
-                                          : selectedLabelIndexes.last();
+        const int primary = state.resolvePrimaryLabelIndex(project());
+        const int primaryLabelIndex = selectedLabelIndexes.contains(primary) ? primary : selectedLabelIndexes.last();
         selectLabelIndexes(selectedLabelIndexes, primaryLabelIndex);
     }
 }
@@ -2733,10 +2745,18 @@ void MainWindow::saveProjectSessionState() const
     state.isValid = true;
     state.imageIndex = m_currentImageIndex;
     state.imageName = project().images().at(m_currentImageIndex).name;
+    state.imageId = project().images().at(m_currentImageIndex).id;
     state.zoomPercent = m_canvas->zoomPercent();
     state.viewCenter = m_canvas->normalizedViewCenter();
     state.selectedLabelIndex = m_currentLabelIndex;
     state.selectedLabelIndexes = selectedLabelIndexes();
+    const auto& labels = project().images().at(m_currentImageIndex).labels;
+    for (int index : state.selectedLabelIndexes) {
+        if (index >= 0 && index < labels.size())
+            state.selectedLabelIds.append(labels.at(index).id());
+    }
+    if (m_currentLabelIndex >= 0 && m_currentLabelIndex < labels.size())
+        state.selectedLabelId = labels.at(m_currentLabelIndex).id();
     m_sessionStateStore.saveProjectSession(project().filePath(), state);
 }
 

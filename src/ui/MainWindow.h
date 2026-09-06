@@ -51,6 +51,7 @@ class MainWindowShortcutController;
 class PageSelectorComboBox;
 class ProjectViewController;
 class ProjectRecoveryController;
+class ProjectExternalChangeController;
 class ProjectSearchPanel;
 class ProofreadingController;
 class ViewportFittedTableColumns;
@@ -186,7 +187,8 @@ private:
     bool promptToSaveIfDirty();
     void updateWindowTitle();
     void updateProofreadingStatusUi();
-    bool loadProjectFile(const QString& path, bool showErrors, const QString& successMessage);
+    bool loadProjectFile(const QString& path, bool showErrors, const QString& successMessage,
+                         std::optional<labelqt::services::FileRevision> expectedRevision = {});
     void updateRecentProjectsMenu();
     void applyGroupStylesToCombo(QComboBox* comboBox);
     void updateInsertGroupTextColor();
@@ -237,6 +239,7 @@ private:
     QAction* m_compareWithProjectAction{nullptr};
     QAction* m_saveProjectAction{nullptr};
     ProjectRecoveryController* m_recoveryController{nullptr};
+    ProjectExternalChangeController* m_externalChangeController{nullptr};
     ProjectSearchPanel* m_searchPanel{nullptr};
     QMenu* m_editMenu{nullptr};
     QAction* m_saveProjectAsAction{nullptr};

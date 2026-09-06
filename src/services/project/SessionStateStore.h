@@ -4,7 +4,12 @@
 #include <QPointF>
 #include <QString>
 #include <QStringList>
+#include <QUuid>
 #include <QVector>
+
+namespace labelqt::core {
+class Project;
+}
 
 namespace labelqt::services {
 
@@ -23,6 +28,12 @@ struct ProjectSessionState {
     QPointF viewCenter{0.5, 0.5};
     int selectedLabelIndex{-1};
     QVector<int> selectedLabelIndexes;
+    QUuid imageId;
+    QUuid selectedLabelId;
+    QVector<QUuid> selectedLabelIds;
+    int resolveImageIndex(const labelqt::core::Project& project) const;
+    QVector<int> resolveLabelIndexes(const labelqt::core::Project& project) const;
+    int resolvePrimaryLabelIndex(const labelqt::core::Project& project) const;
 };
 
 enum class FileDialogScope {

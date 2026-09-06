@@ -85,9 +85,10 @@ void ProjectController::setProject(labelqt::core::Project project)
     m_revisions.reset(m_project);
     m_savedRevision = *revision;
     setDirty(false);
+    emit storageChanged();
 }
 
-void ProjectController::loadFromFile(const QString& path)
+void ProjectController::loadFromFile(const QString& path, std::optional<FileRevision> expectedRevision)
 {
     const auto recovered = FileRenameTransaction::checkRecoveryDirectory(QFileInfo(path).absolutePath());
     if (!recovered)
@@ -95,16 +96,19 @@ void ProjectController::loadFromFile(const QString& path)
     const auto before = FileRevision::read(path);
     if (!before)
         throw std::runtime_error(before.error().toStdString());
-    auto loaded = labelqt::core::LabelPlusDocument::loadFromFile(path);
+    if (expectedRevision && !before->sameContent(*expectedRevision))
+        throw ProjectFileConflict(*before);
+    auto loaded = labelqt::core::LabelPlusDocument::readFromFile(path);
     const auto after = FileRevision::read(path);
     if (!after)
         throw std::runtime_error(after.error().toStdString());
-    if (!before->sameContent(*after))
+    if (!before->sameContent(*after) || loaded.sha256 != after->sha256)
         throw ProjectFileConflict(*after);
-    m_project = std::move(loaded);
+    m_project = std::move(loaded.project);
     m_revisions.reset(m_project);
     m_savedRevision = *after;
     setDirty(false);
+    emit storageChanged();
 }
 
 void ProjectController::save(std::optional<FileRevision> confirmedRevision)
@@ -126,11 +130,12 @@ void ProjectController::save(ProjectFileTransaction& transaction, std::optional<
         throw ProjectFileConflict(*revision);
     m_savedRevision = writeProject(m_project, transaction, confirmedRevision.value_or(m_savedRevision));
     setDirty(false);
+    emit storageChanged();
 }
 
 void ProjectController::saveAs(const QString& path)
 {
-    if (QFileInfo(path).absoluteFilePath() == QFileInfo(m_project.filePath()).absoluteFilePath()) {
+    if (ProjectFileTransaction::sameTarget(path, m_project.filePath())) {
         save();
         return;
     }
@@ -148,6 +153,7 @@ void ProjectController::saveAs(const QString& path)
     m_revisions.reset(m_project);
     m_savedRevision = revision;
     setDirty(false);
+    emit storageChanged();
 }
 
 const FileRevision& ProjectController::savedRevision() const
@@ -185,6 +191,7 @@ std::expected<void, QString> ProjectController::restoreBackup(const ProjectRecov
         m_project = std::move(output);
         m_revisions.reset(m_project);
         setDirty(false);
+        emit storageChanged();
         return {};
     }
     catch (const std::exception& error) {
@@ -210,6 +217,7 @@ std::expected<void, QString> ProjectController::renameImages(const ProjectImageR
             });
         if (result) {
             setDirty(false);
+            emit storageChanged();
         }
         return result;
     }

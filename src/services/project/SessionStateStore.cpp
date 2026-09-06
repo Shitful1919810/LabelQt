@@ -1,4 +1,5 @@
 #include "services/project/SessionStateStore.h"
+#include "core/Project.h"
 
 #include <QCryptographicHash>
 #include <QFileInfo>
@@ -57,6 +58,55 @@ QLatin1StringView fileDialogScopeKey(FileDialogScope scope)
 }
 } // namespace
 
+int ProjectSessionState::resolveImageIndex(const labelqt::core::Project& project) const
+{
+    const auto& images = project.images();
+    if (images.isEmpty())
+        return -1;
+    for (int i = 0; i < images.size(); ++i) {
+        if (!imageId.isNull() && images.at(i).id == imageId)
+            return i;
+    }
+    const int named = project.imageIndexByName(imageName);
+    return named >= 0 ? named : std::clamp(imageIndex, 0, int(images.size()) - 1);
+}
+
+QVector<int> ProjectSessionState::resolveLabelIndexes(const labelqt::core::Project& project) const
+{
+    const int page = resolveImageIndex(project);
+    if (page < 0)
+        return {};
+    const auto& image = project.images().at(page);
+    if (!imageId.isNull() && image.id != imageId)
+        return {};
+    if (selectedLabelIds.isEmpty())
+        return selectedLabelIndexes;
+    QVector<int> result;
+    for (const auto& id : selectedLabelIds) {
+        for (int i = 0; i < image.labels.size(); ++i) {
+            if (image.labels.at(i).id() == id) {
+                result.append(i);
+                break;
+            }
+        }
+    }
+    return result;
+}
+
+int ProjectSessionState::resolvePrimaryLabelIndex(const labelqt::core::Project& project) const
+{
+    if (selectedLabelId.isNull())
+        return selectedLabelIndex;
+    const int page = resolveImageIndex(project);
+    if (page >= 0) {
+        const auto& labels = project.images().at(page).labels;
+        for (int i = 0; i < labels.size(); ++i)
+            if (labels.at(i).id() == selectedLabelId)
+                return i;
+    }
+    return -1;
+}
+
 WindowLayoutState SessionStateStore::loadWindowLayout() const
 {
     QSettings settings;
@@ -93,6 +143,11 @@ ProjectSessionState SessionStateStore::loadProjectSession(const QString& project
     state.isValid = true;
     state.imageIndex = settings.value(sessionImageIndexKey, 0).toInt();
     state.imageName = settings.value(sessionImageNameKey).toString();
+    state.imageId = settings.value("imageId").toUuid();
+    state.selectedLabelId = settings.value("selectedLabelId").toUuid();
+    for (const auto& id : settings.value("selectedLabelIds").toStringList())
+        if (!QUuid(id).isNull())
+            state.selectedLabelIds.append(QUuid(id));
     state.zoomPercent = settings.value(sessionZoomPercentKey, 100).toInt();
     state.viewCenter = QPointF(settings.value(sessionViewCenterXKey, 0.5).toDouble(),
                                settings.value(sessionViewCenterYKey, 0.5).toDouble());
@@ -124,6 +179,12 @@ void SessionStateStore::saveProjectSession(const QString& projectPath, const Pro
     settings.setValue(sessionFilePathKey, canonicalSessionPath(projectPath));
     settings.setValue(sessionImageIndexKey, state.imageIndex);
     settings.setValue(sessionImageNameKey, state.imageName);
+    settings.setValue("imageId", state.imageId);
+    settings.setValue("selectedLabelId", state.selectedLabelId);
+    QStringList ids;
+    for (const auto& id : state.selectedLabelIds)
+        ids.append(id.toString(QUuid::WithoutBraces));
+    settings.setValue("selectedLabelIds", ids);
     settings.setValue(sessionZoomPercentKey, state.zoomPercent);
     settings.setValue(sessionViewCenterXKey, state.viewCenter.x());
     settings.setValue(sessionViewCenterYKey, state.viewCenter.y());

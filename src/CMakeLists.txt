@@ -29,6 +29,8 @@ set(LABELQT_SERVICE_SOURCES
     services/io/FileRevision.cpp
     services/io/ProjectFileTransaction.cpp
     services/io/ProjectFileTransaction.h
+    services/io/ProjectFileMonitor.cpp
+    services/io/ProjectFileMonitor.h
     services/io/ImagePageCache.h
     services/label/LabelClipboardService.cpp
     services/label/LabelClipboardService.h
@@ -104,6 +106,7 @@ set(LABELQT_UI_SOURCES
     ui/project/ProjectViewController.cpp
     ui/project/ProjectRecoveryDialog.cpp
     ui/project/ProjectRecoveryController.cpp
+    ui/project/ProjectExternalChangeController.cpp
     ui/search/ProjectSearchPanel.cpp
     ui/search/ProjectTextSearchModel.cpp
     ui/proofread/ProofreadChangesDialog.cpp

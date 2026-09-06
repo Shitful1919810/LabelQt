@@ -2886,6 +2886,26 @@ Last error: %1</source>
 <context>
     <name>ProjectRecoveryController</name>
     <message>
+        <source>The disk version differs from this session. Continuing to edit will not overwrite it automatically.</source>
+        <translation>ディスク上の内容が現在のセッションと異なります。編集を続けても自動的には上書きしません。</translation>
+    </message>
+    <message>
+        <source>Local edits will be backed up to %1. Backup failure cancels reloading.</source>
+        <translation>ローカルの編集を %1 にバックアップします。バックアップに失敗した場合は再読み込みを中止します。</translation>
+    </message>
+    <message>
+        <source>Reload the disk version? Undo history will be cleared.</source>
+        <translation>ディスク版を再読み込みしますか？元に戻す履歴は消去されます。</translation>
+    </message>
+    <message>
+        <source>Reload canceled</source>
+        <translation>再読み込みを中止しました</translation>
+    </message>
+    <message>
+        <source>Keep current version</source>
+        <translation>現在のバージョンを保持</translation>
+    </message>
+    <message>
         <source>Backup and Recovery...</source>
         <translation>バックアップと復元…</translation>
     </message>
@@ -2896,10 +2916,6 @@ Last error: %1</source>
     <message>
         <source>Current edits</source>
         <translation>現在の編集内容</translation>
-    </message>
-    <message>
-        <source>Discard current unsaved edits and reload the project?</source>
-        <translation>未保存の編集を破棄してプロジェクトを再読み込みしますか？</translation>
     </message>
     <message>
         <source>Disk version</source>
@@ -3055,6 +3071,10 @@ Missing images: %2</source>
 </context>
 <context>
     <name>ProjectRecoveryService</name>
+    <message>
+        <source>Could not create backup directory: %1</source>
+        <translation>バックアップフォルダーを作成できません：%1</translation>
+    </message>
     <message>
         <source>Files recovered, but the recovery record could not be removed.</source>
         <translation>ファイルは復元されましたが、復元記録を削除できませんでした。</translation>
@@ -3304,6 +3324,13 @@ Missing images: %2</source>
     <message>
         <source>Could not lock the project for writing: %1</source>
         <translation>書き込み用にプロジェクトをロックできません。他のプロセスが保存中でないか、ディレクトリの権限を確認してください：%1</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectExternalChangeController</name>
+    <message>
+        <source>Project changed on disk...</source>
+        <translation>ディスク上のプロジェクトが変更されました…</translation>
     </message>
 </context>
 </TS>

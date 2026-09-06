@@ -11,6 +11,7 @@
 #include <optional>
 #include <stdexcept>
 
+#include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QThread>
@@ -56,7 +57,8 @@ struct NewProjectError {
     QString message;
 };
 
-class ProjectController {
+class ProjectController : public QObject {
+    Q_OBJECT
 public:
     ProjectController() = default;
     ProjectController(const ProjectController&) = delete;
@@ -70,7 +72,7 @@ public:
     }
 
     void setProject(labelqt::core::Project project);
-    void loadFromFile(const QString& path);
+    void loadFromFile(const QString& path, std::optional<FileRevision> expectedRevision = {});
     void save(std::optional<FileRevision> confirmedRevision = {});
     void saveAs(const QString& path);
     const FileRevision& savedRevision() const;
@@ -91,6 +93,9 @@ public:
     std::expected<std::optional<QString>, QString> tryPerformAutoBackup(
         const labelqt::core::AppPreferences& preferences);
     AutoBackupResult performAutoBackup(const labelqt::core::AppPreferences& preferences);
+
+signals:
+    void storageChanged();
 
 private:
     void save(ProjectFileTransaction& transaction, std::optional<FileRevision> confirmedRevision = {});
