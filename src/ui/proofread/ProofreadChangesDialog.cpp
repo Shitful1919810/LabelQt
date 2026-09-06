@@ -3,15 +3,17 @@
 #include "services/proofread/ProjectComparisonService.h"
 #include "services/proofread/ProofreadReportService.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
-#include "ui/proofread/ProofreadChangeTableModel.h"
-#include "ui/widgets/CheckableFilterButton.h"
-#include "ui/widgets/BusyTaskDialog.h"
-#include "ui/widgets/DialogWindowUtils.h"
 #include "ui/canvas/ImageCanvas.h"
 #include "ui/labeltable/ViewportFittedTableColumns.h"
+#include "ui/proofread/ProofreadChangeTableModel.h"
+#include "ui/proofread/ProofreadReviewPanel.h"
+#include "ui/widgets/BusyTaskDialog.h"
+#include "ui/widgets/CheckableFilterButton.h"
+#include "ui/widgets/DialogWindowUtils.h"
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFile>
@@ -20,8 +22,8 @@
 #include <QFrame>
 #include <QFutureWatcher>
 #include <QGroupBox>
-#include <QHeaderView>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
@@ -50,7 +52,7 @@ constexpr QLatin1StringView modifiedKindKey{"modified"};
 
 QVector<int> defaultColumnWidths()
 {
-    return {160, 80, 120, 220};
+    return {160, 80, 120, 220, 64};
 }
 
 QString temporaryExportPathFor(const QString& filePath)
@@ -200,24 +202,61 @@ ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& bef
     m_tableModel = new ProofreadChangeTableModel(
         std::move(changes),
         {
-            .headers = {tr("Page"), QStringLiteral("#"), tr("Change"), tr("Summary")},
+            .headers = {tr("Page"), QStringLiteral("#"), tr("Change"), tr("Summary"), tr("Review")},
             .added = tr("Added"),
             .deleted = tr("Deleted"),
             .modified = tr("Modified"),
-            .facets = {
-                {labelqt::services::ReviewChangeFacet::Text, tr("text")},
-                {labelqt::services::ReviewChangeFacet::Format, tr("format")},
-                {labelqt::services::ReviewChangeFacet::Group, tr("group")},
-                {labelqt::services::ReviewChangeFacet::Marker, tr("marker")},
-                {labelqt::services::ReviewChangeFacet::Order, tr("order")},
-            },
+            .facets =
+                {
+                    {labelqt::services::ReviewChangeFacet::Text, tr("text")},
+                    {labelqt::services::ReviewChangeFacet::Format, tr("format")},
+                    {labelqt::services::ReviewChangeFacet::Group, tr("group")},
+                    {labelqt::services::ReviewChangeFacet::Marker, tr("marker")},
+                    {labelqt::services::ReviewChangeFacet::Order, tr("order")},
+                },
         },
         this);
+    QSet<QPair<QString, QString>> pageKeys;
+    for (const auto& change : m_tableModel->changes()) {
+        const auto key = qMakePair(change.baselineImageName, change.imageName);
+        if (!pageKeys.contains(key)) {
+            pageKeys.insert(key);
+            m_pagePairs.append(
+                {change.baselineImageName, change.imageName, labelqt::services::ProjectPageMatchKind::Name});
+        }
+    }
     buildUi();
+    if (m_labels.reviewEnabled) {
+        m_sessionKey = labelqt::services::ReviewSessionService::contextKey(m_beforeProject, m_currentProject);
+        const auto session = m_labels.projectReviewSession
+                                 ? labelqt::services::ReviewSessionService::decode(
+                                       labelqt::services::ReviewSessionService::projectSession(m_currentProject))
+                                 : labelqt::services::ReviewSessionService::loadLocal(m_sessionKey);
+        if (session) {
+            m_initialReviewSession = labelqt::services::ReviewSessionService::encode(*session);
+            auto restored = *session;
+            const auto valid = labelqt::services::ProjectComparisonService::changesWithPairs(
+                m_currentProject, m_metadata, m_pagePairs, restored.pairs);
+            if (!valid) {
+                restored.pairs.clear();
+                QMessageBox::warning(this, tr("Manual pair"), valid.error());
+            }
+            m_reviewPanel->setSession(std::move(restored));
+            updateManualPairs();
+            updateReviewAnnotations();
+        }
+        else {
+            m_sessionWritable = false;
+            m_reviewPanel->setEnabled(false);
+            QMessageBox::warning(this, tr("Review"), session.error());
+        }
+    }
 }
 
 ProofreadChangesDialog::~ProofreadChangesDialog()
 {
+    for (QObject* child : findChildren<QObject*>())
+        disconnect(child, nullptr, this, nullptr);
     if (m_tableColumns != nullptr) {
         m_tableColumns->setColumnsChangedCallback({});
     }
@@ -257,6 +296,21 @@ int ProofreadChangesDialog::selectedLabelIndex() const noexcept
 
 void ProofreadChangesDialog::done(int result)
 {
+    if (m_reviewPanel && m_sessionWritable) {
+        m_reviewPanel->commitNote();
+        if (!m_labels.projectReviewSession && reviewSession() != m_initialReviewSession) {
+            const auto saved =
+                labelqt::services::ReviewSessionService::saveLocal(m_sessionKey, m_reviewPanel->session());
+            if (!saved) {
+                if (QMessageBox::warning(this, tr("Review session not saved"), saved.error(),
+                                         QMessageBox::Discard | QMessageBox::Cancel,
+                                         QMessageBox::Cancel) != QMessageBox::Discard) {
+                    m_isClosing = false;
+                    return;
+                }
+            }
+        }
+    }
     m_isClosing = true;
     saveTableColumnWidths();
     QDialog::done(result);
@@ -281,6 +335,10 @@ void ProofreadChangesDialog::buildUi()
     filterLayout->addWidget(new QLabel(tr("Summary"), this));
     m_summaryFilterButton = new CheckableFilterButton(this);
     filterLayout->addWidget(m_summaryFilterButton);
+    m_reviewFilter = new QComboBox(this);
+    m_reviewFilter->addItems({tr("All review states"), tr("Unseen"), tr("Reviewed"), tr("Needs confirmation")});
+    m_reviewFilter->setVisible(m_labels.reviewEnabled);
+    filterLayout->addWidget(m_reviewFilter);
     filterLayout->addStretch(1);
     rootLayout->addLayout(filterLayout);
 
@@ -290,7 +348,7 @@ void ProofreadChangesDialog::buildUi()
     m_filterModel->setSourceModel(m_tableModel);
     m_table->setModel(m_filterModel);
     m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_table->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_table->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->setWordWrap(true);
     m_table->setTextElideMode(Qt::ElideNone);
@@ -298,17 +356,18 @@ void ProofreadChangesDialog::buildUi()
     m_table->verticalHeader()->setVisible(false);
     m_table->horizontalHeader()->setStretchLastSection(false);
     m_table->horizontalHeader()->setSectionsClickable(true);
+    m_table->setColumnHidden(ProofreadChangeTableModel::ReviewColumn, !m_labels.reviewEnabled);
     restoreTableColumnWidths();
     m_table->setMinimumWidth(520);
-    m_tableColumns = new ViewportFittedTableColumns(
-        m_table,
-        {
-            {ProofreadChangeTableModel::PageColumn, 160, 80, false},
-            {ProofreadChangeTableModel::NumberColumn, 80, 52, false},
-            {ProofreadChangeTableModel::KindColumn, 120, 80, false},
-            {ProofreadChangeTableModel::SummaryColumn, 220, 120, true},
-        },
-        m_table);
+    m_tableColumns = new ViewportFittedTableColumns(m_table,
+                                                    {
+                                                        {ProofreadChangeTableModel::PageColumn, 160, 80, false},
+                                                        {ProofreadChangeTableModel::NumberColumn, 80, 52, false},
+                                                        {ProofreadChangeTableModel::KindColumn, 120, 80, false},
+                                                        {ProofreadChangeTableModel::SummaryColumn, 220, 120, true},
+                                                        {ProofreadChangeTableModel::ReviewColumn, 64, 52, false},
+                                                    },
+                                                    m_table);
     m_tableColumns->setColumnsChangedCallback([this]() { resizeTableRowsToContents(); });
     connect(m_table->horizontalHeader(), &QHeaderView::sectionResized, this,
             [this](int logicalIndex, int oldSize, int newSize) {
@@ -327,6 +386,36 @@ void ProofreadChangesDialog::buildUi()
     auto* detailLayout = new QVBoxLayout(detailPanel);
     detailLayout->setContentsMargins(0, 0, 0, 0);
     detailLayout->setSpacing(6);
+    if (m_labels.reviewEnabled) {
+        m_reviewPanel = new ProofreadReviewPanel(
+            {[this] { return selectedChanges(); }, [this] { return m_tableModel->changes(); },
+             [this](const QVector<labelqt::services::ManualLabelPair>& pairs) -> std::expected<void, QString> {
+                 const auto result = labelqt::services::ProjectComparisonService::changesWithPairs(
+                     m_currentProject, m_metadata, m_pagePairs, pairs);
+                 if (!result)
+                     return std::unexpected(result.error());
+                 return {};
+             }},
+            this);
+        connect(m_reviewPanel, &ProofreadReviewPanel::annotationsChanged, this,
+                &ProofreadChangesDialog::updateReviewAnnotations);
+        connect(m_reviewPanel, &ProofreadReviewPanel::pairsChanged, this, &ProofreadChangesDialog::updateManualPairs);
+        connect(m_reviewPanel, &ProofreadReviewPanel::nextUnseenRequested, this, [this] {
+            const int start = m_table->currentIndex().row();
+            const int count = m_filterModel->rowCount();
+            for (int offset = 1; offset <= count; ++offset) {
+                const int row = (std::max(-1, start) + offset) % count;
+                if (m_filterModel->index(row, 0).data(ProofreadChangeTableModel::ReviewStatusRole).toInt() == 0) {
+                    m_table->selectRow(row);
+                    return;
+                }
+            }
+        });
+    }
+    connect(m_reviewFilter, &QComboBox::currentIndexChanged, this, [this](int index) {
+        m_filterModel->setReviewStatusFilter(index - 1);
+        applyFilters();
+    });
 
     detailLayout->addWidget(new QLabel(tr("Text Difference"), detailPanel));
     m_diffBrowser = new QTextBrowser(detailPanel);
@@ -362,6 +451,8 @@ void ProofreadChangesDialog::buildUi()
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
     rootLayout->addWidget(splitter, 1);
+    if (m_reviewPanel)
+        rootLayout->addWidget(m_reviewPanel);
 
     connect(m_beforeCanvas, &ImageCanvas::viewportStateChanged, this,
             [this](int zoomPercent, QPointF normalizedCenter) {
@@ -469,6 +560,8 @@ void ProofreadChangesDialog::applyFilters()
         updateJumpButton();
     }
     m_summaryLabel->setText(tr("%n proofreading change(s)", nullptr, m_filterModel->rowCount()));
+    if (m_reviewPanel)
+        updateReviewAnnotations();
 }
 
 void ProofreadChangesDialog::restoreTableColumnWidths()
@@ -499,6 +592,8 @@ void ProofreadChangesDialog::saveTableColumnWidths() const
 
 void ProofreadChangesDialog::exportReport()
 {
+    if (m_reviewPanel)
+        m_reviewPanel->commitNote();
     const QVector<labelqt::services::ReviewChange> changesToExport = filteredChanges();
     if (changesToExport.isEmpty()) {
         QMessageBox::information(this, tr("Proofreading"), tr("No proofreading changes to export."));
@@ -520,6 +615,10 @@ void ProofreadChangesDialog::exportReport()
     m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::ExportProofreadingReport, path);
 
     labelqt::services::ProofreadReportOptions options;
+    if (m_reviewPanel) {
+        options.includeReview = true;
+        options.annotations = m_reviewPanel->session().annotations;
+    }
     const std::optional<std::expected<void, QString>> result = runProofreadReportExportTask(
         this, QString(), tr("Exporting proofreading report..."), tr("Abort"), path, changesToExport, m_beforeProject,
         m_currentProject, reportTexts(), reportFilterDescription(), options);
@@ -571,6 +670,8 @@ void ProofreadChangesDialog::updateDetails(int row)
         return;
     }
     const int changeIndex = changeIndexForRow(row);
+    if (m_reviewPanel)
+        m_reviewPanel->setCurrentChange(m_tableModel->changeAt(changeIndex));
     if (m_diffBrowser == nullptr || changeIndex < 0) {
         if (m_diffBrowser != nullptr) {
             m_diffBrowser->clear();
@@ -721,8 +822,60 @@ QString ProofreadChangesDialog::reportFilterDescription() const
         return texts.isEmpty() ? button->text() : texts.join(QStringLiteral(", "));
     };
 
-    return tr("Pages: %1; Changes: %2; Summaries: %3")
-        .arg(selectedText(m_pageFilterButton), selectedText(m_kindFilterButton), selectedText(m_summaryFilterButton));
+    QString description = tr("Pages: %1; Changes: %2; Summaries: %3")
+                              .arg(selectedText(m_pageFilterButton), selectedText(m_kindFilterButton),
+                                   selectedText(m_summaryFilterButton));
+    if (m_labels.reviewEnabled)
+        description += tr("; Review: %1").arg(m_reviewFilter->currentText());
+    return description;
+}
+
+QJsonObject ProofreadChangesDialog::reviewSession() const
+{
+    if (!m_sessionWritable)
+        return labelqt::services::ReviewSessionService::projectSession(m_currentProject);
+    return m_reviewPanel ? labelqt::services::ReviewSessionService::encode(m_reviewPanel->session()) : QJsonObject{};
+}
+
+QVector<labelqt::services::ReviewChange> ProofreadChangesDialog::selectedChanges() const
+{
+    QVector<labelqt::services::ReviewChange> result;
+    for (const auto& index : m_table->selectionModel()->selectedRows()) {
+        const auto* change = m_tableModel->changeAt(changeIndexForRow(index.row()));
+        if (change)
+            result.append(*change);
+    }
+    return result;
+}
+
+void ProofreadChangesDialog::updateReviewAnnotations()
+{
+    if (!m_reviewPanel)
+        return;
+    QVector<labelqt::services::ReviewAnnotation> annotations;
+    for (const auto& change : m_tableModel->changes())
+        annotations.append(
+            m_reviewPanel->session().annotations.value(labelqt::services::ReviewSessionService::fingerprint(change)));
+    m_tableModel->setReviewAnnotations(std::move(annotations), {tr("Unseen"), tr("Reviewed"), tr("Needs confirmation")},
+                                       tr("Manual pair"));
+    int reviewed = 0;
+    for (int row = 0; row < m_filterModel->rowCount(); ++row)
+        if (m_filterModel->index(row, 0).data(ProofreadChangeTableModel::ReviewStatusRole).toInt() == 1)
+            ++reviewed;
+    m_summaryLabel->setText(tr("Changes: %1; reviewed: %2").arg(m_filterModel->rowCount()).arg(reviewed));
+}
+
+void ProofreadChangesDialog::updateManualPairs()
+{
+    if (!m_reviewPanel)
+        return;
+    const auto result = labelqt::services::ProjectComparisonService::changesWithPairs(
+        m_currentProject, m_metadata, m_pagePairs, m_reviewPanel->session().pairs);
+    if (!result)
+        return;
+    m_tableModel->setChanges(*result);
+    updateReviewAnnotations();
+    applyFilters();
 }
 
 QString ProofreadChangesDialog::diffHtml(const QString& beforeText, const QString& afterText) const
@@ -756,6 +909,9 @@ labelqt::services::ProofreadReportTexts ProofreadChangesDialog::reportTexts() co
         .order = tr("order"),
         .noTextChange = tr("No text change."),
         .filter = tr("Filters"),
+        .review = tr("Review"),
+        .manualPair = tr("Manual pair"),
+        .reviewStates = {tr("Unseen"), tr("Reviewed"), tr("Needs confirmation")},
     };
 }
 

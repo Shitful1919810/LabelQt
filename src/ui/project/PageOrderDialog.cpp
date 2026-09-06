@@ -7,13 +7,19 @@
 #include "ui/labeltable/ViewportFittedTableColumns.h"
 
 #include <QAbstractItemView>
+#include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QIcon>
+#include <QInputDialog>
 #include <QItemSelection>
 #include <QLabel>
+#include <QMenu>
+#include <QMessageBox>
 #include <QPainter>
 #include <QSet>
 #include <QSignalBlocker>
@@ -66,17 +72,23 @@ PageOrderDialog::PageOrderDialog(const labelqt::core::Project& project, labelqt:
 
 QVector<int> PageOrderDialog::pageOrder() const
 {
+    if (m_orderApplied) {
+        QVector<int> identity;
+        for (int i = 0; i < m_pageOrderModel->pageOrder().size(); ++i)
+            identity.append(i);
+        return identity;
+    }
     return m_pageOrderModel == nullptr ? QVector<int>{} : m_pageOrderModel->pageOrder();
 }
 
 bool PageOrderDialog::hasPendingImageRenamePlan() const noexcept
 {
-    return m_hasPendingImageRenamePlan && m_pendingImageRenamePlan.hasChanges();
+    return m_pageOrderModel->draft().pending().hasChanges();
 }
 
 labelqt::services::ProjectImageRenamePlan PageOrderDialog::pendingImageRenamePlan() const
 {
-    return m_pendingImageRenamePlan;
+    return m_pageOrderModel->draft().pending();
 }
 
 void PageOrderDialog::setPendingImageRenameHandler(
@@ -134,6 +146,16 @@ void PageOrderDialog::buildUi()
     pageActionLayout->addWidget(m_movePageUpButton);
     pageActionLayout->addWidget(m_movePageDownButton);
     pageActionLayout->addWidget(m_removePageButton);
+    m_pageFilter = new QComboBox(pageActionBar);
+    m_pageFilter->addItems({tr("All pages"), tr("Pending"), tr("Issues")});
+    m_targetScope = new QComboBox(pageActionBar);
+    m_targetScope->addItems({tr("Selected pages"), tr("All pages")});
+    m_pendingCount = new QLabel(pageActionBar);
+    pageActionLayout->addWidget(m_pageFilter);
+    pageActionLayout->addWidget(m_targetScope);
+    pageActionLayout->addWidget(m_pendingCount);
+    m_pageFilter->setVisible(m_enableImageRename);
+    m_targetScope->setVisible(m_enableImageRename);
     pageActionLayout->addStretch();
     pageListLayout->addWidget(pageActionBar);
 
@@ -178,22 +200,11 @@ void PageOrderDialog::buildUi()
         m_imageRenameWidget->setProject(m_project);
         connect(m_imageRenameWidget, &ImageRenamePreviewWidget::renameQueued, this,
                 [this](const labelqt::services::ProjectImageRenamePlan& plan) {
-                    m_pendingImageRenamePlan =
-                        labelqt::services::ProjectImageRenameService::mergePlans(m_pendingImageRenamePlan, plan);
-                    m_visibleImageRenamePlan = m_pendingImageRenamePlan;
-                    m_hasPendingImageRenamePlan = m_pendingImageRenamePlan.hasChanges();
-                    if (m_pageOrderModel != nullptr) {
-                        m_pageOrderModel->setPendingRenamePlan(m_pendingImageRenamePlan);
-                        m_pageOrderModel->setRenamePlan(m_pendingImageRenamePlan);
-                    }
-                    if (m_pageTable != nullptr) {
-                        updatePreview(m_pageTable->currentIndex());
-                    }
+                    m_pageOrderModel->setPendingRenamePlan(plan);
                 });
         connect(m_imageRenameWidget, &ImageRenamePreviewWidget::previewChanged, this,
                 [this](const labelqt::services::ProjectImageRenamePlan& plan) {
-                    m_visibleImageRenamePlan =
-                        labelqt::services::ProjectImageRenameService::mergePlans(m_pendingImageRenamePlan, plan);
+                    m_visibleImageRenamePlan = m_pageOrderModel->draft().preview(plan);
                     if (m_pageOrderModel != nullptr) {
                         m_pageOrderModel->setRenamePlan(m_visibleImageRenamePlan);
                     }
@@ -252,10 +263,12 @@ void PageOrderDialog::buildUi()
                 }
             }
             if (!selection.isEmpty()) {
-                m_pageTable->selectionModel()->select(selection, QItemSelectionModel::ClearAndSelect);
+                m_pageTable->selectionModel()->select(selection,
+                                                      QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
                 const int currentRow = m_pageOrderModel->rowForSourceIndex(movedSourceIndexes.first());
                 if (currentRow >= 0) {
-                    m_pageTable->setCurrentIndex(m_pageOrderModel->index(currentRow, 0));
+                    m_pageTable->selectionModel()->setCurrentIndex(m_pageOrderModel->index(currentRow, 0),
+                                                                   QItemSelectionModel::NoUpdate);
                 }
                 updatePageActionButtons();
                 updateImageRenamePreview();
@@ -269,11 +282,59 @@ void PageOrderDialog::buildUi()
         updatePageActionButtons();
         updateImageRenamePreview();
     });
+    auto* undoButton = new QToolButton(pageActionBar);
+    auto* redoButton = new QToolButton(pageActionBar);
+    undoButton->setIcon(QIcon::fromTheme("edit-undo", style()->standardIcon(QStyle::SP_ArrowBack)));
+    redoButton->setIcon(QIcon::fromTheme("edit-redo", style()->standardIcon(QStyle::SP_ArrowForward)));
+    undoButton->setToolTip(tr("Undo draft edit"));
+    redoButton->setToolTip(tr("Redo draft edit"));
+    pageActionLayout->addWidget(undoButton);
+    pageActionLayout->addWidget(redoButton);
+    auto& undo = m_pageOrderModel->undoStack();
+    undo.setChangedCallback([this, undoButton, redoButton] {
+        undoButton->setEnabled(m_pageOrderModel->undoStack().canUndo());
+        redoButton->setEnabled(m_pageOrderModel->undoStack().canRedo());
+    });
+    undoButton->setEnabled(false);
+    redoButton->setEnabled(false);
+    connect(undoButton, &QToolButton::clicked, this, [this] { m_pageOrderModel->undoStack().undo(); });
+    connect(redoButton, &QToolButton::clicked, this, [this] { m_pageOrderModel->undoStack().redo(); });
+    connect(m_pageFilter, &QComboBox::currentIndexChanged, this, [this] {
+        applyPageFilter();
+        updateImageRenamePreview();
+    });
+    connect(m_targetScope, &QComboBox::currentIndexChanged, this, &PageOrderDialog::updateImageRenamePreview);
+    if (m_enableImageRename) {
+        auto* pendingMenu = new QToolButton(pageActionBar);
+        pendingMenu->setIcon(
+            QIcon::fromTheme("document-properties", style()->standardIcon(QStyle::SP_FileDialogDetailedView)));
+        pendingMenu->setToolTip(tr("Pending operations"));
+        pendingMenu->setPopupMode(QToolButton::InstantPopup);
+        auto* menu = new QMenu(pendingMenu);
+        menu->addAction(tr("Clear selected pending operations"), this,
+                        [this] { m_pageOrderModel->clearPendingSourceIndexes(selectedPageSourceIndexes()); });
+        menu->addAction(tr("Clear all pending operations"), this,
+                        [this] { m_pageOrderModel->clearPendingRenamePlan(); });
+        menu->addSeparator();
+        menu->addAction(tr("Assign image..."), this, [this] { assignImages(false); });
+        menu->addAction(tr("Match in folder..."), this, [this] { assignImages(true); });
+        pendingMenu->setMenu(menu);
+        pageActionLayout->addWidget(pendingMenu);
+        m_pageTable->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(m_pageTable, &QTableView::customContextMenuRequested, this, [this, menu](const QPoint& position) {
+            const auto index = m_pageTable->indexAt(position);
+            if (index.isValid() && !m_pageTable->selectionModel()->isSelected(index))
+                m_pageTable->selectRow(index.row());
+            menu->popup(m_pageTable->viewport()->mapToGlobal(position));
+        });
+    }
     if (m_pageOrderModel->rowCount() > 0) {
         m_pageTable->setCurrentIndex(m_pageOrderModel->index(0, 0));
     }
+    connect(m_pageOrderModel, &PageOrderListModel::draftChanged, this, &PageOrderDialog::refreshDraftUi);
     updatePageActionButtons();
     updateImageRenamePreview();
+    refreshDraftUi();
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &PageOrderDialog::acceptRequested);
@@ -284,12 +345,12 @@ void PageOrderDialog::buildUi()
 void PageOrderDialog::acceptRequested()
 {
     if (hasPendingImageRenamePlan() && m_pendingImageRenameHandler) {
-        if (!m_pendingImageRenameHandler(m_pendingImageRenamePlan)) {
+        auto plan = pendingImageRenamePlan();
+        plan.finalPageOrder = pageOrder();
+        if (!m_pendingImageRenameHandler(plan)) {
             return;
         }
-        m_pendingImageRenamePlan = {};
-        m_visibleImageRenamePlan = {};
-        m_hasPendingImageRenamePlan = false;
+        m_orderApplied = true;
     }
     accept();
 }
@@ -311,7 +372,7 @@ void PageOrderDialog::updatePreview(const QModelIndex& currentIndex)
 
 labelqt::core::ImageEntry PageOrderDialog::previewImageForSourceIndex(int sourceIndex) const
 {
-    labelqt::core::ImageEntry image = m_project.images().at(sourceIndex);
+    labelqt::core::ImageEntry image = m_pageOrderModel->draft().project().images().at(sourceIndex);
     const auto pendingIt =
         std::ranges::find_if(m_visibleImageRenamePlan.items, [sourceIndex](const auto& item) {
             return item.imageIndex == sourceIndex && item.included && item.referenceOnly && item.isChanged() &&
@@ -412,6 +473,8 @@ QVector<int> PageOrderDialog::selectedPageSourceIndexes() const
     const QModelIndexList selectedIndexes = m_pageTable->selectionModel()->selectedRows();
     sourceIndexes.reserve(selectedIndexes.size());
     for (const QModelIndex& index : selectedIndexes) {
+        if (m_pageTable->isRowHidden(index.row()))
+            continue;
         const int sourceIndex = m_pageOrderModel->sourceIndexForRow(index.row());
         if (sourceIndex >= 0 && !sourceIndexes.contains(sourceIndex)) {
             sourceIndexes.append(sourceIndex);
@@ -426,10 +489,11 @@ QVector<int> PageOrderDialog::renameTargetSourceIndexes() const
         return {};
     }
 
-    const QVector<int> selectedSourceIndexes = selectedPageSourceIndexes();
-    if (selectedSourceIndexes.isEmpty()) {
+    if (m_targetScope != nullptr && m_targetScope->currentIndex() == 1)
         return m_pageOrderModel->pageOrder();
-    }
+    const QVector<int> selectedSourceIndexes = selectedPageSourceIndexes();
+    if (selectedSourceIndexes.isEmpty())
+        return {};
 
     QSet<int> selectedSet;
     selectedSet.reserve(selectedSourceIndexes.size());
@@ -444,4 +508,97 @@ QVector<int> PageOrderDialog::renameTargetSourceIndexes() const
         }
     }
     return orderedSelection;
+}
+
+PageOrderDialog::~PageOrderDialog()
+{
+    m_pageOrderModel->undoStack().setChangedCallback({});
+    for (QObject* child : findChildren<QObject*>())
+        disconnect(child, nullptr, this, nullptr);
+}
+
+void PageOrderDialog::refreshDraftUi()
+{
+    if (m_imageRenameWidget)
+        m_imageRenameWidget->setPendingPlan(m_pageOrderModel->draft().pending());
+    applyPageFilter();
+    if (m_pageTable->currentIndex().isValid())
+        updatePreview(m_pageTable->currentIndex());
+}
+
+void PageOrderDialog::applyPageFilter()
+{
+    if (!m_pageFilter || !m_pageTable)
+        return;
+    int pendingCount = 0;
+    const QSignalBlocker selectionBlocker(m_pageTable->selectionModel());
+    for (int row = 0; row < m_pageOrderModel->rowCount(); ++row) {
+        const int source = m_pageOrderModel->sourceIndexForRow(row);
+        const auto pending = m_pageOrderModel->draft().pendingItem(source);
+        const bool changed = pending.isChanged();
+        const bool issue = !pending.error.isEmpty() ||
+                           (!QFileInfo::exists(m_pageOrderModel->draft().project().images().at(source).path) &&
+                            (!pending.referenceOnly || !QFileInfo::exists(pending.newPath)));
+        if (changed)
+            ++pendingCount;
+        m_pageTable->setRowHidden(row, m_pageFilter->currentIndex() == 1   ? !changed
+                                       : m_pageFilter->currentIndex() == 2 ? !issue
+                                                                           : false);
+    }
+    m_pageTable->setDragEnabled(m_pageFilter->currentIndex() == 0);
+    m_pageTable->setAcceptDrops(m_pageFilter->currentIndex() == 0);
+    m_pendingCount->setText(tr("Pending: %1").arg(pendingCount));
+}
+
+void PageOrderDialog::assignImages(bool directory)
+{
+    const auto indexes = selectedPageSourceIndexes();
+    if (indexes.isEmpty())
+        return;
+    if (!directory && indexes.size() != 1) {
+        QMessageBox::information(this, windowTitle(), tr("Select one missing page."));
+        return;
+    }
+    QHash<int, QString> targets;
+    QString folder;
+    if (directory) {
+        folder = QFileDialog::getExistingDirectory(this, tr("Match in folder"));
+        if (folder.isEmpty())
+            return;
+    }
+    for (int index : indexes) {
+        const auto& image = m_pageOrderModel->draft().project().images().at(index);
+        if (QFileInfo::exists(image.path))
+            continue;
+        QString target;
+        if (!directory) {
+            target = QFileDialog::getOpenFileName(this, tr("Assign image"), QFileInfo(image.path).absolutePath());
+        }
+        else {
+            const auto candidates =
+                labelqt::services::ProjectImageRenameService::referenceCandidates(image.path, folder);
+            if (candidates.size() == 1)
+                target = candidates.first();
+            else if (candidates.size() > 1) {
+                bool ok = false;
+                target = QInputDialog::getItem(this, tr("Choose image"), image.name, candidates, 0, false, &ok);
+                if (!ok)
+                    continue;
+            }
+        }
+        if (!target.isEmpty())
+            targets.insert(index, target);
+    }
+    if (targets.isEmpty()) {
+        QMessageBox::information(this, windowTitle(), tr("No matching images selected."));
+        return;
+    }
+    const auto plan =
+        labelqt::services::ProjectImageRenameService::referencePlan(m_pageOrderModel->draft().project(), targets);
+    const auto candidate = m_pageOrderModel->draft().preview(plan);
+    if (!candidate.isValid()) {
+        QMessageBox::warning(this, windowTitle(), candidate.error);
+        return;
+    }
+    m_pageOrderModel->setPendingRenamePlan(plan);
 }

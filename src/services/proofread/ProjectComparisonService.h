@@ -2,6 +2,7 @@
 
 #include "core/Project.h"
 #include "services/proofread/ReviewMetadataService.h"
+#include "services/proofread/ReviewSessionService.h"
 
 #include <QVector>
 
@@ -36,6 +37,9 @@ struct ProjectComparisonPlan {
 class ProjectComparisonService final {
 public:
     static ReviewMetadata captureSnapshot(const labelqt::core::Project& project);
+    static std::expected<QVector<ReviewChange>, QString>
+    changesWithPairs(const labelqt::core::Project& currentProject, const ReviewMetadata& baseline,
+                     const QVector<ProjectComparisonPagePair>& pages, const QVector<ManualLabelPair>& pairs);
     static QVector<ReviewChange> changesForProject(const labelqt::core::Project& currentProject,
                                                    const ReviewMetadata& baselineMetadata);
     static ProjectComparisonPlan planComparison(const labelqt::core::Project& baselineProject,

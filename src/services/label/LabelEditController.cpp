@@ -1,5 +1,7 @@
 #include "services/label/LabelEditController.h"
 
+#include <QCoreApplication>
+#include <QSet>
 #include <algorithm>
 #include <utility>
 
@@ -439,7 +441,7 @@ LabelEditResult LabelEditController::setLabelText(int imageIndex, int labelIndex
     if (registerUndo) {
         registerLabelTextUndo(imageIndex, labelIndex, oldText, text);
     }
-    image->labels[labelIndex].setText(text);
+    writeLabelText(imageIndex, labelIndex, text);
     markDirty();
     return {true, labelIndex, {}, {labelIndex}};
 }
@@ -593,15 +595,58 @@ void LabelEditController::registerLabelGroupUndo(int imageIndex, int labelIndex,
 
 void LabelEditController::applyLabelText(int imageIndex, int labelIndex, const QString& text)
 {
-    labelqt::core::ImageEntry* image = imageAt(imageIndex);
-    if (image == nullptr || labelIndex < 0 || labelIndex >= image->labels.size()) {
+    if (!writeLabelText(imageIndex, labelIndex, text)) {
         return;
     }
-
-    image->labels[labelIndex].setText(text);
     if (m_labelSelected) {
         m_labelSelected(imageIndex, labelIndex);
     }
+    markDirty();
+}
+
+bool LabelEditController::writeLabelText(int imageIndex, int labelIndex, const QString& text)
+{
+    auto* image = imageAt(imageIndex);
+    if (!image || labelIndex < 0 || labelIndex >= image->labels.size())
+        return false;
+    image->labels[labelIndex].setText(text);
+    return true;
+}
+
+std::expected<bool, QString> LabelEditController::replaceTexts(const QByteArray& revision,
+                                                               QVector<LabelTextReplacement> edits,
+                                                               const QString& commandText)
+{
+    const auto stale = []() -> std::expected<bool, QString> {
+        return std::unexpected(QCoreApplication::translate("LabelEditController",
+                                                           "The project changed. Refresh the replacement preview."));
+    };
+    if (revision != ProjectTextSearchService::revision(m_project))
+        return stale();
+    QSet<QPair<int, int>> seen;
+    for (const auto& edit : edits) {
+        const auto* image = imageAt(edit.imageIndex);
+        if (!image || edit.labelIndex < 0 || edit.labelIndex >= image->labels.size() ||
+            image->labels.at(edit.labelIndex).isDeleted() || image->labels.at(edit.labelIndex).text() != edit.before ||
+            seen.contains({edit.imageIndex, edit.labelIndex}))
+            return stale();
+        seen.insert({edit.imageIndex, edit.labelIndex});
+    }
+    if (edits.isEmpty())
+        return false;
+    applyTextReplacements(edits, true);
+    m_undoStack.push(
+        commandText, [this, edits] { applyTextReplacements(edits, false); },
+        [this, edits] { applyTextReplacements(edits, true); });
+    return true;
+}
+
+void LabelEditController::applyTextReplacements(const QVector<LabelTextReplacement>& edits, bool forward)
+{
+    for (const auto& edit : edits)
+        writeLabelText(edit.imageIndex, edit.labelIndex, forward ? edit.after : edit.before);
+    if (m_projectChanged)
+        m_projectChanged();
     markDirty();
 }
 

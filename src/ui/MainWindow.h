@@ -50,6 +50,8 @@ class ImagePageViewController;
 class MainWindowShortcutController;
 class PageSelectorComboBox;
 class ProjectViewController;
+class ProjectRecoveryController;
+class ProjectSearchPanel;
 class ProofreadingController;
 class ViewportFittedTableColumns;
 
@@ -236,6 +238,9 @@ private:
     QAction* m_showProofreadingChangesAction{nullptr};
     QAction* m_compareWithProjectAction{nullptr};
     QAction* m_saveProjectAction{nullptr};
+    ProjectRecoveryController* m_recoveryController{nullptr};
+    ProjectSearchPanel* m_searchPanel{nullptr};
+    QMenu* m_editMenu{nullptr};
     QAction* m_saveProjectAsAction{nullptr};
     QMenu* m_recentProjectsMenu{nullptr};
     QAction* m_undoAction{nullptr};

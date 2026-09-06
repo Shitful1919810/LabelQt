@@ -10,6 +10,7 @@ namespace labelqt::core {
 class AtomicFileWriter final {
 public:
     static std::expected<void, QString> write(const QString& path, const QByteArray& bytes);
+    static std::expected<void, QString> writeNew(const QString& path, const QByteArray& bytes);
 };
 
 } // namespace labelqt::core

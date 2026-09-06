@@ -27,6 +27,7 @@ public:
     void commit();
     QString recoveryPath() const;
     static std::expected<void, QString> checkRecoveryDirectory(const QString& directory);
+    void setProjectCommit(QString path, QByteArray before, QByteArray after);
 
 private:
     enum class Location { Source, Temporary, Target };
@@ -41,6 +42,9 @@ private:
     QVector<Step> m_steps;
     RenameFile m_renameFile;
     QString m_recoveryPath;
+    QString m_projectPath;
+    QByteArray m_projectBefore;
+    QByteArray m_projectAfter;
     bool m_finished{false};
 };
 

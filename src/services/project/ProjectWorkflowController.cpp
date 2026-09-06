@@ -2,6 +2,7 @@
 
 #include "core/LabelPlusDocument.h"
 #include "services/project/ProjectImageRenameService.h"
+#include "services/project/ProjectLocationService.h"
 #include "services/project/ProjectPageOrderService.h"
 
 #include <utility>
@@ -44,7 +45,7 @@ ProjectWorkflowController::mergedProjectPreview(const ProjectMergePlan& mergePla
 
 void ProjectWorkflowController::saveProject(const labelqt::core::Project& project, const QString& path) const
 {
-    labelqt::core::LabelPlusDocument::saveToFile(project, path);
+    labelqt::core::LabelPlusDocument::saveToFile(ProjectLocationService::forOutput(project, path), path);
 }
 
 bool ProjectWorkflowController::applyPageOrder(const QVector<int>& order, const ProjectViewState& viewState)
@@ -56,6 +57,7 @@ bool ProjectWorkflowController::applyPageOrder(const QVector<int>& order, const 
 
     const QVector<labelqt::core::ImageEntry> oldImages = m_project.images();
     const QStringList oldCommentLines = m_project.commentLines();
+    const QString metadataPath = m_project.filePath();
 
     labelqt::core::Project reorderedProject = m_project;
     ProjectPageOrderService::reorderImages(reorderedProject, order);
@@ -69,19 +71,23 @@ bool ProjectWorkflowController::applyPageOrder(const QVector<int>& order, const 
 
     m_undoStack.push(
         m_reorderPagesText, m_reorderPagesText, m_reorderPagesText,
-        [this, oldImages, viewState, oldCommentLines]() {
+        [this, oldImages, viewState, oldCommentLines, metadataPath]() {
             if (m_replaceImages) {
-                m_replaceImages(oldImages, viewState.currentImageName, viewState.fallbackImageIndex,
-                                viewState.zoomPercent, viewState.normalizedCenter, oldCommentLines);
+                m_replaceImages(
+                    oldImages, viewState.currentImageName, viewState.fallbackImageIndex, viewState.zoomPercent,
+                    viewState.normalizedCenter,
+                    ProjectLocationService::rebaseComments(oldCommentLines, metadataPath, m_project.filePath()));
             }
             if (m_dirty) {
                 m_dirty();
             }
         },
-        [this, newImages, viewState, newCommentLines]() {
+        [this, newImages, viewState, newCommentLines, metadataPath]() {
             if (m_replaceImages) {
-                m_replaceImages(newImages, viewState.currentImageName, viewState.fallbackImageIndex,
-                                viewState.zoomPercent, viewState.normalizedCenter, newCommentLines);
+                m_replaceImages(
+                    newImages, viewState.currentImageName, viewState.fallbackImageIndex, viewState.zoomPercent,
+                    viewState.normalizedCenter,
+                    ProjectLocationService::rebaseComments(newCommentLines, metadataPath, m_project.filePath()));
             }
             if (m_dirty) {
                 m_dirty();

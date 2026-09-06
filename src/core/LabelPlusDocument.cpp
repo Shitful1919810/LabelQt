@@ -102,6 +102,19 @@ QStringList commentLinesWithMetadata(const Project& project)
 {
     QJsonObject metadata = checkedMetadata(project);
     metadata.remove(QStringLiteral("labelIds"));
+    QJsonObject imagePaths;
+    const QDir directory(QFileInfo(project.filePath()).absolutePath());
+    for (const ImageEntry& image : project.images()) {
+        if (!image.path.isEmpty()) {
+            const QString relative = directory.relativeFilePath(QFileInfo(image.path).absoluteFilePath());
+            if (relative != imageNameFor(image))
+                imagePaths.insert(imageNameFor(image), relative);
+        }
+    }
+    metadata.remove(QStringLiteral("imagePaths"));
+    if (!imagePaths.isEmpty())
+        metadata.insert(QStringLiteral("imagePaths"),
+                        QJsonObject{{QStringLiteral("version"), 1}, {QStringLiteral("paths"), imagePaths}});
     QJsonArray textOverrides;
     for (const ImageEntry& image : project.images()) {
         int visibleIndex = 0;
@@ -183,7 +196,9 @@ Project LabelPlusDocument::loadFromFile(const QString& filePath)
 
 void LabelPlusDocument::saveToFile(const Project& project, const QString& filePath)
 {
-    writeTextFile(filePath, serialize(project));
+    Project output = project;
+    output.setFilePath(filePath);
+    writeTextFile(filePath, serialize(output));
 }
 
 Project LabelPlusDocument::parse(const QString& content, const QString& filePath)
@@ -292,6 +307,20 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
     if (!hasVersion || sectionSeparatorCount != 2)
         invalidDocument();
     restoreTextMetadata(project);
+    const QJsonObject paths = checkedMetadata(project).value(QStringLiteral("imagePaths")).toObject();
+    if (!paths.isEmpty()) {
+        if (paths.value(QStringLiteral("version")).toInt() != 1 || !paths.value(QStringLiteral("paths")).isObject())
+            invalidDocument();
+        const QJsonObject entries = paths.value(QStringLiteral("paths")).toObject();
+        for (ImageEntry& image : project.images()) {
+            if (entries.contains(image.name)) {
+                const auto value = entries.value(image.name);
+                if (!value.isString() || value.toString().isEmpty())
+                    invalidDocument();
+                image.path = QDir::cleanPath(QDir(baseFolder).absoluteFilePath(value.toString()));
+            }
+        }
+    }
 
     if (project.groups().isEmpty()) {
         project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});

@@ -1,6 +1,7 @@
 #include "ui/proofread/ProofreadingController.h"
 
 #include "core/LabelPlusDocument.h"
+#include "services/project/ProjectLocationService.h"
 #include "services/proofread/ProjectComparisonService.h"
 #include "services/proofread/ReviewMetadataService.h"
 #include "ui/proofread/ProofreadChangesDialog.h"
@@ -159,21 +160,26 @@ void ProofreadingController::toggleBaseline()
     }
 
     const QStringList oldLines = project.commentLines();
-    const QStringList newLines = labelqt::services::ReviewMetadataService::rewriteCommentLines(
-        oldLines, labelqt::services::ReviewMetadataService::captureBaseline(project));
+    const QString metadataPath = project.filePath();
+    const QStringList newLines = labelqt::services::ReviewSessionService::withProjectSession(
+        labelqt::services::ReviewMetadataService::rewriteCommentLines(
+            oldLines, labelqt::services::ReviewMetadataService::captureBaseline(project)),
+        {});
     if (oldLines == newLines)
         return;
     project.setCommentLines(newLines);
     const QString message = text("Start proofreading baseline");
     m_undoStack.push(
         message, message, message,
-        [this, oldLines]() {
-            m_callbacks.project().setCommentLines(oldLines);
+        [this, oldLines, metadataPath]() {
+            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
+                oldLines, metadataPath, m_callbacks.project().filePath()));
             updateUi(m_automationRunning);
             m_callbacks.markDirty();
         },
-        [this, newLines]() {
-            m_callbacks.project().setCommentLines(newLines);
+        [this, newLines, metadataPath]() {
+            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
+                newLines, metadataPath, m_callbacks.project().filePath()));
             updateUi(m_automationRunning);
             m_callbacks.markDirty();
         });
@@ -188,7 +194,9 @@ void ProofreadingController::endBaseline()
 {
     auto& project = m_callbacks.project();
     const QStringList oldLines = project.commentLines();
-    const QStringList newLines = labelqt::services::ReviewMetadataService::rewriteCommentLines(oldLines, {});
+    const QString metadataPath = project.filePath();
+    const QStringList newLines = labelqt::services::ReviewSessionService::withProjectSession(
+        labelqt::services::ReviewMetadataService::rewriteCommentLines(oldLines, {}), {});
     if (oldLines == newLines) {
         updateUi(m_automationRunning);
         return;
@@ -197,13 +205,15 @@ void ProofreadingController::endBaseline()
     const QString message = text("End proofreading");
     m_undoStack.push(
         message, message, message,
-        [this, oldLines]() {
-            m_callbacks.project().setCommentLines(oldLines);
+        [this, oldLines, metadataPath]() {
+            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
+                oldLines, metadataPath, m_callbacks.project().filePath()));
             updateUi(m_automationRunning);
             m_callbacks.markDirty();
         },
-        [this, newLines]() {
-            m_callbacks.project().setCommentLines(newLines);
+        [this, newLines, metadataPath]() {
+            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
+                newLines, metadataPath, m_callbacks.project().filePath()));
             updateUi(m_automationRunning);
             m_callbacks.markDirty();
         });
@@ -234,9 +244,34 @@ void ProofreadingController::showChanges()
         information(m_parentWidget, text("Proofreading"), text("No proofreading changes since the baseline."));
         return;
     }
-    ProofreadChangesDialog dialog(project, project, m_callbacks.preferences(), std::move(metadata), std::move(changes),
-                                  {}, m_parentWidget);
-    if (dialog.exec() == QDialog::Accepted)
+    ProofreadChangesDialog dialog(
+        project, project, m_callbacks.preferences(), std::move(metadata), std::move(changes),
+        {.leftProjectTitle = {}, .rightProjectTitle = {}, .reviewEnabled = true, .projectReviewSession = true},
+        m_parentWidget);
+    const int result = dialog.exec();
+    const auto originalSession = labelqt::services::ReviewSessionService::decode(
+        labelqt::services::ReviewSessionService::projectSession(project));
+    if (originalSession &&
+        dialog.reviewSession() != labelqt::services::ReviewSessionService::encode(*originalSession)) {
+        const auto before = project.commentLines();
+        const QString metadataPath = project.filePath();
+        const auto after = labelqt::services::ReviewSessionService::withProjectSession(before, dialog.reviewSession());
+        project.setCommentLines(after);
+        m_undoStack.push(
+            tr("Edit review session"),
+            [this, before, metadataPath] {
+                m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
+                    before, metadataPath, m_callbacks.project().filePath()));
+                m_callbacks.markDirty();
+            },
+            [this, after, metadataPath] {
+                m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
+                    after, metadataPath, m_callbacks.project().filePath()));
+                m_callbacks.markDirty();
+            });
+        m_callbacks.markDirty();
+    }
+    if (result == QDialog::Accepted)
         selectDialogResult(dialog.selectedImageIndex(), dialog.selectedLabelIndex());
 }
 
@@ -296,7 +331,8 @@ void ProofreadingController::compareWithProject()
                                   std::move(result->changes),
                                   {.leftProjectTitle = text("Current Project"),
                                    .rightProjectTitle = text("Target Project"),
-                                   .jumpToLeftProject = true},
+                                   .jumpToLeftProject = true,
+                                   .reviewEnabled = true},
                                   m_parentWidget);
     if (dialog.exec() == QDialog::Accepted)
         selectDialogResult(dialog.selectedImageIndex(), dialog.selectedLabelIndex());

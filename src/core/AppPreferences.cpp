@@ -398,8 +398,12 @@ AppPreferences AppPreferences::fromValues(AppPreferencesValues values)
     preferences.m_editLabelTextShortcut = std::move(values.editLabelTextShortcut);
     preferences.m_commitLabelTextShortcut = std::move(values.commitLabelTextShortcut);
     preferences.m_deleteLabelShortcut = std::move(values.deleteLabelShortcut);
+    preferences.m_findProjectShortcut = std::move(values.findProjectShortcut);
+    preferences.m_nextSearchMatchShortcut = std::move(values.nextSearchMatchShortcut);
+    preferences.m_previousSearchMatchShortcut = std::move(values.previousSearchMatchShortcut);
     preferences.m_backupPath = std::move(values.backupPath);
     preferences.m_backupIntervalSeconds = values.backupIntervalSeconds;
+    preferences.m_backupMaximumCount = std::clamp(values.backupMaximumCount, 0, 10000);
     preferences.m_groupStyles = std::move(values.groupStyles);
     return preferences;
 }
@@ -441,8 +445,12 @@ AppPreferencesValues AppPreferences::values() const
         .editLabelTextShortcut = m_editLabelTextShortcut,
         .commitLabelTextShortcut = m_commitLabelTextShortcut,
         .deleteLabelShortcut = m_deleteLabelShortcut,
+        .findProjectShortcut = m_findProjectShortcut,
+        .nextSearchMatchShortcut = m_nextSearchMatchShortcut,
+        .previousSearchMatchShortcut = m_previousSearchMatchShortcut,
         .backupPath = m_backupPath,
         .backupIntervalSeconds = m_backupIntervalSeconds,
+        .backupMaximumCount = m_backupMaximumCount,
         .groupStyles = m_groupStyles,
     };
 }
@@ -844,6 +852,17 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             preferences.m_deleteLabelShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("deleteLabelShortcut")), QStringLiteral("input.deleteLabelShortcut"),
                 preferences.m_deleteLabelShortcut, AppPreferenceWarningType::DeleteLabelShortcutInvalid, warnings);
+            preferences.m_findProjectShortcut = keySequenceFromJsonValue(
+                input.value(QStringLiteral("findProjectShortcut")), QStringLiteral("input.findProjectShortcut"),
+                preferences.m_findProjectShortcut, AppPreferenceWarningType::FindProjectShortcutInvalid, warnings);
+            preferences.m_nextSearchMatchShortcut = keySequenceFromJsonValue(
+                input.value(QStringLiteral("nextSearchMatchShortcut")), QStringLiteral("input.nextSearchMatchShortcut"),
+                preferences.m_nextSearchMatchShortcut, AppPreferenceWarningType::NextSearchMatchShortcutInvalid,
+                warnings);
+            preferences.m_previousSearchMatchShortcut = keySequenceFromJsonValue(
+                input.value(QStringLiteral("previousSearchMatchShortcut")),
+                QStringLiteral("input.previousSearchMatchShortcut"), preferences.m_previousSearchMatchShortcut,
+                AppPreferenceWarningType::PreviousSearchMatchShortcutInvalid, warnings);
         }
     }
 
@@ -869,6 +888,11 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
         preferences.m_backupIntervalSeconds, 1, 86400, AppPreferenceWarningType::BackupIntervalWrongType,
         AppPreferenceWarningType::BackupIntervalOutOfRange, warnings);
 
+    preferences.m_backupMaximumCount = positiveIntegerFromJsonValue(
+        root, QStringLiteral("backupMaximumCount"), QStringLiteral("backupMaximumCount"),
+        preferences.m_backupMaximumCount, 0, 10000, AppPreferenceWarningType::BackupRetentionInvalid,
+        AppPreferenceWarningType::BackupRetentionInvalid, warnings);
+
     std::optional<QVector<LabelGroupStyle>> groupStyles =
         groupStylesFromJsonValue(root.value(QStringLiteral("groupStyles")), preferences.m_labelMarkerDiameterPixels,
                                  preferences.m_labelMarkerFontPointSize, warnings);
@@ -876,7 +900,44 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
         preferences.m_groupStyles = std::move(groupStyles.value());
     }
 
+    for (const auto& key : preferences.conflictingSearchShortcuts())
+        warnings.append(makeWarning(AppPreferenceWarningType::SearchShortcutConflict, key));
     return {preferences, warnings};
+}
+
+QStringList AppPreferences::conflictingSearchShortcuts() const
+{
+    QMap<QString, QKeySequence> bindings;
+    const auto input = toJsonDocument().object().value(QStringLiteral("input")).toObject();
+    for (auto it = input.begin(); it != input.end(); ++it)
+        if (it.key().endsWith(QStringLiteral("Shortcut")))
+            bindings.insert(it.key(), QKeySequence::fromString(it.value().toString(), QKeySequence::PortableText));
+    for (auto it = m_automationShortcuts.begin(); it != m_automationShortcuts.end(); ++it)
+        bindings.insert(QStringLiteral("automation.") + it.key(), it.value());
+    for (auto standard : {QKeySequence::New, QKeySequence::Open, QKeySequence::Save, QKeySequence::SaveAs,
+                          QKeySequence::Copy, QKeySequence::Cut, QKeySequence::Paste})
+        bindings.insert(QStringLiteral("standard.%1").arg(static_cast<int>(standard)), QKeySequence(standard));
+    if (!m_nextLabelShortcut.isEmpty())
+        bindings.insert(
+            QStringLiteral("previousLabel"),
+            QKeySequence(QKeyCombination(m_nextLabelShortcut[0].keyboardModifiers() | m_previousLabelModifiers,
+                                         m_nextLabelShortcut[0].key())));
+    QStringList conflicts;
+    for (const auto& key : {QStringLiteral("findProjectShortcut"), QStringLiteral("nextSearchMatchShortcut"),
+                            QStringLiteral("previousSearchMatchShortcut")}) {
+        const auto sequence = bindings.value(key);
+        if (sequence.isEmpty())
+            continue;
+        for (auto it = bindings.begin(); it != bindings.end(); ++it) {
+            if (it.key() == key || it->isEmpty())
+                continue;
+            if (sequence.matches(*it) != QKeySequence::NoMatch || it->matches(sequence) != QKeySequence::NoMatch) {
+                conflicts.append(key);
+                break;
+            }
+        }
+    }
+    return conflicts;
 }
 
 QString AppPreferences::defaultFilePath()
@@ -989,11 +1050,17 @@ QJsonDocument AppPreferences::toJsonDocument() const
                  m_commitLabelTextShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("deleteLabelShortcut"),
                  m_deleteLabelShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("findProjectShortcut"), m_findProjectShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("nextSearchMatchShortcut"),
+                 m_nextSearchMatchShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("previousSearchMatchShortcut"),
+                 m_previousSearchMatchShortcut.toString(QKeySequence::PortableText));
 
     QJsonObject root;
     root.insert(QStringLiteral("appearance"), appearance);
     root.insert(QStringLiteral("automation"), automation);
     root.insert(QStringLiteral("backupIntervalSeconds"), m_backupIntervalSeconds);
+    root.insert(QStringLiteral("backupMaximumCount"), m_backupMaximumCount);
     root.insert(QStringLiteral("backupPath"), m_backupPath);
     root.insert(QStringLiteral("canvasLabelTextEditor"), canvasLabelTextEditor);
     root.insert(QStringLiteral("groupStyles"), groupStylesToJsonArray(m_groupStyles));
@@ -1176,6 +1243,21 @@ QKeySequence AppPreferences::deleteLabelShortcut() const
     return m_deleteLabelShortcut;
 }
 
+QKeySequence AppPreferences::findProjectShortcut() const
+{
+    return m_findProjectShortcut;
+}
+
+QKeySequence AppPreferences::nextSearchMatchShortcut() const
+{
+    return m_nextSearchMatchShortcut;
+}
+
+QKeySequence AppPreferences::previousSearchMatchShortcut() const
+{
+    return m_previousSearchMatchShortcut;
+}
+
 QString AppPreferences::backupPath() const
 {
     return m_backupPath;
@@ -1184,6 +1266,10 @@ QString AppPreferences::backupPath() const
 int AppPreferences::backupIntervalSeconds() const noexcept
 {
     return m_backupIntervalSeconds;
+}
+int AppPreferences::backupMaximumCount() const noexcept
+{
+    return m_backupMaximumCount;
 }
 
 const QVector<LabelGroupStyle>& AppPreferences::groupStyles() const noexcept

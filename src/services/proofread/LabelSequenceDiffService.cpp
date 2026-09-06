@@ -236,4 +236,36 @@ QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diff(QVector<ReviewLab
     return entries;
 }
 
+QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diffWithPairs(QVector<ReviewLabelSnapshot> baselineLabels,
+                                                                        QVector<ReviewLabelSnapshot> currentLabels,
+                                                                        const QVector<QPair<int, int>>& pairs)
+{
+    QVector<LabelSequenceDiffEntry> forced;
+    for (const auto& pair : pairs) {
+        const auto before = std::find_if(baselineLabels.begin(), baselineLabels.end(),
+                                         [&](const auto& item) { return item.labelIndex == pair.first; });
+        const auto after = std::find_if(currentLabels.begin(), currentLabels.end(),
+                                        [&](const auto& item) { return item.labelIndex == pair.second; });
+        if (before == baselineLabels.end() || after == currentLabels.end())
+            continue;
+        forced.append({before->labelIndex, after->labelIndex, *before, *after, false, true});
+        baselineLabels.erase(before);
+        currentLabels.erase(after);
+    }
+    auto entries = diff(std::move(baselineLabels), std::move(currentLabels));
+    entries.append(forced);
+    for (auto& entry : entries) {
+        if (!entry.manuallyMatched)
+            continue;
+        entry.moved = std::any_of(entries.begin(), entries.end(), [&](const auto& other) {
+            return other.baselineLabelIndex >= 0 && other.currentLabelIndex >= 0 &&
+                   ((entry.baselineLabelIndex < other.baselineLabelIndex &&
+                     entry.currentLabelIndex > other.currentLabelIndex) ||
+                    (entry.baselineLabelIndex > other.baselineLabelIndex &&
+                     entry.currentLabelIndex < other.currentLabelIndex));
+        });
+    }
+    return entries;
+}
+
 } // namespace labelqt::services

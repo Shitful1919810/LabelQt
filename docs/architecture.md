@@ -41,6 +41,7 @@ src/ui/labeltable         右侧标签表格、委托、选择同步和表格列
 src/ui/preferences        偏好设置窗口和复杂配置子控件
 src/ui/project            页面选择、页面顺序调整、工程合并和主界面页控件
 src/ui/proofread          校对变更展示窗口
+src/ui/search             工程全文查找与替换面板、结果模型
 src/ui/widgets            可复用小控件、主题、对话框窗口标志等通用 UI 辅助
 ```
 
@@ -72,6 +73,12 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 `src/services` 放应用服务。它们可以被 UI 调用，但不应该弹窗口或操作控件。
 
 - `ProjectController`：持有当前打开的 `Project`，负责打开、保存、新建工程、未保存修改状态和自动备份写入。
+- `FileRevision`：流式内容摘要；`ProjectController` 在加载、保存、覆盖确认和改名提交之间维护磁盘版本。
+- `ProjectLocationService`：另存、备份、恢复以及旧撤销快照的来源路径重定位。窗口不能自行拼接相对引用。
+- `ProjectRecoveryService`：版本化备份索引、保留策略、恢复副本与文件事务回放。`ProjectRecoveryController/Dialog` 只编排入口、确认和只读预览。
+- `PageManagementDraft`：独立工程快照上的页面顺序与 pending 计划；移除页同步剪裁 pending。表格只派生候选效果，局部撤销不改真实工程。
+- `ProjectTextSearchService`：范围与分组搜索、原文区间、工程指纹及批量替换规划。`ProjectSearchPanel` 不直接改标签，统一调用 `LabelEditController::replaceTexts`。
+- `ReviewSessionService`：审阅状态、批注、人工配对、变更指纹与版本化持久化。`ProofreadReviewPanel` 管局部编辑与撤销，人工对应约束交给 `ProjectComparisonService` 重新计算，不让 renderer 修改业务状态。
 - `FileRenameTransaction`：文件系统两阶段移动与两阶段回滚，保留无法恢复的文件及恢复映射；不操作工程模型或撤销栈。
 - `ProjectWorkflowController`：承接合并工程、保存合并结果、页面顺序调整与对应撤销命令的项目级工作流。`MainWindow` 只负责弹出对话框和刷新 UI。
 - `ProjectMergeService`：读取多个 LabelPlus 工程，按页生成合并计划，生成最终合并工程，并写入合并来源元数据。
@@ -273,6 +280,8 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 - `labelTable`、`labelTextEditor`、`markerTextBubble`、`canvasLabelTextEditor`：表格、文本框、气泡和临时编辑框的字体、透明度和显示细节。`markerTextBubble.maxLineCharacters` 控制气泡单行软换行阈值；真实换行应保留可见换行标记。
 - `input`：主窗口快捷键和修饰键。
 - `backupPath`、`backupIntervalSeconds`：自动备份配置。
+- `backupMaximumCount`：每工程自动备份保留上限，0 为全部保留；只清理经核实的自动记录。
+- `input.findProjectShortcut`、`nextSearchMatchShortcut`、`previousSearchMatchShortcut`：查找导航键位；冲突检查统一由 AppPreferences 提供，避免 UI 和运行时各自定义优先级。
 
 偏好设置窗口现在只有“保存”语义：保存到 `preference.json` 后立即应用。`Reload` 用于从磁盘重新读取。打开窗口时显示的是当前运行时 `AppPreferences`，而不是另写一套 UI 默认值。界面采用左侧分类导航和右侧页面栈；新增偏好时应先判断属于常规、外观、标签显示、快捷键、自动化、分组样式、校对或高级/预览类页面，不要把不同职责重新堆回单个页面。
 
@@ -338,7 +347,7 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 持久化、重命名事务、正文保真和自动化窗口生命周期的失败语义见 [持久化安全说明](persistence-safety.md)。
 重命名后的工程保存必须属于事务提交步骤，成功前不发布候选工程，也不清空撤销历史。
 
-GUI 项目不应只依赖人工点击。当前测试分为 `LabelQtTests`、`ProofreadChangeTableModelTests` 和 `PersistenceSafetyTests`；前者承担主要功能回归，后两者分别覆盖校对表格合约和持久化失败路径。主要覆盖：
+GUI 项目不应只依赖人工点击。当前测试分为 `LabelQtTests`、`ProofreadChangeTableModelTests`、`PersistenceSafetyTests` 和 `ProductWorkflowTests`，分别覆盖主要功能、校对表格合约、持久化失败路径及恢复/草稿/查找/审阅的跨模块工作流。主要覆盖：
 
 - LabelPlus 读写 round-trip。
 - `AppPreferences` 默认值、错误回退和序列化。

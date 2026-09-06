@@ -433,6 +433,14 @@ Last error: %2</source>
 <context>
     <name>ImageRenamePreviewWidget</name>
     <message>
+        <source>Add to pending</source>
+        <translation>保留操作に追加</translation>
+    </message>
+    <message>
+        <source>Selected: %1; pending result: %2</source>
+        <translation>選択：%1 ページ、保留結果：%2</translation>
+    </message>
+    <message>
         <source>Rename image files according to the current page order. The extension is always preserved.</source>
         <translation type="vanished">現在のページ順に画像ファイル名を変更します。拡張子は常に保持されます。</translation>
     </message>
@@ -489,6 +497,30 @@ Last error: %2</source>
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <source>Conflicting search shortcut disabled: %1</source>
+        <translation>競合する検索ショートカットを無効にしました：%1</translation>
+    </message>
+    <message>
+        <source>%1 must be an integer from 0 to 10000; using the default value.</source>
+        <translation>%1 は 0 から 10000 の整数で指定してください。既定値を使用します。</translation>
+    </message>
+    <message>
+        <source>Rename files: %1
+Link images: %2
+Remove pages: %3
+
+The displayed page order and pending targets will be saved together. The project is saved before and after applying changes. Undo history is cleared only on success.
+
+Continue?</source>
+        <translation>名前を変更するファイル：%1
+参照を設定する画像：%2
+削除するページ：%3
+
+表示中のページ順と保留先をまとめて保存します。適用前後にプロジェクトを保存し、成功した場合のみ元に戻す履歴を消去します。
+
+続行しますか？</translation>
+    </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="470"/>
         <source>&amp;New Project...</source>
@@ -1559,6 +1591,74 @@ Last error: %1</source>
 <context>
     <name>PageOrderDialog</name>
     <message>
+        <source>All pages</source>
+        <translation>すべてのページ</translation>
+    </message>
+    <message>
+        <source>Assign image</source>
+        <translation>画像を指定</translation>
+    </message>
+    <message>
+        <source>Assign image...</source>
+        <translation>画像を指定…</translation>
+    </message>
+    <message>
+        <source>Choose image</source>
+        <translation>画像を選択</translation>
+    </message>
+    <message>
+        <source>Clear all pending operations</source>
+        <translation>すべての保留操作を解除</translation>
+    </message>
+    <message>
+        <source>Clear selected pending operations</source>
+        <translation>選択ページの保留操作を解除</translation>
+    </message>
+    <message>
+        <source>Issues</source>
+        <translation>問題あり</translation>
+    </message>
+    <message>
+        <source>Match in folder</source>
+        <translation>フォルダー内で照合</translation>
+    </message>
+    <message>
+        <source>Match in folder...</source>
+        <translation>フォルダー内で照合…</translation>
+    </message>
+    <message>
+        <source>No matching images selected.</source>
+        <translation>対応する画像が選択されていません。</translation>
+    </message>
+    <message>
+        <source>Pending</source>
+        <translation>保留中</translation>
+    </message>
+    <message>
+        <source>Pending operations</source>
+        <translation>保留操作</translation>
+    </message>
+    <message>
+        <source>Pending: %1</source>
+        <translation>保留中：%1 ページ</translation>
+    </message>
+    <message>
+        <source>Redo draft edit</source>
+        <translation>下書き操作をやり直す</translation>
+    </message>
+    <message>
+        <source>Select one missing page.</source>
+        <translation>画像が見つからないページを1つ選択してください。</translation>
+    </message>
+    <message>
+        <source>Selected pages</source>
+        <translation>選択したページ</translation>
+    </message>
+    <message>
+        <source>Undo draft edit</source>
+        <translation>下書き操作を元に戻す</translation>
+    </message>
+    <message>
         <source>Images (%1);;All files (*)</source>
         <translation type="vanished">画像 (%1);;すべてのファイル (*)</translation>
     </message>
@@ -1603,6 +1703,18 @@ Last error: %1</source>
 </context>
 <context>
     <name>PageOrderListModel</name>
+    <message>
+        <source>Edit page draft</source>
+        <translation>ページの下書きを編集</translation>
+    </message>
+    <message>
+        <source>Input preview</source>
+        <translation>入力プレビュー</translation>
+    </message>
+    <message>
+        <source>Pending target</source>
+        <translation>適用予定の参照先</translation>
+    </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="247"/>
         <source>Current image</source>
@@ -1656,6 +1768,30 @@ Last error: %1</source>
 </context>
 <context>
     <name>PreferenceDialog</name>
+    <message>
+        <source>Search shortcuts conflict with other actions: %1</source>
+        <translation>検索ショートカットが他の操作と競合しています：%1</translation>
+    </message>
+    <message>
+        <source>Automatic backups per project</source>
+        <translation>プロジェクトごとの自動バックアップ上限</translation>
+    </message>
+    <message>
+        <source>Keep all</source>
+        <translation>すべて保持</translation>
+    </message>
+    <message>
+        <source>Find in project</source>
+        <translation>プロジェクト内を検索</translation>
+    </message>
+    <message>
+        <source>Next search match</source>
+        <translation>次の検索結果</translation>
+    </message>
+    <message>
+        <source>Previous search match</source>
+        <translation>前の検索結果</translation>
+    </message>
     <message>
         <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="121"/>
         <source>Preferences</source>
@@ -2137,6 +2273,10 @@ Last error: %1</source>
 <context>
     <name>ProjectImageRenameService</name>
     <message>
+        <source>Source image already exists.</source>
+        <translation>元画像はすでに存在します。</translation>
+    </message>
+    <message>
         <location filename="../src/services/project/ProjectImageRenameService.cpp" line="30"/>
         <source>Pattern cannot be empty.</source>
         <translation>パターンを空にすることはできません。</translation>
@@ -2316,6 +2456,42 @@ Last error: %1</source>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
+    <message>
+        <source>; Review: %1</source>
+        <translation>、確認状態：%1</translation>
+    </message>
+    <message>
+        <source>All review states</source>
+        <translation>すべての確認状態</translation>
+    </message>
+    <message>
+        <source>Changes: %1; reviewed: %2</source>
+        <translation>変更：%1 件、確認済み：%2 件</translation>
+    </message>
+    <message>
+        <source>Manual pair</source>
+        <translation>手動対応</translation>
+    </message>
+    <message>
+        <source>Needs confirmation</source>
+        <translation>要確認</translation>
+    </message>
+    <message>
+        <source>Review</source>
+        <translation>確認</translation>
+    </message>
+    <message>
+        <source>Review session not saved</source>
+        <translation>確認記録が保存されていません</translation>
+    </message>
+    <message>
+        <source>Reviewed</source>
+        <translation>確認済み</translation>
+    </message>
+    <message>
+        <source>Unseen</source>
+        <translation>未確認</translation>
+    </message>
     <message numerus="yes">
         <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="339"/>
         <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="590"/>
@@ -2639,6 +2815,10 @@ Last error: %1</source>
 <context>
     <name>FileRenameTransaction</name>
     <message>
+        <source>A source file cannot be verified.</source>
+        <translation>元ファイルを検証できません。</translation>
+    </message>
+    <message>
         <source>Unresolved rename record: %1. Recover the files before continuing.</source>
         <translation>未解決の名前変更記録：%1。ファイルを復旧してから続行してください。</translation>
     </message>
@@ -2656,6 +2836,447 @@ Last error: %1</source>
     <message>
         <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
         <translation>プロジェクトのメタデータが破損しているか、未対応の形式です。元のファイルは変更されていません。</translation>
+    </message>
+</context>
+<context>
+    <name>LabelEditController</name>
+    <message>
+        <source>The project changed. Refresh the replacement preview.</source>
+        <translation>プロジェクトが変更されました。置換プレビューを更新してください。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectComparisonService</name>
+    <message>
+        <source>A manual pair is stale, duplicated, or outside the matched pages.</source>
+        <translation>手動対応が古いか、重複しているか、対応ページの範囲外です。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectController</name>
+    <message>
+        <source>Open the original project before replacing it.</source>
+        <translation>置き換える前に元のプロジェクトを開いてください。</translation>
+    </message>
+    <message>
+        <source>The project was changed on disk.</source>
+        <translation>ディスク上のプロジェクトが変更されました。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryController</name>
+    <message>
+        <source>Backup and Recovery...</source>
+        <translation>バックアップと復元…</translation>
+    </message>
+    <message>
+        <source>Compare</source>
+        <translation>比較</translation>
+    </message>
+    <message>
+        <source>Current edits</source>
+        <translation>現在の編集内容</translation>
+    </message>
+    <message>
+        <source>Discard current unsaved edits and reload the project?</source>
+        <translation>未保存の編集を破棄してプロジェクトを再読み込みしますか？</translation>
+    </message>
+    <message>
+        <source>Disk version</source>
+        <translation>ディスク上の版</translation>
+    </message>
+    <message>
+        <source>File missing</source>
+        <translation>ファイルがありません</translation>
+    </message>
+    <message>
+        <source>Loaded/saved: %1
+Disk version: %2</source>
+        <translation>読み込み・保存時：%1
+ディスク上の版：%2</translation>
+    </message>
+    <message>
+        <source>Overwrite disk version</source>
+        <translation>ディスク上の版を上書き</translation>
+    </message>
+    <message>
+        <source>Overwrite disk version...</source>
+        <translation>ディスク上の版を上書き…</translation>
+    </message>
+    <message>
+        <source>Project changed on disk</source>
+        <translation>ディスク上のプロジェクトが変更されています</translation>
+    </message>
+    <message>
+        <source>Recovery available...</source>
+        <translation>復元可能な記録があります…</translation>
+    </message>
+    <message>
+        <source>Recovery canceled.</source>
+        <translation>復元をキャンセルしました。</translation>
+    </message>
+    <message>
+        <source>Reload disk version</source>
+        <translation>ディスク上の版を再読み込み</translation>
+    </message>
+    <message>
+        <source>Reload disk version...</source>
+        <translation>ディスク上の版を再読み込み…</translation>
+    </message>
+    <message>
+        <source>Replace the disk version with the current edits?</source>
+        <translation>現在の編集内容でディスク上の版を置き換えますか？</translation>
+    </message>
+    <message>
+        <source>Save current edits as...</source>
+        <translation>現在の編集内容を別名で保存…</translation>
+    </message>
+    <message>
+        <source>Save failed</source>
+        <translation>保存に失敗しました</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryDialog</name>
+    <message>
+        <source>Apply file recovery for %1? Files will only be moved if their contents can be verified.</source>
+        <translation>%1 のファイルを復元しますか？内容を検証できる場合のみファイルを移動します。</translation>
+    </message>
+    <message>
+        <source>Backup</source>
+        <translation>バックアップ</translation>
+    </message>
+    <message>
+        <source>Backup and Recovery</source>
+        <translation>バックアップと復元</translation>
+    </message>
+    <message>
+        <source>Choose project</source>
+        <translation>プロジェクトを選択</translation>
+    </message>
+    <message>
+        <source>Choose project...</source>
+        <translation>プロジェクトを選択…</translation>
+    </message>
+    <message>
+        <source>Complete file operation...</source>
+        <translation>ファイル操作を完了…</translation>
+    </message>
+    <message>
+        <source>File operations: %1</source>
+        <translation>ファイル操作：%1 件</translation>
+    </message>
+    <message>
+        <source>LabelPlus text (*.txt)</source>
+        <translation>LabelPlus プロジェクト (*.txt)</translation>
+    </message>
+    <message>
+        <source>No recovery records.</source>
+        <translation>復元記録はありません。</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>フォルダーを開く</translation>
+    </message>
+    <message>
+        <source>Pages: %1
+Missing images: %2</source>
+        <translation>ページ：%1
+見つからない画像：%2</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>プレビュー</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>プロジェクト：%1</translation>
+    </message>
+    <message>
+        <source>Recover as copy</source>
+        <translation>コピーとして復元</translation>
+    </message>
+    <message>
+        <source>Recover as copy...</source>
+        <translation>コピーとして復元…</translation>
+    </message>
+    <message>
+        <source>Recovered copy: %1</source>
+        <translation>復元したコピー：%1</translation>
+    </message>
+    <message>
+        <source>Replace current project</source>
+        <translation>現在のプロジェクトを置換</translation>
+    </message>
+    <message>
+        <source>Replace current project...</source>
+        <translation>現在のプロジェクトを置換…</translation>
+    </message>
+    <message>
+        <source>Replace the current project with this backup? The current project will be backed up first and undo history will be cleared.</source>
+        <translation>このバックアップで現在のプロジェクトを置き換えますか？先に現在の内容をバックアップし、成功後に元に戻す履歴を消去します。</translation>
+    </message>
+    <message>
+        <source>Restore original file names...</source>
+        <translation>元のファイル名に戻す…</translation>
+    </message>
+    <message>
+        <source>Saved project</source>
+        <translation>保存済みプロジェクト</translation>
+    </message>
+    <message>
+        <source>This older record is available for manual inspection only.</source>
+        <translation>この旧形式の記録は手動確認専用です。</translation>
+    </message>
+    <message>
+        <source>Unfinished file operation</source>
+        <translation>未完了のファイル操作</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryService</name>
+    <message>
+        <source>Files recovered, but the recovery record could not be removed.</source>
+        <translation>ファイルは復元されましたが、復元記録を削除できませんでした。</translation>
+    </message>
+    <message>
+        <source>Recovery is ambiguous or files have changed. No automatic recovery is possible.</source>
+        <translation>ファイルの対応が不明確か、内容が変更されています。自動復元はできません。</translation>
+    </message>
+    <message>
+        <source>Recovery stopped. Keep the recovery record and temporary files.</source>
+        <translation>復元を停止しました。復元記録と一時ファイルを保持してください。</translation>
+    </message>
+    <message>
+        <source>Choose a new file for the recovered copy.</source>
+        <translation>復元コピーには既存でないファイル名を指定してください。</translation>
+    </message>
+    <message>
+        <source>The backup cannot be verified.</source>
+        <translation>バックアップを検証できません。</translation>
+    </message>
+    <message>
+        <source>This record requires file recovery.</source>
+        <translation>この記録にはファイルの復元が必要です。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectSearchPanel</name>
+    <message>
+        <source>After</source>
+        <translation>置換後</translation>
+    </message>
+    <message>
+        <source>All groups</source>
+        <translation>すべてのグループ</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>適用</translation>
+    </message>
+    <message>
+        <source>Before</source>
+        <translation>置換前</translation>
+    </message>
+    <message>
+        <source>Close search</source>
+        <translation>検索を閉じる</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>現在のページ</translation>
+    </message>
+    <message>
+        <source>Find in project...</source>
+        <translation>プロジェクト内を検索…</translation>
+    </message>
+    <message>
+        <source>Find text</source>
+        <translation>検索するテキスト</translation>
+    </message>
+    <message>
+        <source>First page</source>
+        <translation>開始ページ</translation>
+    </message>
+    <message>
+        <source>Groups: %1</source>
+        <translation>グループ：%1</translation>
+    </message>
+    <message>
+        <source>Last page</source>
+        <translation>終了ページ</translation>
+    </message>
+    <message>
+        <source>Match case</source>
+        <translation>大文字と小文字を区別</translation>
+    </message>
+    <message>
+        <source>Matches: %1</source>
+        <translation>一致：%1 件</translation>
+    </message>
+    <message>
+        <source>Next match</source>
+        <translation>次の一致</translation>
+    </message>
+    <message>
+        <source>Next search match</source>
+        <translation>次の検索結果</translation>
+    </message>
+    <message>
+        <source>No groups</source>
+        <translation>グループ未選択</translation>
+    </message>
+    <message>
+        <source>Page / label</source>
+        <translation>ページ / ラベル</translation>
+    </message>
+    <message>
+        <source>Page range</source>
+        <translation>ページ範囲</translation>
+    </message>
+    <message>
+        <source>Preview replacements...</source>
+        <translation>一括置換をプレビュー…</translation>
+    </message>
+    <message>
+        <source>Previous match</source>
+        <translation>前の一致</translation>
+    </message>
+    <message>
+        <source>Previous search match</source>
+        <translation>前の検索結果</translation>
+    </message>
+    <message>
+        <source>Replace</source>
+        <translation>置換</translation>
+    </message>
+    <message>
+        <source>Replace match</source>
+        <translation>現在の一致を置換</translation>
+    </message>
+    <message>
+        <source>Replace project text</source>
+        <translation>プロジェクトのテキストを置換</translation>
+    </message>
+    <message>
+        <source>Replacement preview</source>
+        <translation>置換プレビュー</translation>
+    </message>
+    <message>
+        <source>Replacement text</source>
+        <translation>置換後のテキスト</translation>
+    </message>
+    <message>
+        <source>Selected matches: %1; labels to change: %2</source>
+        <translation>選択した一致：%1 件、変更するラベル：%2 個</translation>
+    </message>
+    <message>
+        <source>Whole project</source>
+        <translation>プロジェクト全体</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectTextSearchModel</name>
+    <message>
+        <source>Page</source>
+        <translation>ページ</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>テキスト</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadReviewPanel</name>
+    <message>
+        <source>Change fingerprint</source>
+        <translation>変更の識別子</translation>
+    </message>
+    <message>
+        <source>Previous notes</source>
+        <translation>以前の注記</translation>
+    </message>
+    <message>
+        <source>Previous notes...</source>
+        <translation>以前の注記…</translation>
+    </message>
+    <message>
+        <source>Apply note</source>
+        <translation>注記を保存</translation>
+    </message>
+    <message>
+        <source>Edit review session</source>
+        <translation>確認記録を編集</translation>
+    </message>
+    <message>
+        <source>Manual pair</source>
+        <translation>手動対応</translation>
+    </message>
+    <message>
+        <source>Needs confirmation</source>
+        <translation>要確認</translation>
+    </message>
+    <message>
+        <source>Next unseen</source>
+        <translation>次の未確認</translation>
+    </message>
+    <message>
+        <source>No unmatched labels on the other side of this page.</source>
+        <translation>このページの反対側に未対応のラベルはありません。</translation>
+    </message>
+    <message>
+        <source>Other-side label</source>
+        <translation>反対側のラベル</translation>
+    </message>
+    <message>
+        <source>Pair with...</source>
+        <translation>反対側と対応付け…</translation>
+    </message>
+    <message>
+        <source>Redo review edit</source>
+        <translation>確認操作をやり直す</translation>
+    </message>
+    <message>
+        <source>Remove manual pair</source>
+        <translation>手動対応を解除</translation>
+    </message>
+    <message>
+        <source>Review note</source>
+        <translation>確認の注記</translation>
+    </message>
+    <message>
+        <source>Reviewed</source>
+        <translation>確認済み</translation>
+    </message>
+    <message>
+        <source>Select one added or deleted change.</source>
+        <translation>追加または削除の変更を1件選択してください。</translation>
+    </message>
+    <message>
+        <source>Set status for selected changes</source>
+        <translation>選択した変更の確認状態を設定</translation>
+    </message>
+    <message>
+        <source>Undo review edit</source>
+        <translation>確認操作を元に戻す</translation>
+    </message>
+    <message>
+        <source>Unseen</source>
+        <translation>未確認</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadingController</name>
+    <message>
+        <source>Edit review session</source>
+        <translation>確認記録を編集</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewSessionService</name>
+    <message>
+        <source>Unsupported or damaged review session.</source>
+        <translation>確認記録が破損しているか、未対応の形式です。</translation>
     </message>
 </context>
 </TS>

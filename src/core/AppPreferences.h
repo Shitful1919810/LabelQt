@@ -63,9 +63,14 @@ enum class AppPreferenceWarningType {
     EditLabelTextShortcutInvalid,
     CommitLabelTextShortcutInvalid,
     DeleteLabelShortcutInvalid,
+    FindProjectShortcutInvalid,
+    NextSearchMatchShortcutInvalid,
+    PreviousSearchMatchShortcutInvalid,
     BackupPathWrongType,
     BackupIntervalWrongType,
     BackupIntervalOutOfRange,
+    BackupRetentionInvalid,
+    SearchShortcutConflict,
     AppearanceNotObject,
     AppearanceStyleWrongType,
     AppearanceThemeWrongType,
@@ -142,8 +147,12 @@ struct AppPreferencesValues {
     QKeySequence editLabelTextShortcut{QStringLiteral("Return")};
     QKeySequence commitLabelTextShortcut{QStringLiteral("Ctrl+Return")};
     QKeySequence deleteLabelShortcut{QStringLiteral("Del")};
+    QKeySequence findProjectShortcut{QStringLiteral("Ctrl+F")};
+    QKeySequence nextSearchMatchShortcut{QStringLiteral("F3")};
+    QKeySequence previousSearchMatchShortcut{QStringLiteral("Shift+F3")};
     QString backupPath{QStringLiteral("bak")};
     int backupIntervalSeconds{60};
+    int backupMaximumCount{0};
     QVector<LabelGroupStyle> groupStyles{defaultLabelGroupStyles()};
 };
 
@@ -193,8 +202,13 @@ public:
     QKeySequence editLabelTextShortcut() const;
     QKeySequence commitLabelTextShortcut() const;
     QKeySequence deleteLabelShortcut() const;
+    QKeySequence findProjectShortcut() const;
+    QKeySequence nextSearchMatchShortcut() const;
+    QKeySequence previousSearchMatchShortcut() const;
+    QStringList conflictingSearchShortcuts() const;
     QString backupPath() const;
     int backupIntervalSeconds() const noexcept;
+    int backupMaximumCount() const noexcept;
     const QVector<LabelGroupStyle>& groupStyles() const noexcept;
 
 private:
@@ -234,8 +248,12 @@ private:
     QKeySequence m_editLabelTextShortcut{QStringLiteral("Return")};
     QKeySequence m_commitLabelTextShortcut{QStringLiteral("Ctrl+Return")};
     QKeySequence m_deleteLabelShortcut{QStringLiteral("Del")};
+    QKeySequence m_findProjectShortcut{QStringLiteral("Ctrl+F")};
+    QKeySequence m_nextSearchMatchShortcut{QStringLiteral("F3")};
+    QKeySequence m_previousSearchMatchShortcut{QStringLiteral("Shift+F3")};
     QString m_backupPath{QStringLiteral("bak")};
     int m_backupIntervalSeconds{60};
+    int m_backupMaximumCount{0};
     QVector<LabelGroupStyle> m_groupStyles{defaultLabelGroupStyles()};
 };
 

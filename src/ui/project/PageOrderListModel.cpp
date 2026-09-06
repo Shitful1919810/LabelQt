@@ -16,17 +16,13 @@ const char* pageOrderMimeType = "application/x-labelqt-page-order-rows";
 }
 
 PageOrderListModel::PageOrderListModel(const labelqt::core::Project& project, QObject* parent)
-    : QAbstractTableModel(parent), m_project(project)
+    : QAbstractTableModel(parent), m_draft(project)
 {
-    m_order.reserve(project.images().size());
-    for (int i = 0; i < project.images().size(); ++i) {
-        m_order.append(i);
-    }
 }
 
 QVector<int> PageOrderListModel::pageOrder() const
 {
-    return m_order;
+    return m_draft.order();
 }
 
 QVector<int> PageOrderListModel::lastMovedSourceIndexes() const
@@ -36,24 +32,24 @@ QVector<int> PageOrderListModel::lastMovedSourceIndexes() const
 
 int PageOrderListModel::sourceIndexForRow(int row) const
 {
-    if (row < 0 || row >= m_order.size()) {
+    if (row < 0 || row >= m_draft.order().size()) {
         return -1;
     }
-    return m_order.at(row);
+    return m_draft.order().at(row);
 }
 
 int PageOrderListModel::rowForSourceIndex(int sourceIndex) const
 {
-    return static_cast<int>(m_order.indexOf(sourceIndex));
+    return static_cast<int>(m_draft.order().indexOf(sourceIndex));
 }
 
 void PageOrderListModel::refreshAllRows()
 {
-    if (m_order.isEmpty()) {
+    if (m_draft.order().isEmpty()) {
         return;
     }
 
-    emit dataChanged(index(0, 0), index(static_cast<int>(m_order.size()) - 1, ColumnCount - 1),
+    emit dataChanged(index(0, 0), index(static_cast<int>(m_draft.order().size()) - 1, ColumnCount - 1),
                      {Qt::DisplayRole, Qt::ToolTipRole});
 }
 
@@ -70,22 +66,54 @@ void PageOrderListModel::setRenamePlan(const labelqt::services::ProjectImageRena
 
 void PageOrderListModel::setPendingRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan)
 {
-    m_pendingRenameItemsBySourceIndex.clear();
-    for (const labelqt::services::ProjectImageRenameItem& item : plan.items) {
-        if (item.imageIndex >= 0) {
-            m_pendingRenameItemsBySourceIndex.insert(item.imageIndex, item);
-        }
-    }
+    const auto before = m_draft.state();
+    if (m_draft.queue(plan))
+        rememberChange(before);
     refreshAllRows();
+    if (before != m_draft.state())
+        emit draftChanged();
 }
 
 void PageOrderListModel::clearPendingRenamePlan()
 {
-    if (m_pendingRenameItemsBySourceIndex.isEmpty()) {
-        return;
-    }
-    m_pendingRenameItemsBySourceIndex.clear();
+    clearPendingSourceIndexes(m_draft.order());
+}
+
+void PageOrderListModel::clearPendingSourceIndexes(const QVector<int>& indexes)
+{
+    const auto before = m_draft.state();
+    m_draft.clearPending(indexes);
+    rememberChange(before);
     refreshAllRows();
+    if (before != m_draft.state())
+        emit draftChanged();
+}
+
+const labelqt::services::PageManagementDraft& PageOrderListModel::draft() const
+{
+    return m_draft;
+}
+labelqt::core::UndoStack& PageOrderListModel::undoStack()
+{
+    return m_undo;
+}
+
+void PageOrderListModel::restoreDraft(labelqt::services::PageManagementDraft::State state)
+{
+    beginResetModel();
+    m_draft.restore(std::move(state));
+    endResetModel();
+    emit draftChanged();
+}
+
+void PageOrderListModel::rememberChange(labelqt::services::PageManagementDraft::State before)
+{
+    const auto after = m_draft.state();
+    if (before == after)
+        return;
+    m_undo.push(
+        QCoreApplication::translate("PageOrderListModel", "Edit page draft"), [this, before] { restoreDraft(before); },
+        [this, after] { restoreDraft(after); });
 }
 
 void PageOrderListModel::moveSourceIndexes(QVector<int> sourceIndexes, int delta)
@@ -97,7 +125,7 @@ void PageOrderListModel::moveSourceIndexes(QVector<int> sourceIndexes, int delta
     QSet<int> selectedSourceIndexes;
     selectedSourceIndexes.reserve(sourceIndexes.size());
     for (int sourceIndex : std::as_const(sourceIndexes)) {
-        if (m_order.contains(sourceIndex)) {
+        if (m_draft.order().contains(sourceIndex)) {
             selectedSourceIndexes.insert(sourceIndex);
         }
     }
@@ -105,7 +133,7 @@ void PageOrderListModel::moveSourceIndexes(QVector<int> sourceIndexes, int delta
         return;
     }
 
-    QVector<int> reordered = m_order;
+    QVector<int> reordered = m_draft.order();
     if (delta < 0) {
         for (int i = 1; i < reordered.size(); ++i) {
             if (selectedSourceIndexes.contains(reordered.at(i)) &&
@@ -139,8 +167,8 @@ void PageOrderListModel::removeSourceIndexes(QVector<int> sourceIndexes)
     }
 
     QVector<int> reordered;
-    reordered.reserve(m_order.size());
-    for (int sourceIndex : std::as_const(m_order)) {
+    reordered.reserve(m_draft.order().size());
+    for (int sourceIndex : std::as_const(m_draft.order())) {
         if (!selectedSourceIndexes.contains(sourceIndex)) {
             reordered.append(sourceIndex);
         }
@@ -148,7 +176,7 @@ void PageOrderListModel::removeSourceIndexes(QVector<int> sourceIndexes)
 
     QVector<int> nextSelection;
     if (!reordered.isEmpty()) {
-        int firstRemovedRow = static_cast<int>(m_order.size());
+        int firstRemovedRow = static_cast<int>(m_draft.order().size());
         for (int sourceIndex : std::as_const(sourceIndexes)) {
             const int row = rowForSourceIndex(sourceIndex);
             if (row >= 0) {
@@ -162,7 +190,7 @@ void PageOrderListModel::removeSourceIndexes(QVector<int> sourceIndexes)
 
 int PageOrderListModel::rowCount(const QModelIndex& parent) const
 {
-    return parent.isValid() ? 0 : static_cast<int>(m_order.size());
+    return parent.isValid() ? 0 : static_cast<int>(m_draft.order().size());
 }
 
 int PageOrderListModel::columnCount(const QModelIndex& parent) const
@@ -172,21 +200,20 @@ int PageOrderListModel::columnCount(const QModelIndex& parent) const
 
 QVariant PageOrderListModel::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid() || index.row() < 0 || index.row() >= m_order.size() || index.column() < 0 ||
+    if (!index.isValid() || index.row() < 0 || index.row() >= m_draft.order().size() || index.column() < 0 ||
         index.column() >= ColumnCount) {
         return {};
     }
 
-    const int sourceIndex = m_order.at(index.row());
-    if (sourceIndex < 0 || sourceIndex >= m_project.images().size()) {
+    const int sourceIndex = m_draft.order().at(index.row());
+    if (sourceIndex < 0 || sourceIndex >= m_draft.project().images().size()) {
         return {};
     }
 
-    const labelqt::core::ImageEntry& image = m_project.images().at(sourceIndex);
+    const labelqt::core::ImageEntry& image = m_draft.project().images().at(sourceIndex);
     const QString pageName = image.name.isEmpty() ? image.path : image.name;
     const labelqt::services::ProjectImageRenameItem renameItem = m_renameItemsBySourceIndex.value(sourceIndex);
-    const labelqt::services::ProjectImageRenameItem pendingRenameItem =
-        m_pendingRenameItemsBySourceIndex.value(sourceIndex);
+    const labelqt::services::ProjectImageRenameItem pendingRenameItem = m_draft.pendingItem(sourceIndex);
     const bool imageMissing = !QFileInfo::exists(image.path);
     switch (role) {
     case Qt::DisplayRole:
@@ -246,9 +273,9 @@ QVariant PageOrderListModel::headerData(int section, Qt::Orientation orientation
     case ImageNameColumn:
         return QCoreApplication::translate("PageOrderListModel", "Current image");
     case RenamePreviewColumn:
-        return QCoreApplication::translate("PageOrderListModel", "Target image");
+        return QCoreApplication::translate("PageOrderListModel", "Pending target");
     case RenameStatusColumn:
-        return QCoreApplication::translate("PageOrderListModel", "Image action");
+        return QCoreApplication::translate("PageOrderListModel", "Input preview");
     case OriginalIndexColumn:
         return QCoreApplication::translate("PageOrderListModel", "Original #");
     default:
@@ -305,9 +332,10 @@ bool PageOrderListModel::dropMimeData(const QMimeData* data, Qt::DropAction acti
     stream >> sourceRows;
     std::sort(sourceRows.begin(), sourceRows.end());
     sourceRows.erase(std::unique(sourceRows.begin(), sourceRows.end()), sourceRows.end());
-    sourceRows.erase(std::remove_if(sourceRows.begin(), sourceRows.end(),
-                                    [this](int sourceRow) { return sourceRow < 0 || sourceRow >= m_order.size(); }),
-                     sourceRows.end());
+    sourceRows.erase(
+        std::remove_if(sourceRows.begin(), sourceRows.end(),
+                       [this](int sourceRow) { return sourceRow < 0 || sourceRow >= m_draft.order().size(); }),
+        sourceRows.end());
     if (sourceRows.isEmpty()) {
         return false;
     }
@@ -317,16 +345,16 @@ bool PageOrderListModel::dropMimeData(const QMimeData* data, Qt::DropAction acti
         destinationRow = parent.row();
     }
     if (destinationRow < 0) {
-        destinationRow = static_cast<int>(m_order.size());
+        destinationRow = static_cast<int>(m_draft.order().size());
     }
-    destinationRow = std::clamp(destinationRow, 0, static_cast<int>(m_order.size()));
+    destinationRow = std::clamp(destinationRow, 0, static_cast<int>(m_draft.order().size()));
 
     QVector<int> movingPages;
     movingPages.reserve(sourceRows.size());
     QSet<int> sourceRowSet;
     sourceRowSet.reserve(sourceRows.size());
     for (int sourceRow : sourceRows) {
-        movingPages.append(m_order.at(sourceRow));
+        movingPages.append(m_draft.order().at(sourceRow));
         sourceRowSet.insert(sourceRow);
     }
 
@@ -338,10 +366,10 @@ bool PageOrderListModel::dropMimeData(const QMimeData* data, Qt::DropAction acti
     }
 
     QVector<int> reordered;
-    reordered.reserve(m_order.size());
-    for (int i = 0; i < m_order.size(); ++i) {
+    reordered.reserve(m_draft.order().size());
+    for (int i = 0; i < m_draft.order().size(); ++i) {
         if (!sourceRowSet.contains(i)) {
-            reordered.append(m_order.at(i));
+            reordered.append(m_draft.order().at(i));
         }
     }
 
@@ -350,7 +378,7 @@ bool PageOrderListModel::dropMimeData(const QMimeData* data, Qt::DropAction acti
         reordered.insert(adjustedDestinationRow + i, movingPages.at(i));
     }
 
-    if (reordered == m_order) {
+    if (reordered == m_draft.order()) {
         return false;
     }
 
@@ -365,12 +393,15 @@ Qt::DropActions PageOrderListModel::supportedDropActions() const
 
 void PageOrderListModel::resetOrder(QVector<int> order, QVector<int> selectedSourceIndexes)
 {
-    if (order == m_order) {
+    if (order == m_draft.order()) {
         return;
     }
 
     m_lastMovedSourceIndexes = std::move(selectedSourceIndexes);
     beginResetModel();
-    m_order = std::move(order);
+    const auto before = m_draft.state();
+    m_draft.setOrder(std::move(order));
     endResetModel();
+    rememberChange(before);
+    emit draftChanged();
 }

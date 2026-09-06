@@ -17,12 +17,18 @@ add_library(LabelQtTestSupport STATIC
     ../src/services/automation/AutomationService.cpp
     ../src/services/automation/SecretStore.cpp
     ../src/services/io/FileRenameTransaction.cpp
+    ../src/services/io/FileRevision.cpp
     ../src/services/label/LabelClipboardService.cpp
     ../src/services/label/LabelEditController.cpp
+    ../src/services/label/ProjectTextSearchService.cpp
+    ../src/ui/search/ProjectTextSearchModel.cpp
     ../src/services/label/LabelNavigator.cpp
     ../src/services/label/LabelPastePlanner.cpp
     ../src/services/project/PageSourceInfoService.cpp
     ../src/services/project/ProjectController.cpp
+    ../src/services/project/ProjectLocationService.cpp
+    ../src/services/project/PageManagementDraft.cpp
+    ../src/services/project/ProjectRecoveryService.cpp
     ../src/services/project/ProjectImageRenameService.cpp
     ../src/services/project/ProjectImageValidator.cpp
     ../src/services/project/ProjectMergeService.cpp
@@ -35,6 +41,7 @@ add_library(LabelQtTestSupport STATIC
     ../src/services/proofread/ProofreadReportService.cpp
     ../src/services/proofread/ReviewChangeClassifier.cpp
     ../src/services/proofread/ReviewMetadataService.cpp
+    ../src/services/proofread/ReviewSessionService.cpp
     ../src/services/proofread/TextDiffHtmlRenderer.cpp
     ../src/services/proofread/TextDiffService.cpp
     ../src/ui/canvas/CanvasLabelItems.cpp
@@ -47,6 +54,17 @@ add_library(LabelQtTestSupport STATIC
     ../src/ui/labeltable/LabelTableModel.cpp
     ../src/ui/labeltable/LabelTableView.cpp
     ../src/ui/project/PageOrderListModel.cpp
+    ../src/ui/project/PageOrderDialog.cpp
+    ../src/ui/project/ImageRenamePreviewWidget.cpp
+    ../src/ui/project/ProjectRecoveryDialog.cpp
+    ../src/ui/search/ProjectSearchPanel.cpp
+    ../src/ui/proofread/ProofreadChangesDialog.cpp
+    ../src/ui/proofread/ProofreadReviewPanel.cpp
+    ../src/ui/proofread/ProofreadChangeTableModel.cpp
+    ../src/ui/labeltable/ViewportFittedTableColumns.cpp
+    ../src/ui/widgets/DialogWindowUtils.cpp
+    ../src/ui/widgets/BusyTaskDialog.cpp
+    ../src/ui/widgets/CheckableFilterButton.cpp
     ../src/ui/automation/AutomationRunDialog.cpp
 )
 
@@ -62,6 +80,7 @@ target_link_libraries(LabelQtTestSupport
         Qt6::Gui
         Qt6::Test
         Qt6::Widgets
+        Qt6::Concurrent
         Qt6Keychain::Qt6Keychain
 )
 
@@ -76,6 +95,12 @@ target_link_libraries(PersistenceSafetyTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(PersistenceSafetyTests)
 add_test(NAME PersistenceSafetyTests COMMAND $<TARGET_FILE:PersistenceSafetyTests>)
 set_tests_properties(PersistenceSafetyTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(ProductWorkflowTests ProductWorkflowTests.cpp)
+target_link_libraries(ProductWorkflowTests PRIVATE LabelQtTestSupport)
+labelqt_enable_warnings(ProductWorkflowTests)
+add_test(NAME ProductWorkflowTests COMMAND $<TARGET_FILE:ProductWorkflowTests>)
+set_tests_properties(ProductWorkflowTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_test(NAME LabelQtTests COMMAND $<TARGET_FILE:LabelQtTests>)
 set_tests_properties(LabelQtTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

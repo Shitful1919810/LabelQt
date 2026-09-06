@@ -3,6 +3,8 @@
 #include "core/Label.h"
 #include "core/Project.h"
 #include "core/UndoStack.h"
+#include "services/label/ProjectTextSearchService.h"
+#include <expected>
 
 #include <QPointF>
 #include <QString>
@@ -70,9 +72,13 @@ public:
                                       bool registerUndo = true);
     void registerLabelTextUndo(int imageIndex, int labelIndex, const QString& oldText, const QString& newText);
     void registerLabelGroupUndo(int imageIndex, int labelIndex, const QString& oldGroup, const QString& newGroup);
+    std::expected<bool, QString> replaceTexts(const QByteArray& revision, QVector<LabelTextReplacement> edits,
+                                              const QString& commandText);
 
 private:
     void applyLabelText(int imageIndex, int labelIndex, const QString& text);
+    bool writeLabelText(int imageIndex, int labelIndex, const QString& text);
+    void applyTextReplacements(const QVector<LabelTextReplacement>& edits, bool forward);
     void applyLabelGroup(int imageIndex, int labelIndex, const QString& group);
     void applyLabelPosition(int imageIndex, int labelIndex, QPointF normalizedPosition);
     void applyBatchLabelPositions(int imageIndex, QVector<int> labelIndexes, QVector<QPointF> normalizedPositions);

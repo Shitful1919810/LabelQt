@@ -2995,6 +2995,9 @@ private slots:
             .order = QStringLiteral("顺序"),
             .noTextChange = QStringLiteral("文本未变化"),
             .filter = QStringLiteral("筛选"),
+            .review = {},
+            .manualPair = {},
+            .reviewStates = {},
         };
 
         const QString html = labelqt::services::ProofreadReportService::htmlReport(

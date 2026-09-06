@@ -29,6 +29,19 @@ void GroupFilterComboBox::setGroups(const QStringList& groups, QVector<labelqt::
     updateButtonText();
 }
 
+void GroupFilterComboBox::setSelectedGroups(const QStringList& groups)
+{
+    QSet<QString> selected;
+    for (const auto& group : groups)
+        if (m_groups.contains(group))
+            selected.insert(group);
+    if (selected == m_selectedGroups)
+        return;
+    m_selectedGroups = std::move(selected);
+    refreshMenuChecks();
+    emitSelectionChanged();
+}
+
 QStringList GroupFilterComboBox::selectedGroups() const
 {
     QStringList groups;

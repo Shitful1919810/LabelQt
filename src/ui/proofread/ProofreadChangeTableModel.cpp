@@ -34,6 +34,11 @@ QVariant ProofreadChangeTableModel::data(const QModelIndex& index, int role) con
     }
 
     const auto& change = m_changes.at(index.row());
+    const auto annotation = m_annotations.value(index.row());
+    if (role == ReviewStatusRole)
+        return static_cast<int>(annotation.status);
+    if (role == Qt::ToolTipRole && change.manuallyMatched && index.column() == KindColumn)
+        return m_manualPairText;
     const int sortNumber = change.labelIndex < 0 ? std::numeric_limits<int>::max() : change.labelIndex;
     if (role == ChangeIndexRole)
         return index.row();
@@ -53,6 +58,15 @@ QVariant ProofreadChangeTableModel::data(const QModelIndex& index, int role) con
         break;
     case SummaryColumn:
         text = summaryText(change);
+        break;
+    case ReviewColumn:
+        text = m_statusNames.value(static_cast<int>(annotation.status));
+        if (role == Qt::DisplayRole)
+            return annotation.status == labelqt::services::ReviewStatus::Reviewed            ? QString(QChar(0x2713))
+                   : annotation.status == labelqt::services::ReviewStatus::NeedsConfirmation ? QStringLiteral("?")
+                                                                                             : QString(QChar(0x25cb));
+        if (role == Qt::ToolTipRole && !annotation.note.isEmpty())
+            text += QLatin1Char('\n') + annotation.note;
         break;
     default:
         return {};
@@ -82,6 +96,24 @@ const QVector<labelqt::services::ReviewChange>& ProofreadChangeTableModel::chang
     return m_changes;
 }
 
+void ProofreadChangeTableModel::setChanges(QVector<labelqt::services::ReviewChange> changes)
+{
+    beginResetModel();
+    m_changes = std::move(changes);
+    m_annotations.clear();
+    endResetModel();
+}
+
+void ProofreadChangeTableModel::setReviewAnnotations(QVector<labelqt::services::ReviewAnnotation> annotations,
+                                                     QStringList statusNames, QString manualPairText)
+{
+    m_annotations = std::move(annotations);
+    m_statusNames = std::move(statusNames);
+    m_manualPairText = std::move(manualPairText);
+    if (!m_changes.isEmpty())
+        emit dataChanged(index(0, 0), index(rowCount() - 1, ColumnCount - 1));
+}
+
 QString ProofreadChangeTableModel::kindText(labelqt::services::ReviewChangeKind kind) const
 {
     switch (kind) {
@@ -100,6 +132,8 @@ QString ProofreadChangeTableModel::summaryText(const labelqt::services::ReviewCh
     if (change.kind != labelqt::services::ReviewChangeKind::Modified)
         return kindText(change.kind);
     QStringList parts;
+    if (change.manuallyMatched)
+        parts.append(m_manualPairText);
     for (const auto facet : labelqt::services::ReviewChangeClassifier::facets(change)) {
         parts.append(m_texts.facets.value(facet));
     }
@@ -134,6 +168,9 @@ bool ProofreadChangeFilterModel::filterAcceptsRow(int sourceRow, const QModelInd
     const auto* model = qobject_cast<const ProofreadChangeTableModel*>(sourceModel());
     if (model == nullptr)
         return false;
+    if (m_reviewStatus >= 0 &&
+        model->index(sourceRow, 0).data(ProofreadChangeTableModel::ReviewStatusRole).toInt() != m_reviewStatus)
+        return false;
     const auto* change = model->changeAt(sourceRow);
     if (change == nullptr || !m_pages.contains(pageName(*change)) ||
         !m_kinds.contains(labelqt::services::ReviewChangeClassifier::kindKey(change->kind))) {
@@ -144,6 +181,19 @@ bool ProofreadChangeFilterModel::filterAcceptsRow(int sourceRow, const QModelInd
     return std::ranges::any_of(labelqt::services::ReviewChangeClassifier::facets(*change), [this](auto facet) {
         return m_facets.contains(labelqt::services::ReviewChangeClassifier::facetKey(facet));
     });
+}
+
+void ProofreadChangeFilterModel::setReviewStatusFilter(int status)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    beginFilterChange();
+#endif
+    m_reviewStatus = status;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    endFilterChange();
+#else
+    invalidateFilter();
+#endif
 }
 
 bool ProofreadChangeFilterModel::lessThan(const QModelIndex& left, const QModelIndex& right) const

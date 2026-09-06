@@ -23,6 +23,10 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 - 鼠标悬停在图像 marker 上时显示标签文本提示。
 - 提供撤销/重做能力，覆盖新增、删除、移动、文本编辑、类别修改、标签排序和页面排序等工程编辑操作。
 - 支持按间隔自动备份已修改的 LabelPlus 文本工程。
+- 提供备份与恢复入口、外部保存冲突处理，以及带文件内容校验的重命名恢复。
+- 页面管理支持累计待处理目标、局部撤销、范围与问题筛选，以及直接指定缺失图片。
+- 支持工程全文查找、分组和页码范围、替换预览与整批撤销。
+- 校对支持审阅状态、批注、人工配对与筛选后报告导出。具体操作与首版限制见 [工作流说明](docs/product-workflows.md)。
 - 支持通过“自动化”菜单运行外部 Python 自动化脚本，当前内置测试脚本、OCR 与 AI 翻译脚本，并提供脚本开发 SDK。
 - 偏好设置窗口支持通过系统字体选择器分别调整标签列表和大文本编辑框字体。
 - 支持通过偏好设置启用内置 Breeze 风格 QSS 主题。
@@ -417,6 +421,8 @@ cmake --build --preset windows-vs-release --target deploy_windows
 - `input.redoShortcut`：重做快捷键，使用 Qt portable key sequence 文本格式，默认 `Ctrl+Y`，可改为 `Ctrl+Shift+Z` 等组合键。
 - `backupPath`：自动备份目录，默认 `bak`。相对路径会解析到当前工程文件所在目录下，绝对路径会直接使用。
 - `backupIntervalSeconds`：自动备份检查间隔，单位为秒，默认 60。
+- `backupMaximumCount`：每工程自动备份上限，0 表示全部保留；不清理手工备份或未解决事务材料。
+- `input.findProjectShortcut`、`input.nextSearchMatchShortcut`、`input.previousSearchMatchShortcut`：工程查找、下一匹配、上一匹配，默认 `Ctrl+F`、`F3`、`Shift+F3`。
 - `groupStyles`：按分组顺序应用的分组样式数组。
 
 当有工程打开且存在未保存修改时，程序会按 `backupIntervalSeconds` 检查是否需要备份。每次备份会在 `backupPath` 中生成一份 LabelPlus 文本工程副本，文件名由当前工程文件名和时间戳组成。

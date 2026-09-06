@@ -1,6 +1,7 @@
 #include "services/io/FileRenameTransaction.h"
 
 #include "core/AtomicFileWriter.h"
+#include "services/io/FileRevision.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -68,13 +69,23 @@ std::expected<void, QString> FileRenameTransaction::apply()
             return recovered;
         QJsonArray moves;
         for (const Step& step : std::as_const(m_steps)) {
+            const auto revision = FileRevision::read(step.move.source);
+            if (!revision || !revision->exists)
+                return std::unexpected(
+                    QCoreApplication::translate("FileRenameTransaction", "A source file cannot be verified."));
             moves.append(QJsonObject{{QStringLiteral("source"), step.move.source},
                                      {QStringLiteral("temporary"), step.temporary},
-                                     {QStringLiteral("target"), step.move.target}});
+                                     {QStringLiteral("target"), step.move.target},
+                                     {QStringLiteral("sha256"), QString::fromLatin1(revision->sha256.toHex())}});
         }
         const auto written = labelqt::core::AtomicFileWriter::write(
             m_recoveryPath,
-            QJsonDocument(QJsonObject{{QStringLiteral("version"), 1}, {QStringLiteral("moves"), moves}}).toJson());
+            QJsonDocument(QJsonObject{{QStringLiteral("version"), 2},
+                                      {QStringLiteral("moves"), moves},
+                                      {QStringLiteral("project"), m_projectPath},
+                                      {QStringLiteral("before"), QString::fromLatin1(m_projectBefore.toBase64())},
+                                      {QStringLiteral("after"), QString::fromLatin1(m_projectAfter.toBase64())}})
+                .toJson());
         if (!written)
             return written;
     }
@@ -134,6 +145,13 @@ void FileRenameTransaction::commit()
 QString FileRenameTransaction::recoveryPath() const
 {
     return m_recoveryPath;
+}
+
+void FileRenameTransaction::setProjectCommit(QString path, QByteArray before, QByteArray after)
+{
+    m_projectPath = std::move(path);
+    m_projectBefore = std::move(before);
+    m_projectAfter = std::move(after);
 }
 
 std::expected<void, QString> FileRenameTransaction::checkRecoveryDirectory(const QString& directory)

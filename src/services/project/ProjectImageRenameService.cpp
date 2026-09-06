@@ -1,7 +1,9 @@
 #include "services/project/ProjectImageRenameService.h"
+#include "core/LabelPlusDocument.h"
 
 #include "services/io/FileRenameTransaction.h"
 #include "services/project/PageSourceInfoService.h"
+#include "services/project/ProjectPageOrderService.h"
 #include "services/proofread/ReviewMetadataService.h"
 
 #include <QCoreApplication>
@@ -29,6 +31,7 @@ QString serviceText(const char* text)
 }
 
 [[maybe_unused]] constexpr const char* projectImageRenameServiceTranslationSources[] = {
+    QT_TRANSLATE_NOOP("ProjectImageRenameService", "Source image already exists."),
     QT_TRANSLATE_NOOP("ProjectImageRenameService", "Pattern cannot be empty."),
     QT_TRANSLATE_NOOP("ProjectImageRenameService", "Unexpected '}' in pattern."),
     QT_TRANSLATE_NOOP("ProjectImageRenameService", "Missing '}' in pattern."),
@@ -273,18 +276,23 @@ void validatePlanTargets(ProjectImageRenamePlan& plan)
     }
 
     QHash<QString, int> targetPathCounts;
+    QHash<QString, int> targetNameCounts;
     for (const ProjectImageRenameItem& item : plan.items) {
+        if (plan.finalPageOrder && !plan.finalPageOrder->contains(item.imageIndex))
+            continue;
         const QString finalPath = finalImagePathForConflictCheck(item);
         if (!finalPath.isEmpty()) {
             targetPathCounts[pathComparisonKey(finalPath)] += 1;
         }
+        targetNameCounts[(item.included ? item.newName : item.oldName).toCaseFolded()] += 1;
     }
 
     for (ProjectImageRenameItem& item : plan.items) {
         if (!item.included || !item.error.isEmpty()) {
             continue;
         }
-        if (targetPathCounts.value(pathComparisonKey(item.newPath)) > 1) {
+        if (targetPathCounts.value(pathComparisonKey(item.newPath)) > 1 ||
+            targetNameCounts.value(item.newName.toCaseFolded()) > 1) {
             item.error = serviceText("Duplicate target file name.");
             continue;
         }
@@ -307,6 +315,46 @@ void validatePlanTargets(ProjectImageRenamePlan& plan)
 }
 
 } // namespace
+
+QStringList ProjectImageRenameService::referenceCandidates(const QString& missingPath, const QString& directory)
+{
+    const QFileInfo missing(missingPath);
+    const QDir folder(directory);
+    const auto exact = folder.absoluteFilePath(missing.fileName());
+    if (QFileInfo(exact).isFile() && canReadImage(exact))
+        return {exact};
+    QStringList candidates;
+    for (const auto& info : folder.entryInfoList(QDir::Files, QDir::Name))
+        if (info.completeBaseName() == missing.completeBaseName() && canReadImage(info.absoluteFilePath()))
+            candidates.append(info.absoluteFilePath());
+    return candidates;
+}
+
+ProjectImageRenamePlan ProjectImageRenameService::referencePlan(const labelqt::core::Project& project,
+                                                                const QHash<int, QString>& targets)
+{
+    ProjectImageRenamePlan plan;
+    for (int i = 0; i < project.images().size(); ++i) {
+        const auto& image = project.images().at(i);
+        ProjectImageRenameItem item;
+        item.imageIndex = i;
+        item.oldName = item.newName = image.name;
+        item.oldPath = item.newPath = image.path;
+        if (targets.contains(i)) {
+            item.included = true;
+            item.referenceOnly = true;
+            item.newPath = QFileInfo(targets.value(i)).absoluteFilePath();
+            item.newName = QDir(QFileInfo(project.filePath()).absolutePath()).relativeFilePath(item.newPath);
+            if (QFileInfo::exists(image.path))
+                item.error = serviceText("Source image already exists.");
+            else if (!QFileInfo(item.newPath).isFile() || !canReadImage(item.newPath))
+                item.error = serviceText("Target image cannot be read.");
+        }
+        plan.items.append(item);
+    }
+    validatePlanTargets(plan);
+    return plan;
+}
 
 bool ProjectImageRenameItem::isChanged() const noexcept
 {
@@ -467,6 +515,8 @@ ProjectImageRenamePlan ProjectImageRenameService::mergePlans(ProjectImageRenameP
         validatePlanTargets(currentPlan);
         return currentPlan;
     }
+    if (incomingPlan.finalPageOrder)
+        currentPlan.finalPageOrder = incomingPlan.finalPageOrder;
 
     QHash<int, int> currentRowByImageIndex;
     currentRowByImageIndex.reserve(currentPlan.items.size());
@@ -519,7 +569,8 @@ std::expected<void, QString> ProjectImageRenameService::applyPlan(labelqt::core:
         if (!item.included)
             continue;
         if (item.imageIndex < 0 || item.imageIndex >= project.images().size() ||
-            includedIndexes.contains(item.imageIndex) || project.images().at(item.imageIndex).path != item.oldPath) {
+            includedIndexes.contains(item.imageIndex) || project.images().at(item.imageIndex).path != item.oldPath ||
+            (plan.finalPageOrder && !plan.finalPageOrder->contains(item.imageIndex))) {
             return std::unexpected(serviceText("Fix invalid file names before renaming."));
         }
         includedIndexes.insert(item.imageIndex);
@@ -532,9 +583,18 @@ std::expected<void, QString> ProjectImageRenameService::applyPlan(labelqt::core:
     }
     rewritePageSourceMetadata(updated, plan, oldSources);
     rewriteReviewMetadata(updated, plan, oldReviewMetadata);
+    if (plan.finalPageOrder) {
+        if (!ProjectPageOrderService::isValidOrder(*plan.finalPageOrder, static_cast<int>(updated.images().size())))
+            return std::unexpected(serviceText("Fix invalid file names before renaming."));
+        ProjectPageOrderService::reorderImages(updated, *plan.finalPageOrder);
+    }
 
     FileRenameTransaction transaction(
         std::move(moves), project.filePath().isEmpty() ? QString() : QFileInfo(project.filePath()).absolutePath());
+    if (commitProject && !project.filePath().isEmpty()) {
+        transaction.setProjectCommit(project.filePath(), labelqt::core::LabelPlusDocument::serialize(project).toUtf8(),
+                                     labelqt::core::LabelPlusDocument::serialize(updated).toUtf8());
+    }
     auto fail = [&transaction](QString error) -> std::expected<void, QString> {
         return std::unexpected(renameFailureWithRollbackDetails(std::move(error), transaction.rollback()));
     };

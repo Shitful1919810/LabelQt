@@ -17,6 +17,7 @@ public:
 
     void setGroups(const QStringList& groups, QVector<labelqt::core::LabelGroupStyle> groupStyles = {});
     QStringList selectedGroups() const;
+    void setSelectedGroups(const QStringList& groups);
     bool isAllSelected() const;
 
 signals:

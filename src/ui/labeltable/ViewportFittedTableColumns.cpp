@@ -30,9 +30,27 @@ ViewportFittedTableColumns::ViewportFittedTableColumns(QTableView* tableView, QV
     header->setMinimumSectionSize(narrowViewportMinimumWidth);
     m_tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_tableView->installEventFilter(this);
-    m_tableView->viewport()->installEventFilter(this);
+    m_viewport = m_tableView->viewport();
+    m_viewport->installEventFilter(this);
+    connect(m_tableView, &QObject::destroyed, this, [this] {
+        m_tableView = nullptr;
+        m_viewport.clear();
+        m_columnsChangedCallback = {};
+    });
     attachModel(m_tableView->model());
     scheduleFitToViewport();
+}
+
+ViewportFittedTableColumns::~ViewportFittedTableColumns()
+{
+    if (m_tableView) {
+        m_tableView->removeEventFilter(this);
+        disconnect(m_tableView, nullptr, this, nullptr);
+    }
+    if (m_viewport)
+        m_viewport->removeEventFilter(this);
+    if (m_model)
+        disconnect(m_model, nullptr, this, nullptr);
 }
 
 void ViewportFittedTableColumns::fitToViewport()
@@ -167,7 +185,13 @@ bool ViewportFittedTableColumns::eventFilter(QObject* watched, QEvent* event)
         return QObject::eventFilter(watched, event);
     }
 
-    if ((watched == m_tableView->viewport() && event->type() == QEvent::Resize) ||
+    // QWidget sends events after QTableView/QAbstractScrollArea have already been destroyed.
+    if (watched == m_tableView && event->type() == QEvent::Destroy) {
+        m_tableView = nullptr;
+        m_columnsChangedCallback = {};
+        return false;
+    }
+    if ((watched == m_viewport && event->type() == QEvent::Resize) ||
         (watched == m_tableView && (event->type() == QEvent::Show || event->type() == QEvent::StyleChange ||
                                     event->type() == QEvent::LayoutRequest || event->type() == QEvent::FontChange ||
                                     event->type() == QEvent::PolishRequest))) {

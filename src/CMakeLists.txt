@@ -24,15 +24,20 @@ set(LABELQT_SERVICE_SOURCES
     services/automation/SecretStore.cpp
     services/io/ImagePageCache.cpp
     services/io/FileRenameTransaction.cpp
+    services/io/FileRevision.cpp
     services/io/ImagePageCache.h
     services/label/LabelClipboardService.cpp
     services/label/LabelClipboardService.h
     services/label/LabelEditController.cpp
+    services/label/ProjectTextSearchService.cpp
     services/label/LabelNavigator.cpp
     services/label/LabelPastePlanner.cpp
     services/label/LabelPastePlanner.h
     services/project/PageSourceInfoService.cpp
     services/project/ProjectController.cpp
+    services/project/ProjectLocationService.cpp
+    services/project/PageManagementDraft.cpp
+    services/project/ProjectRecoveryService.cpp
     services/project/ProjectImageRenameService.cpp
     services/project/ProjectImageValidator.cpp
     services/project/ProjectMergeService.cpp
@@ -50,6 +55,7 @@ set(LABELQT_SERVICE_SOURCES
     services/proofread/ReviewChangeClassifier.cpp
     services/proofread/ReviewChangeClassifier.h
     services/proofread/ReviewMetadataService.cpp
+    services/proofread/ReviewSessionService.cpp
     services/proofread/ReviewMetadataService.h
     services/proofread/TextDiffHtmlRenderer.cpp
     services/proofread/TextDiffHtmlRenderer.h
@@ -90,7 +96,12 @@ set(LABELQT_UI_SOURCES
     ui/project/PageSelectorComboBox.cpp
     ui/project/ProjectMergeDialog.cpp
     ui/project/ProjectViewController.cpp
+    ui/project/ProjectRecoveryDialog.cpp
+    ui/project/ProjectRecoveryController.cpp
+    ui/search/ProjectSearchPanel.cpp
+    ui/search/ProjectTextSearchModel.cpp
     ui/proofread/ProofreadChangesDialog.cpp
+    ui/proofread/ProofreadReviewPanel.cpp
     ui/proofread/ProofreadChangeTableModel.cpp
     ui/proofread/ProofreadingController.cpp
     ui/widgets/CheckableFilterButton.cpp

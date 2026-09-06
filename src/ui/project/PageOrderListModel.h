@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/Project.h"
+#include "core/UndoStack.h"
+#include "services/project/PageManagementDraft.h"
 #include "services/project/ProjectImageRenameService.h"
 
 #include <QAbstractTableModel>
@@ -8,6 +10,7 @@
 #include <QVector>
 
 class PageOrderListModel final : public QAbstractTableModel {
+    Q_OBJECT
 public:
     enum Column {
         ImageNameColumn = 0,
@@ -27,6 +30,9 @@ public:
     void setRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan);
     void setPendingRenamePlan(const labelqt::services::ProjectImageRenamePlan& plan);
     void clearPendingRenamePlan();
+    void clearPendingSourceIndexes(const QVector<int>& indexes);
+    const labelqt::services::PageManagementDraft& draft() const;
+    labelqt::core::UndoStack& undoStack();
     void moveSourceIndexes(QVector<int> sourceIndexes, int delta);
     void removeSourceIndexes(QVector<int> sourceIndexes);
 
@@ -41,12 +47,16 @@ public:
                       const QModelIndex& parent) override;
     Qt::DropActions supportedDropActions() const override;
 
+signals:
+    void draftChanged();
+
 private:
     void resetOrder(QVector<int> order, QVector<int> selectedSourceIndexes);
+    void restoreDraft(labelqt::services::PageManagementDraft::State state);
+    void rememberChange(labelqt::services::PageManagementDraft::State before);
 
-    const labelqt::core::Project& m_project;
-    QVector<int> m_order;
+    labelqt::services::PageManagementDraft m_draft;
+    labelqt::core::UndoStack m_undo;
     QVector<int> m_lastMovedSourceIndexes;
     QHash<int, labelqt::services::ProjectImageRenameItem> m_renameItemsBySourceIndex;
-    QHash<int, labelqt::services::ProjectImageRenameItem> m_pendingRenameItemsBySourceIndex;
 };

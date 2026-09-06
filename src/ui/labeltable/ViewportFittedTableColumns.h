@@ -9,6 +9,7 @@
 class QEvent;
 class QAbstractItemModel;
 class QTableView;
+class QWidget;
 
 class ViewportFittedTableColumns final : public QObject {
     Q_OBJECT
@@ -22,6 +23,7 @@ public:
     };
 
     explicit ViewportFittedTableColumns(QTableView* tableView, QVector<Column> columns, QObject* parent = nullptr);
+    ~ViewportFittedTableColumns() override;
 
     void fitToViewport();
     void rebalanceFromSectionResize(int logicalIndex, int oldSize, int newSize);
@@ -39,6 +41,7 @@ private:
     int defaultWidthSum() const;
 
     QTableView* m_tableView{nullptr};
+    QPointer<QWidget> m_viewport;
     QPointer<QAbstractItemModel> m_model;
     QVector<Column> m_columns;
     std::function<void()> m_columnsChangedCallback;

@@ -41,6 +41,31 @@ class ModuleTopic:
 
 MODULE_TOPICS = (
     ModuleTopic(
+        name="recovery",
+        keywords=("recovery", "backup", "save conflict", "file revision"),
+        files=("src/services/project/ProjectRecoveryService.*", "src/services/project/ProjectLocationService.*",
+               "src/services/project/ProjectController.*", "src/services/io/FileRevision.*",
+               "src/services/io/FileRenameTransaction.*", "src/ui/project/ProjectRecovery*"),
+        notes=("恢复先校验全部文件身份；不确定时保留材料，不猜测。",),
+        docs=("docs/persistence-safety.md", "docs/product-workflows.md"),
+    ),
+    ModuleTopic(
+        name="search",
+        keywords=("search", "find", "replace"),
+        files=("src/services/label/ProjectTextSearchService.*", "src/services/label/LabelEditController.*",
+               "src/ui/search/*"),
+        notes=("替换使用原文区间和工程指纹，通过 LabelEditController 批量提交与撤销。",),
+        docs=("docs/product-workflows.md",),
+    ),
+    ModuleTopic(
+        name="page-draft",
+        keywords=("draft", "pending", "rename", "missing image"),
+        files=("src/services/project/PageManagementDraft.*", "src/services/project/ProjectImageRenameService.*",
+               "src/ui/project/PageOrder*", "src/ui/project/ImageRenamePreviewWidget.*"),
+        notes=("pending 由草稿持有，输入只预览；移除页面同步剪裁指令。",),
+        docs=("docs/product-workflows.md",),
+    ),
+    ModuleTopic(
         name="label-edit",
         keywords=("label", "edit", "undo", "clipboard", "paste", "marker"),
         files=(
@@ -94,6 +119,8 @@ MODULE_TOPICS = (
             "src/services/proofread/TextDiffService.*",
             "src/services/proofread/TextDiffHtmlRenderer.*",
             "src/services/proofread/ProofreadReportService.*",
+            "src/services/proofread/ReviewSessionService.*",
+            "src/ui/proofread/ProofreadReviewPanel.*",
             "src/ui/proofread/ProofreadingController.*",
             "src/ui/proofread/ProofreadChangeTableModel.*",
             "src/ui/proofread/ProofreadChangesDialog.*",

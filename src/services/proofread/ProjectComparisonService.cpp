@@ -2,6 +2,7 @@
 
 #include "services/proofread/LabelSequenceDiffService.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QHash>
 #include <QImageReader>
@@ -378,6 +379,7 @@ ReviewChange changeFromEntry(const labelqt::core::Project& currentProject, const
     change.baselineLabelIndex = entry.baselineLabelIndex;
     change.currentLabelIndex = entry.currentLabelIndex;
     change.labelIndex = change.currentLabelIndex >= 0 ? change.currentLabelIndex : change.baselineLabelIndex;
+    change.manuallyMatched = entry.manuallyMatched;
 
     if (entry.baselineLabelIndex < 0) {
         change.kind = ReviewChangeKind::Added;
@@ -401,7 +403,8 @@ ReviewChange changeFromEntry(const labelqt::core::Project& currentProject, const
 }
 
 QVector<ReviewChange> changesForPagePairs(const labelqt::core::Project& currentProject, const ReviewMetadata& metadata,
-                                          const QVector<ProjectComparisonPagePair>& pagePairs)
+                                          const QVector<ProjectComparisonPagePair>& pagePairs,
+                                          const QVector<ManualLabelPair>& forcedPairs = {})
 {
     QVector<ReviewChange> changes;
     for (const ProjectComparisonPagePair& pagePair : pagePairs) {
@@ -413,13 +416,18 @@ QVector<ReviewChange> changesForPagePairs(const labelqt::core::Project& currentP
             currentLabels = currentSnapshotsForImage(*currentImage);
         }
 
+        QVector<QPair<int, int>> pairs;
+        for (const auto& forced : forcedPairs)
+            if (forced.baseline.imageName == pagePair.baselineImageName &&
+                forced.current.imageName == pagePair.currentImageName)
+                pairs.append({forced.baseline.labelIndex, forced.current.labelIndex});
         const QVector<LabelSequenceDiffEntry> entries =
-            LabelSequenceDiffService::diff(baselineLabels, currentLabels);
+            LabelSequenceDiffService::diffWithPairs(baselineLabels, currentLabels, pairs);
         for (const LabelSequenceDiffEntry& entry : entries) {
             ReviewChange change =
                 changeFromEntry(currentProject, pagePair.currentImageName, pagePair.baselineImageName, entry);
             if (change.kind == ReviewChangeKind::Modified && !isModified(change.baseline, change.current) &&
-                !change.orderChanged) {
+                !change.orderChanged && !change.manuallyMatched) {
                 continue;
             }
             changes.append(std::move(change));
@@ -435,6 +443,42 @@ QVector<ReviewChange> changesForPagePairs(const labelqt::core::Project& currentP
 }
 
 } // namespace
+
+std::expected<QVector<ReviewChange>, QString>
+ProjectComparisonService::changesWithPairs(const labelqt::core::Project& currentProject, const ReviewMetadata& baseline,
+                                           const QVector<ProjectComparisonPagePair>& pages,
+                                           const QVector<ManualLabelPair>& pairs)
+{
+    QSet<QString> usedBefore, usedAfter;
+    for (const auto& pair : pairs) {
+        const auto fail = []() -> std::expected<QVector<ReviewChange>, QString> {
+            return std::unexpected(QCoreApplication::translate(
+                "ProjectComparisonService", "A manual pair is stale, duplicated, or outside the matched pages."));
+        };
+        const auto* image = currentProject.imageByName(pair.current.imageName);
+        const auto before = baseline.baselineFor(pair.baseline.imageName, pair.baseline.labelIndex);
+        if (!image || pair.current.labelIndex < 0 || pair.current.labelIndex >= image->labels.size() ||
+            image->labels.at(pair.current.labelIndex).isDeleted() || before.labelIndex < 0)
+            return fail();
+        const auto after =
+            snapshotFromLabel(image->name, pair.current.labelIndex, image->labels.at(pair.current.labelIndex));
+        const auto beforeKey = ReviewMetadataService::keyForLabel(pair.baseline.imageName, pair.baseline.labelIndex);
+        const auto afterKey = ReviewMetadataService::keyForLabel(pair.current.imageName, pair.current.labelIndex);
+        if (usedBefore.contains(beforeKey) || usedAfter.contains(afterKey) ||
+            ReviewSessionService::snapshotFingerprint(before) !=
+                ReviewSessionService::snapshotFingerprint(pair.baseline) ||
+            ReviewSessionService::snapshotFingerprint(after) != ReviewSessionService::snapshotFingerprint(pair.current))
+            return fail();
+        if (!std::any_of(pages.begin(), pages.end(), [&](const auto& page) {
+                return page.baselineImageName == pair.baseline.imageName &&
+                       page.currentImageName == pair.current.imageName;
+            }))
+            return fail();
+        usedBefore.insert(beforeKey);
+        usedAfter.insert(afterKey);
+    }
+    return changesForPagePairs(currentProject, baseline, pages, pairs);
+}
 
 ReviewMetadata ProjectComparisonService::captureSnapshot(const labelqt::core::Project& project)
 {

@@ -118,6 +118,12 @@ void ImageRenamePreviewWidget::setProject(labelqt::core::Project project)
     updatePreview();
 }
 
+ImageRenamePreviewWidget::~ImageRenamePreviewWidget()
+{
+    for (QObject* child : findChildren<QObject*>())
+        disconnect(child, nullptr, this, nullptr);
+}
+
 void ImageRenamePreviewWidget::setTargetImageIndexes(QVector<int> imageIndexes)
 {
     if (m_targetImageIndexes == imageIndexes) {
@@ -131,6 +137,12 @@ void ImageRenamePreviewWidget::setTargetImageIndexes(QVector<int> imageIndexes)
 labelqt::services::ProjectImageRenamePlan ImageRenamePreviewWidget::renamePlan() const
 {
     return m_plan;
+}
+
+void ImageRenamePreviewWidget::setPendingPlan(labelqt::services::ProjectImageRenamePlan pending)
+{
+    m_pending = std::move(pending);
+    updatePreview();
 }
 
 void ImageRenamePreviewWidget::setRenameQueued(bool queued)
@@ -171,12 +183,12 @@ void ImageRenamePreviewWidget::buildUi()
     m_statusLabel = new QLabel(this);
     m_statusLabel->setWordWrap(true);
 
-    m_actionButton = new QPushButton(tr("Queue Rename..."), this);
+    m_actionButton = new QPushButton(tr("Add to pending"), this);
     m_actionButton->setMinimumWidth(160);
     connect(m_actionButton, &QPushButton::clicked, this, [this]() {
         if (m_plan.isValid() && m_plan.hasChanges()) {
             setRenameQueued(true);
-            emit renameQueued(m_plan);
+            emit renameQueued(m_incoming);
         }
     });
 
@@ -198,13 +210,16 @@ void ImageRenamePreviewWidget::buildUi()
 void ImageRenamePreviewWidget::updatePreview()
 {
     m_isRenameQueued = false;
-    m_plan = labelqt::services::ProjectImageRenameService::createPlan(m_project, options());
+    m_incoming = m_targetImageIndexes.isEmpty()
+                     ? labelqt::services::ProjectImageRenamePlan{}
+                     : labelqt::services::ProjectImageRenameService::createPlan(m_project, options());
+    m_plan = labelqt::services::ProjectImageRenameService::mergePlans(m_pending, m_incoming);
 
     updateStatus();
     if (m_actionButton != nullptr) {
-        m_actionButton->setEnabled(m_plan.isValid() && m_plan.hasChanges());
+        m_actionButton->setEnabled(!m_targetImageIndexes.isEmpty() && m_plan.isValid() && m_incoming.hasChanges());
     }
-    emit previewChanged(m_plan);
+    emit previewChanged(m_incoming);
 }
 
 void ImageRenamePreviewWidget::updateStatus()
@@ -212,7 +227,7 @@ void ImageRenamePreviewWidget::updateStatus()
     if (m_plan.isValid()) {
         const int changedCount = static_cast<int>(std::count_if(m_plan.items.cbegin(), m_plan.items.cend(),
                                                                 [](const auto& item) { return item.isChanged(); }));
-        QString status = tr("%n image item(s) will be updated.", nullptr, changedCount);
+        QString status = tr("Selected: %1; pending result: %2").arg(m_targetImageIndexes.size()).arg(changedCount);
         if (m_isRenameQueued) {
             status += QLatin1Char(' ');
             status += tr("Queued until you click OK.");

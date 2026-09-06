@@ -1,6 +1,7 @@
 #pragma once
 
 #include "services/proofread/ReviewChangeClassifier.h"
+#include "services/proofread/ReviewSessionService.h"
 
 #include <QAbstractTableModel>
 #include <QSet>
@@ -20,8 +21,8 @@ class ProofreadChangeTableModel final : public QAbstractTableModel {
     Q_OBJECT
 
 public:
-    enum Column { PageColumn, NumberColumn, KindColumn, SummaryColumn, ColumnCount };
-    enum Role { ChangeIndexRole = Qt::UserRole + 1, SortTextRole, SortNumberRole };
+    enum Column { PageColumn, NumberColumn, KindColumn, SummaryColumn, ReviewColumn, ColumnCount };
+    enum Role { ChangeIndexRole = Qt::UserRole + 1, SortTextRole, SortNumberRole, ReviewStatusRole };
 
     ProofreadChangeTableModel(QVector<labelqt::services::ReviewChange> changes, ProofreadChangeTableTexts texts,
                               QObject* parent = nullptr);
@@ -32,6 +33,9 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
     const labelqt::services::ReviewChange* changeAt(int row) const noexcept;
     const QVector<labelqt::services::ReviewChange>& changes() const noexcept;
+    void setChanges(QVector<labelqt::services::ReviewChange> changes);
+    void setReviewAnnotations(QVector<labelqt::services::ReviewAnnotation> annotations, QStringList statusNames,
+                              QString manualPairText);
 
 private:
     QString kindText(labelqt::services::ReviewChangeKind kind) const;
@@ -39,6 +43,9 @@ private:
 
     QVector<labelqt::services::ReviewChange> m_changes;
     ProofreadChangeTableTexts m_texts;
+    QVector<labelqt::services::ReviewAnnotation> m_annotations;
+    QStringList m_statusNames;
+    QString m_manualPairText;
 };
 
 class ProofreadChangeFilterModel final : public QSortFilterProxyModel {
@@ -48,6 +55,7 @@ public:
     explicit ProofreadChangeFilterModel(QObject* parent = nullptr);
 
     void setFilters(QSet<QString> pages, QSet<QString> kinds, QSet<QString> facets, bool allFacetsSelected);
+    void setReviewStatusFilter(int status);
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
@@ -58,4 +66,5 @@ private:
     QSet<QString> m_kinds;
     QSet<QString> m_facets;
     bool m_allFacetsSelected{true};
+    int m_reviewStatus{-1};
 };

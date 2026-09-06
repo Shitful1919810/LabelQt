@@ -433,6 +433,14 @@ Last error: %2</source>
 <context>
     <name>ImageRenamePreviewWidget</name>
     <message>
+        <source>Add to pending</source>
+        <translation>加入待處理</translation>
+    </message>
+    <message>
+        <source>Selected: %1; pending result: %2</source>
+        <translation>已選 %1 頁；待處理結果：%2</translation>
+    </message>
+    <message>
         <source>Rename image files according to the current page order. The extension is always preserved.</source>
         <translation type="vanished">按照目前頁面順序重新命名圖片檔。副檔名會始終保留。</translation>
     </message>
@@ -489,6 +497,30 @@ Last error: %2</source>
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <source>Conflicting search shortcut disabled: %1</source>
+        <translation>已停用衝突的尋找快捷鍵：%1</translation>
+    </message>
+    <message>
+        <source>%1 must be an integer from 0 to 10000; using the default value.</source>
+        <translation>%1 必須為 0 到 10000 的整數；已使用預設值。</translation>
+    </message>
+    <message>
+        <source>Rename files: %1
+Link images: %2
+Remove pages: %3
+
+The displayed page order and pending targets will be saved together. The project is saved before and after applying changes. Undo history is cleared only on success.
+
+Continue?</source>
+        <translation>重新命名檔案：%1
+指定圖片：%2
+移除頁面：%3
+
+將一併儲存目前頁序和待處理目標。操作前後都會儲存工程，僅在成功後清空復原歷史。
+
+繼續？</translation>
+    </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="470"/>
         <source>&amp;New Project...</source>
@@ -1559,6 +1591,74 @@ Last error: %1</source>
 <context>
     <name>PageOrderDialog</name>
     <message>
+        <source>All pages</source>
+        <translation>全部頁面</translation>
+    </message>
+    <message>
+        <source>Assign image</source>
+        <translation>指定圖片</translation>
+    </message>
+    <message>
+        <source>Assign image...</source>
+        <translation>指定圖片…</translation>
+    </message>
+    <message>
+        <source>Choose image</source>
+        <translation>選擇圖片</translation>
+    </message>
+    <message>
+        <source>Clear all pending operations</source>
+        <translation>清空待處理操作</translation>
+    </message>
+    <message>
+        <source>Clear selected pending operations</source>
+        <translation>清除所選頁面的待處理操作</translation>
+    </message>
+    <message>
+        <source>Issues</source>
+        <translation>有問題</translation>
+    </message>
+    <message>
+        <source>Match in folder</source>
+        <translation>在資料夾中比對</translation>
+    </message>
+    <message>
+        <source>Match in folder...</source>
+        <translation>在資料夾中比對…</translation>
+    </message>
+    <message>
+        <source>No matching images selected.</source>
+        <translation>未選擇相符的圖片。</translation>
+    </message>
+    <message>
+        <source>Pending</source>
+        <translation>待處理</translation>
+    </message>
+    <message>
+        <source>Pending operations</source>
+        <translation>待處理操作</translation>
+    </message>
+    <message>
+        <source>Pending: %1</source>
+        <translation>待處理：%1 頁</translation>
+    </message>
+    <message>
+        <source>Redo draft edit</source>
+        <translation>重做草稿操作</translation>
+    </message>
+    <message>
+        <source>Select one missing page.</source>
+        <translation>請選擇一個缺少圖片的頁面。</translation>
+    </message>
+    <message>
+        <source>Selected pages</source>
+        <translation>所選頁面</translation>
+    </message>
+    <message>
+        <source>Undo draft edit</source>
+        <translation>復原草稿操作</translation>
+    </message>
+    <message>
         <source>Images (%1);;All files (*)</source>
         <translation type="vanished">圖片 (%1);;所有檔案 (*)</translation>
     </message>
@@ -1603,6 +1703,18 @@ Last error: %1</source>
 </context>
 <context>
     <name>PageOrderListModel</name>
+    <message>
+        <source>Edit page draft</source>
+        <translation>編輯頁面草稿</translation>
+    </message>
+    <message>
+        <source>Input preview</source>
+        <translation>輸入預覽</translation>
+    </message>
+    <message>
+        <source>Pending target</source>
+        <translation>待套用目標</translation>
+    </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="247"/>
         <source>Current image</source>
@@ -1656,6 +1768,30 @@ Last error: %1</source>
 </context>
 <context>
     <name>PreferenceDialog</name>
+    <message>
+        <source>Search shortcuts conflict with other actions: %1</source>
+        <translation>尋找快捷鍵與其他操作衝突：%1</translation>
+    </message>
+    <message>
+        <source>Automatic backups per project</source>
+        <translation>每工程自動備份上限</translation>
+    </message>
+    <message>
+        <source>Keep all</source>
+        <translation>全部保留</translation>
+    </message>
+    <message>
+        <source>Find in project</source>
+        <translation>工程內尋找</translation>
+    </message>
+    <message>
+        <source>Next search match</source>
+        <translation>下一處相符項目</translation>
+    </message>
+    <message>
+        <source>Previous search match</source>
+        <translation>上一處相符項目</translation>
+    </message>
     <message>
         <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="121"/>
         <source>Preferences</source>
@@ -2137,6 +2273,10 @@ Last error: %1</source>
 <context>
     <name>ProjectImageRenameService</name>
     <message>
+        <source>Source image already exists.</source>
+        <translation>來源圖片已存在。</translation>
+    </message>
+    <message>
         <location filename="../src/services/project/ProjectImageRenameService.cpp" line="30"/>
         <source>Pattern cannot be empty.</source>
         <translation>格式不能為空。</translation>
@@ -2316,6 +2456,42 @@ Last error: %1</source>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
+    <message>
+        <source>; Review: %1</source>
+        <translation>；審閱：%1</translation>
+    </message>
+    <message>
+        <source>All review states</source>
+        <translation>全部審閱狀態</translation>
+    </message>
+    <message>
+        <source>Changes: %1; reviewed: %2</source>
+        <translation>變更：%1 項；已查看：%2 項</translation>
+    </message>
+    <message>
+        <source>Manual pair</source>
+        <translation>手動配對</translation>
+    </message>
+    <message>
+        <source>Needs confirmation</source>
+        <translation>待確認</translation>
+    </message>
+    <message>
+        <source>Review</source>
+        <translation>審閱</translation>
+    </message>
+    <message>
+        <source>Review session not saved</source>
+        <translation>審閱記錄未儲存</translation>
+    </message>
+    <message>
+        <source>Reviewed</source>
+        <translation>已查看</translation>
+    </message>
+    <message>
+        <source>Unseen</source>
+        <translation>未查看</translation>
+    </message>
     <message numerus="yes">
         <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="339"/>
         <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="590"/>
@@ -2639,6 +2815,10 @@ Last error: %1</source>
 <context>
     <name>FileRenameTransaction</name>
     <message>
+        <source>A source file cannot be verified.</source>
+        <translation>無法核實來源檔案。</translation>
+    </message>
+    <message>
         <source>Unresolved rename record: %1. Recover the files before continuing.</source>
         <translation>存在未解決的重新命名記錄：%1。請先還原檔案再繼續。</translation>
     </message>
@@ -2656,6 +2836,447 @@ Last error: %1</source>
     <message>
         <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
         <translation>專案中繼資料已損毀或使用不支援的格式。原始檔案未被修改。</translation>
+    </message>
+</context>
+<context>
+    <name>LabelEditController</name>
+    <message>
+        <source>The project changed. Refresh the replacement preview.</source>
+        <translation>工程已變更，請重新整理取代預覽。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectComparisonService</name>
+    <message>
+        <source>A manual pair is stale, duplicated, or outside the matched pages.</source>
+        <translation>手動配對已過期、重複或不在對應頁面內。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectController</name>
+    <message>
+        <source>Open the original project before replacing it.</source>
+        <translation>請先開啟原工程再進行取代。</translation>
+    </message>
+    <message>
+        <source>The project was changed on disk.</source>
+        <translation>磁碟上的工程已被修改。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryController</name>
+    <message>
+        <source>Backup and Recovery...</source>
+        <translation>備份與復原…</translation>
+    </message>
+    <message>
+        <source>Compare</source>
+        <translation>比較</translation>
+    </message>
+    <message>
+        <source>Current edits</source>
+        <translation>目前編輯稿</translation>
+    </message>
+    <message>
+        <source>Discard current unsaved edits and reload the project?</source>
+        <translation>放棄目前未儲存的編輯並重新載入工程？</translation>
+    </message>
+    <message>
+        <source>Disk version</source>
+        <translation>磁碟版本</translation>
+    </message>
+    <message>
+        <source>File missing</source>
+        <translation>檔案不存在</translation>
+    </message>
+    <message>
+        <source>Loaded/saved: %1
+Disk version: %2</source>
+        <translation>載入或儲存時：%1
+磁碟版本：%2</translation>
+    </message>
+    <message>
+        <source>Overwrite disk version</source>
+        <translation>覆寫磁碟版本</translation>
+    </message>
+    <message>
+        <source>Overwrite disk version...</source>
+        <translation>覆寫磁碟版本…</translation>
+    </message>
+    <message>
+        <source>Project changed on disk</source>
+        <translation>磁碟工程已變更</translation>
+    </message>
+    <message>
+        <source>Recovery available...</source>
+        <translation>有可復原記錄…</translation>
+    </message>
+    <message>
+        <source>Recovery canceled.</source>
+        <translation>復原已取消。</translation>
+    </message>
+    <message>
+        <source>Reload disk version</source>
+        <translation>重新載入磁碟版本</translation>
+    </message>
+    <message>
+        <source>Reload disk version...</source>
+        <translation>重新載入磁碟版本…</translation>
+    </message>
+    <message>
+        <source>Replace the disk version with the current edits?</source>
+        <translation>以目前編輯稿覆寫磁碟版本？</translation>
+    </message>
+    <message>
+        <source>Save current edits as...</source>
+        <translation>將目前編輯稿另存為…</translation>
+    </message>
+    <message>
+        <source>Save failed</source>
+        <translation>儲存失敗</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryDialog</name>
+    <message>
+        <source>Apply file recovery for %1? Files will only be moved if their contents can be verified.</source>
+        <translation>對 %1 執行檔案復原？僅在能核實檔案內容時才會移動檔案。</translation>
+    </message>
+    <message>
+        <source>Backup</source>
+        <translation>備份</translation>
+    </message>
+    <message>
+        <source>Backup and Recovery</source>
+        <translation>備份與復原</translation>
+    </message>
+    <message>
+        <source>Choose project</source>
+        <translation>選擇工程</translation>
+    </message>
+    <message>
+        <source>Choose project...</source>
+        <translation>選擇工程…</translation>
+    </message>
+    <message>
+        <source>Complete file operation...</source>
+        <translation>完成此次檔案操作…</translation>
+    </message>
+    <message>
+        <source>File operations: %1</source>
+        <translation>檔案操作：%1 項</translation>
+    </message>
+    <message>
+        <source>LabelPlus text (*.txt)</source>
+        <translation>LabelPlus 工程 (*.txt)</translation>
+    </message>
+    <message>
+        <source>No recovery records.</source>
+        <translation>沒有復原記錄。</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>開啟資料夾</translation>
+    </message>
+    <message>
+        <source>Pages: %1
+Missing images: %2</source>
+        <translation>頁面：%1
+缺少圖片：%2</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>預覽</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>工程：%1</translation>
+    </message>
+    <message>
+        <source>Recover as copy</source>
+        <translation>復原為副本</translation>
+    </message>
+    <message>
+        <source>Recover as copy...</source>
+        <translation>復原為副本…</translation>
+    </message>
+    <message>
+        <source>Recovered copy: %1</source>
+        <translation>已復原副本：%1</translation>
+    </message>
+    <message>
+        <source>Replace current project</source>
+        <translation>取代目前工程</translation>
+    </message>
+    <message>
+        <source>Replace current project...</source>
+        <translation>取代目前工程…</translation>
+    </message>
+    <message>
+        <source>Replace the current project with this backup? The current project will be backed up first and undo history will be cleared.</source>
+        <translation>以此備份取代目前工程？將先備份目前工程，成功後清空復原歷史。</translation>
+    </message>
+    <message>
+        <source>Restore original file names...</source>
+        <translation>復原原始檔名…</translation>
+    </message>
+    <message>
+        <source>Saved project</source>
+        <translation>已儲存工程</translation>
+    </message>
+    <message>
+        <source>This older record is available for manual inspection only.</source>
+        <translation>此舊版記錄僅供人工檢查。</translation>
+    </message>
+    <message>
+        <source>Unfinished file operation</source>
+        <translation>未完成的檔案操作</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryService</name>
+    <message>
+        <source>Files recovered, but the recovery record could not be removed.</source>
+        <translation>檔案已復原，但無法刪除復原記錄。</translation>
+    </message>
+    <message>
+        <source>Recovery is ambiguous or files have changed. No automatic recovery is possible.</source>
+        <translation>檔案對應關係不明確或檔案已被修改，無法自動復原。</translation>
+    </message>
+    <message>
+        <source>Recovery stopped. Keep the recovery record and temporary files.</source>
+        <translation>復原已停止。請保留復原記錄和暫存檔案。</translation>
+    </message>
+    <message>
+        <source>Choose a new file for the recovered copy.</source>
+        <translation>請為復原副本選擇不存在的新檔案。</translation>
+    </message>
+    <message>
+        <source>The backup cannot be verified.</source>
+        <translation>無法核實備份內容。</translation>
+    </message>
+    <message>
+        <source>This record requires file recovery.</source>
+        <translation>此記錄需要執行檔案復原。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectSearchPanel</name>
+    <message>
+        <source>After</source>
+        <translation>取代後</translation>
+    </message>
+    <message>
+        <source>All groups</source>
+        <translation>全部群組</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>套用</translation>
+    </message>
+    <message>
+        <source>Before</source>
+        <translation>取代前</translation>
+    </message>
+    <message>
+        <source>Close search</source>
+        <translation>關閉尋找</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>目前頁面</translation>
+    </message>
+    <message>
+        <source>Find in project...</source>
+        <translation>工程內尋找…</translation>
+    </message>
+    <message>
+        <source>Find text</source>
+        <translation>尋找文字</translation>
+    </message>
+    <message>
+        <source>First page</source>
+        <translation>起始頁</translation>
+    </message>
+    <message>
+        <source>Groups: %1</source>
+        <translation>群組：%1</translation>
+    </message>
+    <message>
+        <source>Last page</source>
+        <translation>結束頁</translation>
+    </message>
+    <message>
+        <source>Match case</source>
+        <translation>區分大小寫</translation>
+    </message>
+    <message>
+        <source>Matches: %1</source>
+        <translation>相符項目：%1 處</translation>
+    </message>
+    <message>
+        <source>Next match</source>
+        <translation>下一處相符項目</translation>
+    </message>
+    <message>
+        <source>Next search match</source>
+        <translation>下一處相符項目</translation>
+    </message>
+    <message>
+        <source>No groups</source>
+        <translation>未選群組</translation>
+    </message>
+    <message>
+        <source>Page / label</source>
+        <translation>頁面 / 標籤</translation>
+    </message>
+    <message>
+        <source>Page range</source>
+        <translation>頁碼範圍</translation>
+    </message>
+    <message>
+        <source>Preview replacements...</source>
+        <translation>預覽全部取代…</translation>
+    </message>
+    <message>
+        <source>Previous match</source>
+        <translation>上一處相符項目</translation>
+    </message>
+    <message>
+        <source>Previous search match</source>
+        <translation>上一處相符項目</translation>
+    </message>
+    <message>
+        <source>Replace</source>
+        <translation>取代</translation>
+    </message>
+    <message>
+        <source>Replace match</source>
+        <translation>取代目前項目</translation>
+    </message>
+    <message>
+        <source>Replace project text</source>
+        <translation>取代工程文字</translation>
+    </message>
+    <message>
+        <source>Replacement preview</source>
+        <translation>取代預覽</translation>
+    </message>
+    <message>
+        <source>Replacement text</source>
+        <translation>取代為</translation>
+    </message>
+    <message>
+        <source>Selected matches: %1; labels to change: %2</source>
+        <translation>已選相符項目：%1 處；將修改標籤：%2 個</translation>
+    </message>
+    <message>
+        <source>Whole project</source>
+        <translation>全工程</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectTextSearchModel</name>
+    <message>
+        <source>Page</source>
+        <translation>頁面</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>文字</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadReviewPanel</name>
+    <message>
+        <source>Change fingerprint</source>
+        <translation>變更指紋</translation>
+    </message>
+    <message>
+        <source>Previous notes</source>
+        <translation>歷史註記</translation>
+    </message>
+    <message>
+        <source>Previous notes...</source>
+        <translation>歷史註記…</translation>
+    </message>
+    <message>
+        <source>Apply note</source>
+        <translation>儲存註記</translation>
+    </message>
+    <message>
+        <source>Edit review session</source>
+        <translation>編輯審閱記錄</translation>
+    </message>
+    <message>
+        <source>Manual pair</source>
+        <translation>手動配對</translation>
+    </message>
+    <message>
+        <source>Needs confirmation</source>
+        <translation>待確認</translation>
+    </message>
+    <message>
+        <source>Next unseen</source>
+        <translation>下一條未查看</translation>
+    </message>
+    <message>
+        <source>No unmatched labels on the other side of this page.</source>
+        <translation>本頁另一側沒有未配對的標籤。</translation>
+    </message>
+    <message>
+        <source>Other-side label</source>
+        <translation>另一側標籤</translation>
+    </message>
+    <message>
+        <source>Pair with...</source>
+        <translation>與另一側配對…</translation>
+    </message>
+    <message>
+        <source>Redo review edit</source>
+        <translation>重做審閱操作</translation>
+    </message>
+    <message>
+        <source>Remove manual pair</source>
+        <translation>取消手動配對</translation>
+    </message>
+    <message>
+        <source>Review note</source>
+        <translation>審閱註記</translation>
+    </message>
+    <message>
+        <source>Reviewed</source>
+        <translation>已查看</translation>
+    </message>
+    <message>
+        <source>Select one added or deleted change.</source>
+        <translation>請選擇一項新增或刪除變更。</translation>
+    </message>
+    <message>
+        <source>Set status for selected changes</source>
+        <translation>設定所選變更的審閱狀態</translation>
+    </message>
+    <message>
+        <source>Undo review edit</source>
+        <translation>復原審閱操作</translation>
+    </message>
+    <message>
+        <source>Unseen</source>
+        <translation>未查看</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadingController</name>
+    <message>
+        <source>Edit review session</source>
+        <translation>編輯審閱記錄</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewSessionService</name>
+    <message>
+        <source>Unsupported or damaged review session.</source>
+        <translation>審閱記錄已損壞或版本不受支援。</translation>
     </message>
 </context>
 </TS>

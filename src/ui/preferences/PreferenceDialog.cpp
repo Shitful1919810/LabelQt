@@ -259,10 +259,15 @@ QWidget* PreferenceDialog::createGeneralPage(QWidget* parent)
     m_backupIntervalSpinBox = new QSpinBox(generalPage);
     m_backupIntervalSpinBox->setRange(1, 86400);
     m_backupIntervalSpinBox->setValue(defaultPreferences().backupIntervalSeconds());
+    m_backupMaximumSpinBox = new QSpinBox(generalPage);
+    m_backupMaximumSpinBox->setRange(0, 10000);
+    m_backupMaximumSpinBox->setSpecialValueText(tr("Keep all"));
+    m_backupMaximumSpinBox->setValue(defaultPreferences().backupMaximumCount());
 
     generalLayout->addRow(tr("Language"), m_applicationLanguageComboBox);
     generalLayout->addRow(tr("Backup path"), m_backupPathEdit);
     generalLayout->addRow(tr("Backup interval seconds"), m_backupIntervalSpinBox);
+    generalLayout->addRow(tr("Automatic backups per project"), m_backupMaximumSpinBox);
     return generalPage;
 }
 
@@ -400,12 +405,20 @@ QWidget* PreferenceDialog::createKeyMappingPage(QWidget* parent)
     m_commitLabelTextShortcutEdit =
         new QKeySequenceEdit(defaultPreferences().commitLabelTextShortcut(), keyMappingPage);
     m_deleteLabelShortcutEdit = new QKeySequenceEdit(defaultPreferences().deleteLabelShortcut(), keyMappingPage);
+    m_findProjectShortcutEdit = new QKeySequenceEdit(defaultPreferences().findProjectShortcut(), keyMappingPage);
+    m_nextSearchMatchShortcutEdit =
+        new QKeySequenceEdit(defaultPreferences().nextSearchMatchShortcut(), keyMappingPage);
+    m_previousSearchMatchShortcutEdit =
+        new QKeySequenceEdit(defaultPreferences().previousSearchMatchShortcut(), keyMappingPage);
 
     leftLayout->addRow(tr("Move-label modifier"), m_moveModifierComboBox);
     leftLayout->addRow(tr("Previous label modifier"), m_previousLabelModifierComboBox);
     leftLayout->addRow(tr("Undo"), m_undoShortcutEdit);
     leftLayout->addRow(tr("Redo"), m_redoShortcutEdit);
     leftLayout->addRow(tr("Delete label"), m_deleteLabelShortcutEdit);
+    leftLayout->addRow(tr("Find in project"), m_findProjectShortcutEdit);
+    leftLayout->addRow(tr("Next search match"), m_nextSearchMatchShortcutEdit);
+    leftLayout->addRow(tr("Previous search match"), m_previousSearchMatchShortcutEdit);
     leftLayout->addRow(tr("Edit label text"), m_editLabelTextShortcutEdit);
     leftLayout->addRow(tr("Commit label text"), m_commitLabelTextShortcutEdit);
 
@@ -506,7 +519,14 @@ void PreferenceDialog::connectPreferenceChangeSignals()
             &PreferenceDialog::updateJsonPreview);
     connect(m_deleteLabelShortcutEdit, &QKeySequenceEdit::keySequenceChanged, this,
             &PreferenceDialog::updateJsonPreview);
+    connect(m_findProjectShortcutEdit, &QKeySequenceEdit::keySequenceChanged, this,
+            &PreferenceDialog::updateJsonPreview);
+    connect(m_nextSearchMatchShortcutEdit, &QKeySequenceEdit::keySequenceChanged, this,
+            &PreferenceDialog::updateJsonPreview);
+    connect(m_previousSearchMatchShortcutEdit, &QKeySequenceEdit::keySequenceChanged, this,
+            &PreferenceDialog::updateJsonPreview);
     connect(m_backupPathEdit, &QLineEdit::textChanged, this, &PreferenceDialog::updateJsonPreview);
+    connect(m_backupMaximumSpinBox, &QSpinBox::valueChanged, this, &PreferenceDialog::updateJsonPreview);
     connect(m_backupIntervalSpinBox, &QSpinBox::valueChanged, this, &PreferenceDialog::updateJsonPreview);
 }
 
@@ -626,8 +646,12 @@ void PreferenceDialog::loadPreferences(const labelqt::core::AppPreferences& pref
     m_editLabelTextShortcutEdit->setKeySequence(preferences.editLabelTextShortcut());
     m_commitLabelTextShortcutEdit->setKeySequence(preferences.commitLabelTextShortcut());
     m_deleteLabelShortcutEdit->setKeySequence(preferences.deleteLabelShortcut());
+    m_findProjectShortcutEdit->setKeySequence(preferences.findProjectShortcut());
+    m_nextSearchMatchShortcutEdit->setKeySequence(preferences.nextSearchMatchShortcut());
+    m_previousSearchMatchShortcutEdit->setKeySequence(preferences.previousSearchMatchShortcut());
     m_backupPathEdit->setText(preferences.backupPath());
     m_backupIntervalSpinBox->setValue(preferences.backupIntervalSeconds());
+    m_backupMaximumSpinBox->setValue(preferences.backupMaximumCount());
 
     m_groupStyleEditor->setMarkerDefaults(m_markerDiameterSpinBox->value(), m_markerFontSpinBox->value());
     m_groupStyleEditor->loadStyles(preferences.groupStyles());
@@ -692,8 +716,12 @@ labelqt::core::AppPreferences PreferenceDialog::preferencesFromUi() const
     values.editLabelTextShortcut = m_editLabelTextShortcutEdit->keySequence();
     values.commitLabelTextShortcut = m_commitLabelTextShortcutEdit->keySequence();
     values.deleteLabelShortcut = m_deleteLabelShortcutEdit->keySequence();
+    values.findProjectShortcut = m_findProjectShortcutEdit->keySequence();
+    values.nextSearchMatchShortcut = m_nextSearchMatchShortcutEdit->keySequence();
+    values.previousSearchMatchShortcut = m_previousSearchMatchShortcutEdit->keySequence();
     values.backupPath = m_backupPathEdit->text().trimmed();
     values.backupIntervalSeconds = m_backupIntervalSpinBox->value();
+    values.backupMaximumCount = m_backupMaximumSpinBox->value();
     values.groupStyles = m_groupStyleEditor->styles();
     return labelqt::core::AppPreferences::fromValues(std::move(values));
 }
@@ -837,6 +865,13 @@ void PreferenceDialog::savePreferences()
     }
 
     const QJsonDocument document = documentFromUi();
+    const auto validation = labelqt::core::AppPreferences::loadFromJson(document.toJson());
+    const auto conflicts = validation.preferences.conflictingSearchShortcuts();
+    if (!conflicts.isEmpty()) {
+        setMessage(tr("Search shortcuts conflict with other actions: %1").arg(conflicts.join(QStringLiteral(", "))),
+                   true);
+        return;
+    }
     const QDir preferenceDirectory = QFileInfo(m_preferencePath).absoluteDir();
     if (!preferenceDirectory.exists() && !preferenceDirectory.mkpath(QStringLiteral("."))) {
         setMessage(tr("Could not save preference file."), true);

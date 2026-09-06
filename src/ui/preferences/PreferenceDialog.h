@@ -118,8 +118,12 @@ private:
     QKeySequenceEdit* m_editLabelTextShortcutEdit{nullptr};
     QKeySequenceEdit* m_commitLabelTextShortcutEdit{nullptr};
     QKeySequenceEdit* m_deleteLabelShortcutEdit{nullptr};
+    QKeySequenceEdit* m_findProjectShortcutEdit{nullptr};
+    QKeySequenceEdit* m_nextSearchMatchShortcutEdit{nullptr};
+    QKeySequenceEdit* m_previousSearchMatchShortcutEdit{nullptr};
     AutomationShortcutEditorWidget* m_automationShortcutEditor{nullptr};
     QLineEdit* m_backupPathEdit{nullptr};
+    QSpinBox* m_backupMaximumSpinBox{nullptr};
     QSpinBox* m_backupIntervalSpinBox{nullptr};
     GroupStyleEditorWidget* m_groupStyleEditor{nullptr};
     QPlainTextEdit* m_jsonPreview{nullptr};

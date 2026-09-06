@@ -2,6 +2,7 @@
 
 #include "core/Project.h"
 #include "services/proofread/ReviewMetadataService.h"
+#include "services/proofread/ReviewSessionService.h"
 
 #include <QString>
 #include <QVector>
@@ -34,11 +35,16 @@ struct ProofreadReportTexts {
     QString order;
     QString noTextChange;
     QString filter;
+    QString review;
+    QString manualPair;
+    QStringList reviewStates;
 };
 
 struct ProofreadReportOptions {
     int maxImageWidth{960};
     int jpegQuality{62};
+    bool includeReview{false};
+    QHash<QString, ReviewAnnotation> annotations;
 };
 
 class ProofreadReportService final {

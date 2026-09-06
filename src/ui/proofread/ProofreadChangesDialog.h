@@ -2,9 +2,10 @@
 
 #include "core/AppPreferences.h"
 #include "core/Project.h"
+#include "services/project/SessionStateStore.h"
+#include "services/proofread/ProjectComparisonService.h"
 #include "services/proofread/ReviewChangeClassifier.h"
 #include "services/proofread/ReviewMetadataService.h"
-#include "services/project/SessionStateStore.h"
 
 #include <QDialog>
 #include <QVector>
@@ -18,6 +19,8 @@ class QTextBrowser;
 class ViewportFittedTableColumns;
 class ProofreadChangeFilterModel;
 class ProofreadChangeTableModel;
+class ProofreadReviewPanel;
+class QComboBox;
 
 namespace labelqt::services {
 struct ProofreadReportTexts;
@@ -27,6 +30,8 @@ struct ProofreadChangesDialogLabels {
     QString leftProjectTitle;
     QString rightProjectTitle;
     bool jumpToLeftProject{false};
+    bool reviewEnabled{false};
+    bool projectReviewSession{false};
 };
 
 class ProofreadChangesDialog final : public QDialog {
@@ -42,6 +47,7 @@ public:
 
     int selectedImageIndex() const noexcept;
     int selectedLabelIndex() const noexcept;
+    QJsonObject reviewSession() const;
 
 public slots:
     void done(int result) override;
@@ -66,6 +72,9 @@ private:
     QString diffHtml(const QString& beforeText, const QString& afterText) const;
     labelqt::services::ProofreadReportTexts reportTexts() const;
     void syncPreviewCanvases(ImageCanvas* sourceCanvas, int zoomPercent, QPointF normalizedCenter);
+    void updateReviewAnnotations();
+    void updateManualPairs();
+    QVector<labelqt::services::ReviewChange> selectedChanges() const;
 
     const labelqt::core::Project& m_beforeProject;
     const labelqt::core::Project& m_currentProject;
@@ -89,4 +98,10 @@ private:
     bool m_isClosing{false};
     bool m_detailUpdateQueued{false};
     int m_pendingDetailRow{-1};
+    ProofreadReviewPanel* m_reviewPanel{nullptr};
+    QComboBox* m_reviewFilter{nullptr};
+    QVector<labelqt::services::ProjectComparisonPagePair> m_pagePairs;
+    QString m_sessionKey;
+    bool m_sessionWritable{true};
+    QJsonObject m_initialReviewSession;
 };

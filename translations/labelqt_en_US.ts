@@ -434,6 +434,14 @@ Last error: %2</translation>
 <context>
     <name>ImageRenamePreviewWidget</name>
     <message>
+        <source>Add to pending</source>
+        <translation>Add to pending</translation>
+    </message>
+    <message>
+        <source>Selected: %1; pending result: %2</source>
+        <translation>Selected: %1; pending result: %2</translation>
+    </message>
+    <message>
         <source>Rename image files according to the current page order. The extension is always preserved.</source>
         <translation type="vanished">Rename image files according to the current page order. The extension is always preserved.</translation>
     </message>
@@ -491,6 +499,30 @@ Last error: %2</translation>
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <source>Conflicting search shortcut disabled: %1</source>
+        <translation>Conflicting search shortcut disabled: %1</translation>
+    </message>
+    <message>
+        <source>%1 must be an integer from 0 to 10000; using the default value.</source>
+        <translation>%1 must be an integer from 0 to 10000; using the default value.</translation>
+    </message>
+    <message>
+        <source>Rename files: %1
+Link images: %2
+Remove pages: %3
+
+The displayed page order and pending targets will be saved together. The project is saved before and after applying changes. Undo history is cleared only on success.
+
+Continue?</source>
+        <translation>Rename files: %1
+Link images: %2
+Remove pages: %3
+
+The displayed page order and pending targets will be saved together. The project is saved before and after applying changes. Undo history is cleared only on success.
+
+Continue?</translation>
+    </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="470"/>
         <source>&amp;New Project...</source>
@@ -1568,6 +1600,74 @@ Last error: %1</translation>
 <context>
     <name>PageOrderDialog</name>
     <message>
+        <source>All pages</source>
+        <translation>All pages</translation>
+    </message>
+    <message>
+        <source>Assign image</source>
+        <translation>Assign image</translation>
+    </message>
+    <message>
+        <source>Assign image...</source>
+        <translation>Assign image...</translation>
+    </message>
+    <message>
+        <source>Choose image</source>
+        <translation>Choose image</translation>
+    </message>
+    <message>
+        <source>Clear all pending operations</source>
+        <translation>Clear all pending operations</translation>
+    </message>
+    <message>
+        <source>Clear selected pending operations</source>
+        <translation>Clear selected pending operations</translation>
+    </message>
+    <message>
+        <source>Issues</source>
+        <translation>Issues</translation>
+    </message>
+    <message>
+        <source>Match in folder</source>
+        <translation>Match in folder</translation>
+    </message>
+    <message>
+        <source>Match in folder...</source>
+        <translation>Match in folder...</translation>
+    </message>
+    <message>
+        <source>No matching images selected.</source>
+        <translation>No matching images selected.</translation>
+    </message>
+    <message>
+        <source>Pending</source>
+        <translation>Pending</translation>
+    </message>
+    <message>
+        <source>Pending operations</source>
+        <translation>Pending operations</translation>
+    </message>
+    <message>
+        <source>Pending: %1</source>
+        <translation>Pending: %1</translation>
+    </message>
+    <message>
+        <source>Redo draft edit</source>
+        <translation>Redo draft edit</translation>
+    </message>
+    <message>
+        <source>Select one missing page.</source>
+        <translation>Select one missing page.</translation>
+    </message>
+    <message>
+        <source>Selected pages</source>
+        <translation>Selected pages</translation>
+    </message>
+    <message>
+        <source>Undo draft edit</source>
+        <translation>Undo draft edit</translation>
+    </message>
+    <message>
         <source>Images (%1);;All files (*)</source>
         <translation type="vanished">Images (%1);;All files (*)</translation>
     </message>
@@ -1612,6 +1712,18 @@ Last error: %1</translation>
 </context>
 <context>
     <name>PageOrderListModel</name>
+    <message>
+        <source>Edit page draft</source>
+        <translation>Edit page draft</translation>
+    </message>
+    <message>
+        <source>Input preview</source>
+        <translation>Input preview</translation>
+    </message>
+    <message>
+        <source>Pending target</source>
+        <translation>Pending target</translation>
+    </message>
     <message>
         <location filename="../src/ui/project/PageOrderListModel.cpp" line="247"/>
         <source>Current image</source>
@@ -1665,6 +1777,30 @@ Last error: %1</translation>
 </context>
 <context>
     <name>PreferenceDialog</name>
+    <message>
+        <source>Search shortcuts conflict with other actions: %1</source>
+        <translation>Search shortcuts conflict with other actions: %1</translation>
+    </message>
+    <message>
+        <source>Automatic backups per project</source>
+        <translation>Automatic backups per project</translation>
+    </message>
+    <message>
+        <source>Keep all</source>
+        <translation>Keep all</translation>
+    </message>
+    <message>
+        <source>Find in project</source>
+        <translation>Find in project</translation>
+    </message>
+    <message>
+        <source>Next search match</source>
+        <translation>Next search match</translation>
+    </message>
+    <message>
+        <source>Previous search match</source>
+        <translation>Previous search match</translation>
+    </message>
     <message>
         <location filename="../src/ui/preferences/PreferenceDialog.cpp" line="121"/>
         <source>Preferences</source>
@@ -2146,6 +2282,10 @@ Last error: %1</translation>
 <context>
     <name>ProjectImageRenameService</name>
     <message>
+        <source>Source image already exists.</source>
+        <translation>Source image already exists.</translation>
+    </message>
+    <message>
         <location filename="../src/services/project/ProjectImageRenameService.cpp" line="30"/>
         <source>Pattern cannot be empty.</source>
         <translation>Pattern cannot be empty.</translation>
@@ -2328,6 +2468,42 @@ Last error: %1</translation>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
+    <message>
+        <source>; Review: %1</source>
+        <translation>; Review: %1</translation>
+    </message>
+    <message>
+        <source>All review states</source>
+        <translation>All review states</translation>
+    </message>
+    <message>
+        <source>Changes: %1; reviewed: %2</source>
+        <translation>Changes: %1; reviewed: %2</translation>
+    </message>
+    <message>
+        <source>Manual pair</source>
+        <translation>Manual pair</translation>
+    </message>
+    <message>
+        <source>Needs confirmation</source>
+        <translation>Needs confirmation</translation>
+    </message>
+    <message>
+        <source>Review</source>
+        <translation>Review</translation>
+    </message>
+    <message>
+        <source>Review session not saved</source>
+        <translation>Review session not saved</translation>
+    </message>
+    <message>
+        <source>Reviewed</source>
+        <translation>Reviewed</translation>
+    </message>
+    <message>
+        <source>Unseen</source>
+        <translation>Unseen</translation>
+    </message>
     <message numerus="yes">
         <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="339"/>
         <location filename="../src/ui/proofread/ProofreadChangesDialog.cpp" line="590"/>
@@ -2652,6 +2828,10 @@ Last error: %1</translation>
 <context>
     <name>FileRenameTransaction</name>
     <message>
+        <source>A source file cannot be verified.</source>
+        <translation>A source file cannot be verified.</translation>
+    </message>
+    <message>
         <source>Unresolved rename record: %1. Recover the files before continuing.</source>
         <translation>Unresolved rename record: %1. Recover the files before continuing.</translation>
     </message>
@@ -2669,6 +2849,447 @@ Last error: %1</translation>
     <message>
         <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
         <translation>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</translation>
+    </message>
+</context>
+<context>
+    <name>LabelEditController</name>
+    <message>
+        <source>The project changed. Refresh the replacement preview.</source>
+        <translation>The project changed. Refresh the replacement preview.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectComparisonService</name>
+    <message>
+        <source>A manual pair is stale, duplicated, or outside the matched pages.</source>
+        <translation>A manual pair is stale, duplicated, or outside the matched pages.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectController</name>
+    <message>
+        <source>Open the original project before replacing it.</source>
+        <translation>Open the original project before replacing it.</translation>
+    </message>
+    <message>
+        <source>The project was changed on disk.</source>
+        <translation>The project was changed on disk.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryController</name>
+    <message>
+        <source>Backup and Recovery...</source>
+        <translation>Backup and Recovery...</translation>
+    </message>
+    <message>
+        <source>Compare</source>
+        <translation>Compare</translation>
+    </message>
+    <message>
+        <source>Current edits</source>
+        <translation>Current edits</translation>
+    </message>
+    <message>
+        <source>Discard current unsaved edits and reload the project?</source>
+        <translation>Discard current unsaved edits and reload the project?</translation>
+    </message>
+    <message>
+        <source>Disk version</source>
+        <translation>Disk version</translation>
+    </message>
+    <message>
+        <source>File missing</source>
+        <translation>File missing</translation>
+    </message>
+    <message>
+        <source>Loaded/saved: %1
+Disk version: %2</source>
+        <translation>Loaded/saved: %1
+Disk version: %2</translation>
+    </message>
+    <message>
+        <source>Overwrite disk version</source>
+        <translation>Overwrite disk version</translation>
+    </message>
+    <message>
+        <source>Overwrite disk version...</source>
+        <translation>Overwrite disk version...</translation>
+    </message>
+    <message>
+        <source>Project changed on disk</source>
+        <translation>Project changed on disk</translation>
+    </message>
+    <message>
+        <source>Recovery available...</source>
+        <translation>Recovery available...</translation>
+    </message>
+    <message>
+        <source>Recovery canceled.</source>
+        <translation>Recovery canceled.</translation>
+    </message>
+    <message>
+        <source>Reload disk version</source>
+        <translation>Reload disk version</translation>
+    </message>
+    <message>
+        <source>Reload disk version...</source>
+        <translation>Reload disk version...</translation>
+    </message>
+    <message>
+        <source>Replace the disk version with the current edits?</source>
+        <translation>Replace the disk version with the current edits?</translation>
+    </message>
+    <message>
+        <source>Save current edits as...</source>
+        <translation>Save current edits as...</translation>
+    </message>
+    <message>
+        <source>Save failed</source>
+        <translation>Save failed</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryDialog</name>
+    <message>
+        <source>Apply file recovery for %1? Files will only be moved if their contents can be verified.</source>
+        <translation>Apply file recovery for %1? Files will only be moved if their contents can be verified.</translation>
+    </message>
+    <message>
+        <source>Backup</source>
+        <translation>Backup</translation>
+    </message>
+    <message>
+        <source>Backup and Recovery</source>
+        <translation>Backup and Recovery</translation>
+    </message>
+    <message>
+        <source>Choose project</source>
+        <translation>Choose project</translation>
+    </message>
+    <message>
+        <source>Choose project...</source>
+        <translation>Choose project...</translation>
+    </message>
+    <message>
+        <source>Complete file operation...</source>
+        <translation>Complete file operation...</translation>
+    </message>
+    <message>
+        <source>File operations: %1</source>
+        <translation>File operations: %1</translation>
+    </message>
+    <message>
+        <source>LabelPlus text (*.txt)</source>
+        <translation>LabelPlus text (*.txt)</translation>
+    </message>
+    <message>
+        <source>No recovery records.</source>
+        <translation>No recovery records.</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Open folder</translation>
+    </message>
+    <message>
+        <source>Pages: %1
+Missing images: %2</source>
+        <translation>Pages: %1
+Missing images: %2</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>Preview</translation>
+    </message>
+    <message>
+        <source>Project: %1</source>
+        <translation>Project: %1</translation>
+    </message>
+    <message>
+        <source>Recover as copy</source>
+        <translation>Recover as copy</translation>
+    </message>
+    <message>
+        <source>Recover as copy...</source>
+        <translation>Recover as copy...</translation>
+    </message>
+    <message>
+        <source>Recovered copy: %1</source>
+        <translation>Recovered copy: %1</translation>
+    </message>
+    <message>
+        <source>Replace current project</source>
+        <translation>Replace current project</translation>
+    </message>
+    <message>
+        <source>Replace current project...</source>
+        <translation>Replace current project...</translation>
+    </message>
+    <message>
+        <source>Replace the current project with this backup? The current project will be backed up first and undo history will be cleared.</source>
+        <translation>Replace the current project with this backup? The current project will be backed up first and undo history will be cleared.</translation>
+    </message>
+    <message>
+        <source>Restore original file names...</source>
+        <translation>Restore original file names...</translation>
+    </message>
+    <message>
+        <source>Saved project</source>
+        <translation>Saved project</translation>
+    </message>
+    <message>
+        <source>This older record is available for manual inspection only.</source>
+        <translation>This older record is available for manual inspection only.</translation>
+    </message>
+    <message>
+        <source>Unfinished file operation</source>
+        <translation>Unfinished file operation</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectRecoveryService</name>
+    <message>
+        <source>Files recovered, but the recovery record could not be removed.</source>
+        <translation>Files recovered, but the recovery record could not be removed.</translation>
+    </message>
+    <message>
+        <source>Recovery is ambiguous or files have changed. No automatic recovery is possible.</source>
+        <translation>Recovery is ambiguous or files have changed. No automatic recovery is possible.</translation>
+    </message>
+    <message>
+        <source>Recovery stopped. Keep the recovery record and temporary files.</source>
+        <translation>Recovery stopped. Keep the recovery record and temporary files.</translation>
+    </message>
+    <message>
+        <source>Choose a new file for the recovered copy.</source>
+        <translation>Choose a new file for the recovered copy.</translation>
+    </message>
+    <message>
+        <source>The backup cannot be verified.</source>
+        <translation>The backup cannot be verified.</translation>
+    </message>
+    <message>
+        <source>This record requires file recovery.</source>
+        <translation>This record requires file recovery.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectSearchPanel</name>
+    <message>
+        <source>After</source>
+        <translation>After</translation>
+    </message>
+    <message>
+        <source>All groups</source>
+        <translation>All groups</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Apply</translation>
+    </message>
+    <message>
+        <source>Before</source>
+        <translation>Before</translation>
+    </message>
+    <message>
+        <source>Close search</source>
+        <translation>Close search</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>Current page</translation>
+    </message>
+    <message>
+        <source>Find in project...</source>
+        <translation>Find in project...</translation>
+    </message>
+    <message>
+        <source>Find text</source>
+        <translation>Find text</translation>
+    </message>
+    <message>
+        <source>First page</source>
+        <translation>First page</translation>
+    </message>
+    <message>
+        <source>Groups: %1</source>
+        <translation>Groups: %1</translation>
+    </message>
+    <message>
+        <source>Last page</source>
+        <translation>Last page</translation>
+    </message>
+    <message>
+        <source>Match case</source>
+        <translation>Match case</translation>
+    </message>
+    <message>
+        <source>Matches: %1</source>
+        <translation>Matches: %1</translation>
+    </message>
+    <message>
+        <source>Next match</source>
+        <translation>Next match</translation>
+    </message>
+    <message>
+        <source>Next search match</source>
+        <translation>Next search match</translation>
+    </message>
+    <message>
+        <source>No groups</source>
+        <translation>No groups</translation>
+    </message>
+    <message>
+        <source>Page / label</source>
+        <translation>Page / label</translation>
+    </message>
+    <message>
+        <source>Page range</source>
+        <translation>Page range</translation>
+    </message>
+    <message>
+        <source>Preview replacements...</source>
+        <translation>Preview replacements...</translation>
+    </message>
+    <message>
+        <source>Previous match</source>
+        <translation>Previous match</translation>
+    </message>
+    <message>
+        <source>Previous search match</source>
+        <translation>Previous search match</translation>
+    </message>
+    <message>
+        <source>Replace</source>
+        <translation>Replace</translation>
+    </message>
+    <message>
+        <source>Replace match</source>
+        <translation>Replace match</translation>
+    </message>
+    <message>
+        <source>Replace project text</source>
+        <translation>Replace project text</translation>
+    </message>
+    <message>
+        <source>Replacement preview</source>
+        <translation>Replacement preview</translation>
+    </message>
+    <message>
+        <source>Replacement text</source>
+        <translation>Replacement text</translation>
+    </message>
+    <message>
+        <source>Selected matches: %1; labels to change: %2</source>
+        <translation>Selected matches: %1; labels to change: %2</translation>
+    </message>
+    <message>
+        <source>Whole project</source>
+        <translation>Whole project</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectTextSearchModel</name>
+    <message>
+        <source>Page</source>
+        <translation>Page</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>Text</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadReviewPanel</name>
+    <message>
+        <source>Change fingerprint</source>
+        <translation>Change fingerprint</translation>
+    </message>
+    <message>
+        <source>Previous notes</source>
+        <translation>Previous notes</translation>
+    </message>
+    <message>
+        <source>Previous notes...</source>
+        <translation>Previous notes...</translation>
+    </message>
+    <message>
+        <source>Apply note</source>
+        <translation>Apply note</translation>
+    </message>
+    <message>
+        <source>Edit review session</source>
+        <translation>Edit review session</translation>
+    </message>
+    <message>
+        <source>Manual pair</source>
+        <translation>Manual pair</translation>
+    </message>
+    <message>
+        <source>Needs confirmation</source>
+        <translation>Needs confirmation</translation>
+    </message>
+    <message>
+        <source>Next unseen</source>
+        <translation>Next unseen</translation>
+    </message>
+    <message>
+        <source>No unmatched labels on the other side of this page.</source>
+        <translation>No unmatched labels on the other side of this page.</translation>
+    </message>
+    <message>
+        <source>Other-side label</source>
+        <translation>Other-side label</translation>
+    </message>
+    <message>
+        <source>Pair with...</source>
+        <translation>Pair with...</translation>
+    </message>
+    <message>
+        <source>Redo review edit</source>
+        <translation>Redo review edit</translation>
+    </message>
+    <message>
+        <source>Remove manual pair</source>
+        <translation>Remove manual pair</translation>
+    </message>
+    <message>
+        <source>Review note</source>
+        <translation>Review note</translation>
+    </message>
+    <message>
+        <source>Reviewed</source>
+        <translation>Reviewed</translation>
+    </message>
+    <message>
+        <source>Select one added or deleted change.</source>
+        <translation>Select one added or deleted change.</translation>
+    </message>
+    <message>
+        <source>Set status for selected changes</source>
+        <translation>Set status for selected changes</translation>
+    </message>
+    <message>
+        <source>Undo review edit</source>
+        <translation>Undo review edit</translation>
+    </message>
+    <message>
+        <source>Unseen</source>
+        <translation>Unseen</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadingController</name>
+    <message>
+        <source>Edit review session</source>
+        <translation>Edit review session</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewSessionService</name>
+    <message>
+        <source>Unsupported or damaged review session.</source>
+        <translation>Unsupported or damaged review session.</translation>
     </message>
 </context>
 </TS>

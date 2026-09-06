@@ -2,11 +2,13 @@
 
 #include "core/Project.h"
 
+#include <QHash>
 #include <QString>
 #include <QVector>
 
 #include <expected>
 #include <functional>
+#include <optional>
 
 namespace labelqt::services {
 
@@ -28,14 +30,17 @@ struct ProjectImageRenameItem {
 
     bool isChanged() const noexcept;
     bool isValid() const noexcept;
+    bool operator==(const ProjectImageRenameItem&) const = default;
 };
 
 struct ProjectImageRenamePlan {
     QVector<ProjectImageRenameItem> items;
     QString error;
+    std::optional<QVector<int>> finalPageOrder;
 
     bool isValid() const noexcept;
     bool hasChanges() const noexcept;
+    bool operator==(const ProjectImageRenamePlan&) const = default;
 };
 
 struct ProjectImageRenamePatternSpan {
@@ -58,6 +63,9 @@ public:
                                              const ProjectImageRenameOptions& options);
     static ProjectImageRenamePlan mergePlans(ProjectImageRenamePlan currentPlan,
                                              const ProjectImageRenamePlan& incomingPlan);
+    static ProjectImageRenamePlan referencePlan(const labelqt::core::Project& project,
+                                                const QHash<int, QString>& targets);
+    static QStringList referenceCandidates(const QString& missingPath, const QString& directory);
     static ProjectImageRenamePatternAnalysis analyzePattern(const QString& pattern);
     static std::expected<void, QString> applyPlan(labelqt::core::Project& project, const ProjectImageRenamePlan& plan,
                                                   const CommitProject& commitProject = {});

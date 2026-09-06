@@ -9,32 +9,34 @@
 #include "services/project/SaveChangesDecision.h"
 #include "services/project/SessionStateStore.h"
 #include "services/proofread/TextDiffService.h"
+#include "ui/EditorStateController.h"
+#include "ui/MainWindowShortcutController.h"
 #include "ui/automation/AutomationController.h"
 #include "ui/automation/AutomationShortcutController.h"
 #include "ui/canvas/CanvasBottomBar.h"
 #include "ui/canvas/CanvasLabelTextEditController.h"
-#include "ui/widgets/DialogWindowUtils.h"
-#include "ui/EditorStateController.h"
 #include "ui/canvas/ImagePageViewController.h"
 #include "ui/labeltable/LabelEditDelegates.h"
 #include "ui/labeltable/LabelSelectionController.h"
 #include "ui/labeltable/LabelTableView.h"
-#include "ui/MainWindowShortcutController.h"
+#include "ui/labeltable/ViewportFittedTableColumns.h"
+#include "ui/preferences/PreferenceDialog.h"
 #include "ui/project/PageOrderDialog.h"
 #include "ui/project/PageSelectorComboBox.h"
-#include "ui/preferences/PreferenceDialog.h"
-#include "ui/proofread/ProofreadingController.h"
 #include "ui/project/ProjectMergeDialog.h"
+#include "ui/project/ProjectRecoveryController.h"
 #include "ui/project/ProjectViewController.h"
+#include "ui/proofread/ProofreadingController.h"
+#include "ui/search/ProjectSearchPanel.h"
+#include "ui/widgets/DialogWindowUtils.h"
 #include "ui/widgets/ThemeManager.h"
-#include "ui/labeltable/ViewportFittedTableColumns.h"
 
 #include <QAbstractItemDelegate>
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
-#include <QCloseEvent>
 #include <QClipboard>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDialog>
 #include <QDir>
@@ -64,6 +66,7 @@
 #include <QStyleFactory>
 #include <QTableView>
 #include <QTextCursor>
+#include <QTextEdit>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -300,6 +303,23 @@ MainWindow::MainWindow(QWidget* parent)
     resize(1200, 800);
 
     createActions();
+    m_recoveryController = new ProjectRecoveryController(
+        this, m_projectController,
+        {[this]() -> const labelqt::core::AppPreferences& { return m_preferences; },
+         [this] { return isProjectEditingBlocked(); },
+         [this] {
+             commitActiveTextInput();
+             return promptToSaveIfDirty();
+         },
+         [this] { detachProjectViewsFromProjectData(); },
+         [this](bool replaced) {
+             if (replaced)
+                 m_undoStack.clear();
+             refreshProjectUi();
+         },
+         [this] { return saveProjectAs(); },
+         [this](const QString& path) { return loadProjectFile(path, true, tr("Loaded %1").arg(path)); }},
+        this);
     createMenus();
     createCentralWidget();
     applyLabelTableFont();
@@ -339,6 +359,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_proofreadingController->setUi(m_startProofreadingAction, m_showProofreadingChangesAction,
                                     m_compareWithProjectAction, m_proofreadingStatusLabel);
     statusBar()->showMessage(tr("Ready"));
+    statusBar()->addPermanentWidget(m_recoveryController->notice());
     showPreferenceWarnings();
     restoreLayoutState();
     m_backupTimer = new QTimer(this);
@@ -476,12 +497,14 @@ void MainWindow::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(m_saveProjectAction);
     fileMenu->addAction(m_saveProjectAsAction);
+    fileMenu->addAction(m_recoveryController->action());
     fileMenu->addSeparator();
     fileMenu->addAction(m_preferencesAction);
     fileMenu->addSeparator();
     fileMenu->addAction(m_quitAction);
 
     QMenu* editMenu = menuBar()->addMenu(tr("&Edit"));
+    m_editMenu = editMenu;
     editMenu->addAction(m_undoAction);
     editMenu->addAction(m_redoAction);
     editMenu->addSeparator();
@@ -607,6 +630,36 @@ void MainWindow::createCentralWidget()
     m_rightSplitter->setStretchFactor(0, 3);
     m_rightSplitter->setStretchFactor(1, 1);
     rightLayout->addWidget(m_rightSplitter, 1);
+    m_searchPanel = new ProjectSearchPanel(
+        {[this]() -> const labelqt::core::Project& { return project(); }, [this] { return m_currentImageIndex; },
+         [this] { return isProjectEditingBlocked(); }, [this] { commitActiveTextInput(); },
+         [this](const labelqt::services::ProjectTextMatch& match) {
+             const auto& group = project().images().at(match.imageIndex).labels.at(match.labelIndex).group();
+             auto groups = m_groupFilterComboBox->selectedGroups();
+             if (!groups.contains(group)) {
+                 groups.append(group);
+                 m_groupFilterComboBox->setSelectedGroups(groups);
+             }
+             selectLabelAndCenter(match.imageIndex, match.labelIndex);
+             QTextEdit::ExtraSelection highlight;
+             highlight.cursor = m_textEdit->textCursor();
+             highlight.cursor.setPosition(static_cast<int>(match.start));
+             highlight.cursor.setPosition(static_cast<int>(match.start + match.length), QTextCursor::KeepAnchor);
+             highlight.format.setBackground(m_textEdit->palette().highlight());
+             highlight.format.setForeground(m_textEdit->palette().highlightedText());
+             m_textEdit->setExtraSelections({highlight});
+         },
+         [this] {
+             if (m_textEdit)
+                 m_textEdit->setExtraSelections({});
+         },
+         [this](const QByteArray& revision, QVector<labelqt::services::LabelTextReplacement> edits,
+                const QString& text) { return m_labelEditController->replaceTexts(revision, std::move(edits), text); }},
+        this, rightPanel);
+    m_searchPanel->setPreferences(m_preferences);
+    rightLayout->addWidget(m_searchPanel);
+    m_editMenu->addSeparator();
+    m_editMenu->addActions(m_searchPanel->actions());
 
     m_rootSplitter->addWidget(leftPanel);
     m_rootSplitter->addWidget(rightPanel);
@@ -921,9 +974,19 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
         return false;
     }
 
+    const int movingFiles = static_cast<int>(std::count_if(plan.items.begin(), plan.items.end(), [](const auto& item) {
+        return item.isChanged() && !item.referenceOnly;
+    }));
+    const int linkedPages = static_cast<int>(std::count_if(
+        plan.items.begin(), plan.items.end(), [](const auto& item) { return item.isChanged() && item.referenceOnly; }));
+    const int removedPages =
+        plan.finalPageOrder ? static_cast<int>(project().images().size() - plan.finalPageOrder->size()) : 0;
     const QMessageBox::StandardButton answer = showMainWindowMessageBox(
-        this, QMessageBox::Warning, tr("Rename Images"),
-        tr("This will rename existing image files on disk and update missing page references when the rendered target image already exists.\n\nThe project will be saved before applying the changes, then saved again after the operation finishes.\n\nThis operation is not part of the normal undo stack. If it succeeds, the current undo history will be cleared.\n\nContinue?"),
+        this, movingFiles > 0 ? QMessageBox::Warning : QMessageBox::Question, tr("Rename Images"),
+        tr("Rename files: %1\nLink images: %2\nRemove pages: %3\n\nThe displayed page order and pending targets will be saved together. The project is saved before and after applying changes. Undo history is cleared only on success.\n\nContinue?")
+            .arg(movingFiles)
+            .arg(linkedPages)
+            .arg(removedPages),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (answer != QMessageBox::Yes) {
         return false;
@@ -934,6 +997,10 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
     }
 
     const int oldImageIndex = m_currentImageIndex;
+    QString preferredImageName = currentImage() == nullptr ? QString() : currentImage()->name;
+    for (const auto& item : plan.items)
+        if (item.imageIndex == oldImageIndex && item.included)
+            preferredImageName = item.newName;
     const int oldZoomPercent = m_canvas == nullptr ? 100 : m_canvas->zoomPercent();
     const QPointF oldCenter = m_canvas == nullptr ? QPointF(0.5, 0.5) : m_canvas->normalizedViewCenter();
     const int oldLabelIndex = m_currentLabelIndex;
@@ -942,8 +1009,9 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
     const std::expected<void, QString> result = m_projectWorkflowController->applyImageRename(plan);
 
     refreshProjectUi();
-    if (oldImageIndex >= 0 && oldImageIndex < project().images().size()) {
-        m_currentImageIndex = oldImageIndex;
+    const int restoredImageIndex = result ? project().imageIndexByName(preferredImageName) : oldImageIndex;
+    if (restoredImageIndex >= 0 && restoredImageIndex < project().images().size()) {
+        m_currentImageIndex = restoredImageIndex;
         refreshImageUi();
         if (m_imagePageViewController != nullptr) {
             m_imagePageViewController->restoreViewAfterCurrentImageDisplayed(oldZoomPercent, oldCenter);
@@ -1036,6 +1104,7 @@ bool MainWindow::openMostRecentProject()
 
 bool MainWindow::loadProjectFile(const QString& path, bool showErrors, const QString& successMessage)
 {
+    m_recoveryController->check(path);
     try {
         detachProjectViewsFromProjectData();
         m_projectController.loadFromFile(path);
@@ -1056,6 +1125,7 @@ bool MainWindow::loadProjectFile(const QString& path, bool showErrors, const QSt
         return true;
     }
     catch (const std::exception& error) {
+        refreshProjectUi();
         m_sessionStateStore.removeRecentProjectPath(path);
         updateRecentProjectsMenu();
         if (showErrors) {
@@ -1138,6 +1208,11 @@ bool MainWindow::saveProject()
         statusBar()->showMessage(tr("Saved %1").arg(project().filePath()), 4000);
         return true;
     }
+    catch (const labelqt::services::ProjectFileConflict& conflict) {
+        const bool saved = m_recoveryController->resolveSaveConflict(conflict);
+        updateWindowTitle();
+        return saved;
+    }
     catch (const std::exception& error) {
         showMainWindowCritical(this, tr("Save failed"), QString::fromUtf8(error.what()));
         return false;
@@ -1171,7 +1246,6 @@ bool MainWindow::saveProjectAs()
     }
     m_sessionStateStore.saveLastFileDialogPath(labelqt::services::FileDialogScope::SaveProject, path);
 
-    const QString oldPath = project().filePath();
     try {
         m_projectController.saveAs(path);
         m_sessionStateStore.addRecentProjectPath(project().filePath());
@@ -1180,8 +1254,12 @@ bool MainWindow::saveProjectAs()
         statusBar()->showMessage(tr("Saved %1").arg(project().filePath()), 4000);
         return true;
     }
+    catch (const labelqt::services::ProjectFileConflict& conflict) {
+        const bool saved = m_recoveryController->resolveSaveConflict(conflict);
+        updateWindowTitle();
+        return saved;
+    }
     catch (const std::exception& error) {
-        project().setFilePath(oldPath);
         showMainWindowCritical(this, tr("Save failed"), QString::fromUtf8(error.what()));
         return false;
     }
@@ -1728,6 +1806,7 @@ void MainWindow::updateCurrentLabelText()
 
 bool MainWindow::updateCurrentLabelDetails(int index)
 {
+    m_textEdit->setExtraSelections({});
     if (!m_isUpdatingUi && m_canvasTextEditController != nullptr && m_canvasTextEditController->labelIndex() >= 0 &&
         m_canvasTextEditController->labelIndex() != index) {
         commitCanvasLabelTextEditor();
@@ -2342,6 +2421,8 @@ void MainWindow::selectLabelIndexes(const QVector<int>& sourceIndexes, int prima
 
 void MainWindow::refreshProjectUi()
 {
+    if (m_searchPanel)
+        m_searchPanel->invalidate();
     m_isUpdatingUi = true;
     if (m_projectViewController != nullptr) {
         m_projectViewController->refreshProject(project());
@@ -2406,6 +2487,8 @@ void MainWindow::replaceProjectImages(QVector<labelqt::core::ImageEntry> images,
 
 void MainWindow::refreshImageUi()
 {
+    if (m_searchPanel)
+        m_searchPanel->currentPageChanged();
     closeCanvasLabelTextEditor();
     m_isUpdatingUi = true;
     const labelqt::core::ImageEntry* image = currentImage();
@@ -2776,6 +2859,8 @@ void MainWindow::applyPreferences(labelqt::core::AppPreferencesLoadResult result
 {
     const bool languageChanged = m_preferences.applicationLanguage() != result.preferences.applicationLanguage();
     m_preferences = result.preferences;
+    if (m_searchPanel)
+        m_searchPanel->setPreferences(m_preferences);
     m_preferenceWarnings = std::move(result.warnings);
     labelqt::services::TextDiffService::setCleanupMode(m_preferences.textDiffCleanupMode());
     m_labelTableMaxTextRows = m_preferences.labelTableMaxTextRows();
@@ -2946,6 +3031,9 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
     case AppPreferenceWarningType::EditLabelTextShortcutInvalid:
     case AppPreferenceWarningType::CommitLabelTextShortcutInvalid:
     case AppPreferenceWarningType::DeleteLabelShortcutInvalid:
+    case AppPreferenceWarningType::FindProjectShortcutInvalid:
+    case AppPreferenceWarningType::NextSearchMatchShortcutInvalid:
+    case AppPreferenceWarningType::PreviousSearchMatchShortcutInvalid:
         return tr("%1 must be a valid key sequence; using the default value.").arg(warning.key);
     case AppPreferenceWarningType::BackupPathWrongType:
         return tr("%1 must be a non-empty string; using the default value.").arg(warning.key);
@@ -2953,6 +3041,10 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
         return tr("%1 must be a positive integer; using the default value.").arg(warning.key);
     case AppPreferenceWarningType::BackupIntervalOutOfRange:
         return tr("%1 must be a positive integer; using the default value.").arg(warning.key);
+    case AppPreferenceWarningType::BackupRetentionInvalid:
+        return tr("%1 must be an integer from 0 to 10000; using the default value.").arg(warning.key);
+    case AppPreferenceWarningType::SearchShortcutConflict:
+        return tr("Conflicting search shortcut disabled: %1").arg(warning.key);
     }
 
     return tr("Unknown preference warning.");
@@ -2978,6 +3070,8 @@ void MainWindow::markDirty()
 {
     if (!m_isUpdatingUi) {
         m_projectController.markDirty();
+        if (m_searchPanel)
+            m_searchPanel->invalidate();
         updateWindowTitle();
     }
 }

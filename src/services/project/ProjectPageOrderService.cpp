@@ -50,7 +50,8 @@ ProjectPageOrderService::reorderedImages(const QVector<labelqt::core::ImageEntry
 
 void ProjectPageOrderService::reorderImages(labelqt::core::Project& project, const QVector<int>& order)
 {
-    if (!isValidOrder(order, static_cast<int>(project.images().size())) || isIdentityOrder(order)) {
+    if (!isValidOrder(order, static_cast<int>(project.images().size())) ||
+        (order.size() == project.images().size() && isIdentityOrder(order))) {
         return;
     }
 

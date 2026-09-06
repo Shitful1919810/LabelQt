@@ -18,6 +18,7 @@
     },
     "backupIntervalSeconds": 200,
     "backupPath": "bak",
+    "backupMaximumCount": 0,
     "canvasLabelTextEditor": {
         "opacity": 0.75
     },
@@ -46,6 +47,9 @@
         "alternatePreviousLabelShortcut": "Ctrl+Up",
         "commitLabelTextShortcut": "Ctrl+Return",
         "deleteLabelShortcut": "Del",
+        "findProjectShortcut": "Ctrl+F",
+        "nextSearchMatchShortcut": "F3",
+        "previousSearchMatchShortcut": "Shift+F3",
         "editLabelTextShortcut": "Return",
         "moveLabelModifier": "ctrl",
         "nextLabelShortcut": "Tab",

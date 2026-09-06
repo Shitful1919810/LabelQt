@@ -122,8 +122,8 @@ python scripts/devtool.py commit-message --staged
 
 ## 使用原则
 
-持久化安全约定见 [persistence-safety.md](persistence-safety.md)。四项后续产品设计集中在
-[product-design-proposal.md](product-design-proposal.md)，其状态是待审阅，不应按已实现功能开发或编写手册。
+持久化安全约定见 [persistence-safety.md](persistence-safety.md)。四项工作流的实际接口、操作和限制见
+[product-workflows.md](product-workflows.md)，原始设计另保留在 [product-design-proposal.md](product-design-proposal.md)。
 
 - 新增可自动化的重复检查时，优先扩展 `devtool.py`，不要让每个 Agent 重新写一段临时脚本。
 - `devtool.py` 应保持轻量、无第三方 Python 依赖，并尽量复用已有脚本。

@@ -17,6 +17,8 @@ class PageOrderListModel;
 class QToolButton;
 class ViewportFittedTableColumns;
 class ImageRenamePreviewWidget;
+class QComboBox;
+class QLabel;
 
 class PageOrderDialog final : public QDialog {
     Q_OBJECT
@@ -24,6 +26,7 @@ class PageOrderDialog final : public QDialog {
 public:
     PageOrderDialog(const labelqt::core::Project& project, labelqt::core::AppPreferences preferences,
                     QWidget* parent = nullptr, bool enableImageRename = false);
+    ~PageOrderDialog() override;
 
     QVector<int> pageOrder() const;
     bool hasPendingImageRenamePlan() const noexcept;
@@ -45,6 +48,9 @@ private:
     void saveTableColumnWidths() const;
     QVector<int> selectedPageSourceIndexes() const;
     QVector<int> renameTargetSourceIndexes() const;
+    void refreshDraftUi();
+    void applyPageFilter();
+    void assignImages(bool directory);
 
     const labelqt::core::Project& m_project;
     labelqt::core::AppPreferences m_preferences;
@@ -58,8 +64,10 @@ private:
     QToolButton* m_movePageDownButton{nullptr};
     QToolButton* m_removePageButton{nullptr};
     ImageRenamePreviewWidget* m_imageRenameWidget{nullptr};
-    labelqt::services::ProjectImageRenamePlan m_pendingImageRenamePlan;
     labelqt::services::ProjectImageRenamePlan m_visibleImageRenamePlan;
     std::function<bool(const labelqt::services::ProjectImageRenamePlan&)> m_pendingImageRenameHandler;
-    bool m_hasPendingImageRenamePlan{false};
+    QComboBox* m_pageFilter{nullptr};
+    QComboBox* m_targetScope{nullptr};
+    QLabel* m_pendingCount{nullptr};
+    bool m_orderApplied{false};
 };

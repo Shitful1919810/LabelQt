@@ -313,9 +313,19 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
                      escaped(texts.textDifference));
     for (const int changeIndex : changeIndexes) {
         const ReviewChange& change = changes.at(changeIndex);
+        QString details = textDiffHtml(change, texts);
+        if (change.manuallyMatched)
+            details += QStringLiteral("<p>%1</p>").arg(escaped(texts.manualPair));
+        if (options.includeReview) {
+            const auto annotation = options.annotations.value(ReviewSessionService::fingerprint(change));
+            details +=
+                QStringLiteral("<p><strong>%1: %2</strong></p><div style=\"white-space:pre-wrap\">%3</div>")
+                    .arg(escaped(texts.review), escaped(texts.reviewStates.value(static_cast<int>(annotation.status))),
+                         escaped(annotation.note));
+        }
         html += QStringLiteral("<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td></tr>")
                     .arg(escaped(labelNumber(change.labelIndex)), escaped(changeKindText(change, texts)),
-                         escaped(changeSummary(change, texts)), textDiffHtml(change, texts));
+                         escaped(changeSummary(change, texts)), details);
     }
     html += QStringLiteral("</tbody></table></section>");
     return html;

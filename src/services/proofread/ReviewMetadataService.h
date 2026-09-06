@@ -54,6 +54,7 @@ struct ReviewChange {
     bool textChanged{false};
     bool groupChanged{false};
     bool positionChanged{false};
+    bool manuallyMatched{false};
 };
 
 class ReviewMetadataService final {

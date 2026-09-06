@@ -18,8 +18,8 @@
 #show raw: set text(font: ("Source Code Pro", "DejaVu Sans Mono"))
 
 #let product-name = "LabelQt"
-#let manual-version = "v0.1.0"
-#let manual-date = "2026-07-10"
+#let manual-version = "开发版本"
+#let manual-date = "2026-09-06"
 
 #import "style.typ": note
 
@@ -39,7 +39,7 @@
 ])
 
 #note("截图环境", [
-  本手册中的界面截图来自 Fedora 44 KDE。Windows、其他 Linux 桌面环境或不同 Qt 主题下，按钮、标题栏、滚动条和配色可能与截图不完全一致，但功能位置和操作逻辑相同。
+  本手册中的界面截图来自 Fedora 44 KDE。Windows、其他 Linux 桌面环境或不同 Qt 主题下，按钮、标题栏、滚动条和配色可能不同。截图仅作布局参考，部分新增控件尚未出现在截图中，具体操作以正文为准。
 ])
 
 #outline(title: "目录")
@@ -49,6 +49,7 @@
 #include "chapters/quick-start.typ"
 #include "chapters/main-window.typ"
 #include "chapters/editing.typ"
+#include "chapters/search-recovery.typ"
 #include "chapters/page-management.typ"
 #include "chapters/proofreading.typ"
 #include "chapters/merge.typ"
