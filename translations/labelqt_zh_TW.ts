@@ -4,6 +4,18 @@
 <context>
     <name>AutomationController</name>
     <message>
+        <source>Select the pages or labels required by this script.</source>
+        <translation>請先選擇此指令碼需要處理的頁面或標籤。</translation>
+    </message>
+    <message>
+        <source>The project changed while the script was running. No changes were applied.</source>
+        <translation>工程在腳本執行期間發生了變化，未套用任何修改。</translation>
+    </message>
+    <message>
+        <source>The script returned invalid or unauthorized changes. No changes were applied.</source>
+        <translation>腳本傳回無效或未獲授權的修改，未套用任何修改。</translation>
+    </message>
+    <message>
         <location filename="../src/ui/automation/AutomationController.cpp" line="74"/>
         <source>Automation script is no longer available: %1</source>
         <translation>自動化腳本已無法使用：%1</translation>
@@ -204,6 +216,10 @@
 </context>
 <context>
     <name>AutomationService</name>
+    <message>
+        <source>A version 2 manifest with a valid task scope is required.</source>
+        <translation>需要版本為 2 且任務範圍有效的指令碼清單。</translation>
+    </message>
     <message>
         <source>Python was not found. Install Python 3 or set LABELQT_PYTHON to the Python executable path.
 

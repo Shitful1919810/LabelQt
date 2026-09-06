@@ -1,4 +1,5 @@
 #include "services/project/ProjectMergeService.h"
+#include "core/ProjectIdentityService.h"
 
 #include "core/LabelPlusDocument.h"
 #include "services/project/PageSourceInfoService.h"
@@ -219,6 +220,7 @@ labelqt::core::Project ProjectMergeService::mergedProjectWithSelections(ProjectM
         sourcesByImageName.insert(source.imageName, PageSourceInfo{source.projectIndex + 1, source.projectPath});
     }
     PageSourceInfoService::rewriteCommentLinesForCurrentImageOrder(plan.mergedProject, sourcesByImageName);
+    labelqt::core::ProjectIdentityService::regenerate(plan.mergedProject);
     return std::move(plan.mergedProject);
 }
 

@@ -7,6 +7,7 @@ set(LABELQT_CORE_SOURCES
     core/Label.cpp
     core/LabelPlusDocument.cpp
     core/Project.cpp
+    core/ProjectIdentityService.cpp
     core/ProjectMetadataService.cpp
     core/ProjectMetadataService.h
     core/RuntimePaths.cpp
@@ -18,7 +19,8 @@ set(LABELQT_CORE_SOURCES
 
 set(LABELQT_SERVICE_SOURCES
     services/automation/AutomationManifestParser.cpp
-    services/automation/AutomationOperationApplier.cpp
+    services/automation/AutomationProtocol.cpp
+    services/automation/ProjectTaskService.cpp
     services/automation/AutomationPythonResolver.cpp
     services/automation/AutomationService.cpp
     services/automation/SecretStore.cpp
@@ -29,12 +31,14 @@ set(LABELQT_SERVICE_SOURCES
     services/label/LabelClipboardService.cpp
     services/label/LabelClipboardService.h
     services/label/LabelEditController.cpp
+    services/label/LabelEditControllerBatch.cpp
     services/label/ProjectTextSearchService.cpp
     services/label/LabelNavigator.cpp
     services/label/LabelPastePlanner.cpp
     services/label/LabelPastePlanner.h
     services/project/PageSourceInfoService.cpp
     services/project/ProjectController.cpp
+    services/project/ProjectRevisionTracker.cpp
     services/project/ProjectLocationService.cpp
     services/project/PageManagementDraft.cpp
     services/project/ProjectRecoveryService.cpp

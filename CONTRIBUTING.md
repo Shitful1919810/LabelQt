@@ -99,6 +99,11 @@ cmake --build --preset linux-debug --target release_translations
 - Avoid adding one-off undo state in UI code.
 - Label and group edits should go through `LabelEditController` so normal edits and undo replay use the same apply helpers.
 - Prefer small undo callbacks that call shared apply helpers, so table edits, canvas edits and future batch tools keep the same behavior.
+- Bind active-document `LabelEditController` to `ProjectController`, not a detached `Project`, so mutations and undo
+  publish monotonic versions independently of UI callbacks. External results must use `ProjectTaskService`, never
+  mutate the live document from a worker thread. See `docs/automation-foundation.md` for scope and dependency rules.
+- Preserve stable IDs for reorder, rename and undo; allocate new IDs for paste and merge. Store identities through
+  `ProjectIdentityService` inside the unified metadata block. Add persistence and stale-task regression tests.
 - User-configurable shortcuts, including undo/redo shortcuts, should go through `AppPreferences`, `preference.json` and the preference dialog.
 
 ## Session And Local State

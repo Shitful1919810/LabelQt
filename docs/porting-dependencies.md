@@ -53,21 +53,13 @@ python script.py --input input.json --output output.json
 因此：
 
 - 不使用自动化脚本时，LabelQt 主程序本体不需要 Python。
-- 使用自动化脚本时，需要可用的 Python 3。
+- 使用自动化脚本时，SDK 需要可用的 Python 3.10+。
 - Python 命令、解释器参数、是否自动安装 `requirements.txt`、pip 镜像源都在偏好设置中配置。
 - 自动安装依赖会复用自动化日志窗口，并支持用户取消。
 
-官方脚本依赖：
-
-- `scripts/official/test`：只使用 Python 标准库。
-- `scripts/official/ai_translate`：只使用 Python 标准库，调用 DeepSeek 兼容 API；API key 由主程序通过 QtKeychain 存入系统密钥环并注入环境变量。
-- `scripts/official/ocr_preview`：
-  - `pillow`
-  - `paddleocr`
-  - `manga-ocr`
-  - `transformers<5`
-
-OCR 和 AI 翻译属于可选脚本能力。它们的 Python 包、模型文件、API 服务和用户凭据不随本仓库源码自动获得，也不属于 C++ 主程序许可证的一部分。
+当前 `scripts/official/sdk` 与 `scripts/official/test` 仅依赖 Python 标准库。
+旧 OCR/AI 翻译及其配置脚本已删除，不再提供或要求 Pillow/PaddleOCR/manga-ocr/Transformers。
+未来模型/网络后端应使用 v2 API，并分别声明依赖和许可证；不随 SDK 隐式安装模型栈。
 
 ## 运行时文件布局
 

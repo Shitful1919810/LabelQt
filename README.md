@@ -27,7 +27,7 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 - 页面管理支持累计待处理目标、局部撤销、范围与问题筛选，以及直接指定缺失图片。
 - 支持工程全文查找、分组和页码范围、替换预览与整批撤销。
 - 校对支持审阅状态、批注、人工配对与筛选后报告导出。具体操作与首版限制见 [工作流说明](docs/product-workflows.md)。
-- 支持通过“自动化”菜单运行外部 Python 自动化脚本，当前内置测试脚本、OCR 与 AI 翻译脚本，并提供脚本开发 SDK。
+- 支持通过“自动化”菜单运行外部 Python 自动化脚本，提供原生 v2 批处理 SDK 和开发示例；旧 OCR/AI 翻译脚本已移除。
 - 偏好设置窗口支持通过系统字体选择器分别调整标签列表和大文本编辑框字体。
 - 支持通过偏好设置启用内置 Breeze 风格 QSS 主题。
 - 提供简体中文、繁体中文、日文和英文界面文本，并使用 Qt Linguist 工作流生成翻译资源。
@@ -35,7 +35,7 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 
 ## 当前状态
 
-当前版本为 LabelQt 的首个正式版本，基础 LabelPlus 编辑、协作合并、页面管理、校对对比、自动化脚本、OCR 和 AI 翻译工作流已经具备可用形态。后续仍会继续打磨跨平台体验、发布打包和自动化脚本生态。
+本分支在基础编辑、合并、页面管理和校对功能之上重建自动化 v2 接口，与此前发行版的脚本 API 不兼容。新 OCR/AI 后端、持续通信和候选审核仍待实现。
 
 ## 致谢
 
@@ -438,276 +438,22 @@ cmake --build --preset windows-vs-release --target deploy_windows
 
 ## 自动化脚本
 
-程序会优先读取可执行文件目录旁边的自动化脚本；如果没有便携脚本目录，则读取安装到系统数据目录的官方脚本。用户自定义脚本只从用户脚本目录读取，可以通过“自动化 > 打开用户脚本目录”打开该目录：
+本分支仅支持原生 v2 任务协议：按整个工程、当前页或所选 Label 捕获稳定 ID 快照，
+Python 返回字段变更，宿主验证权限与版本后一次性应用并注册撤销。无选中内容时不会自动扩大范围。
+旧 v1 SDK、页名/行号 API 及旧 OCR/翻译脚本已移除，不提供兼容转换。
 
-```text
-scripts/official    官方脚本
-scripts/custom      用户自定义脚本
-```
+通过“自动化 > 打开用户脚本目录”安装自定义脚本；每个目录包含 `script.json` 和 Python 入口。
+在偏好设置中配置 Python 3.10+、参数、依赖安装和日志。
+当前使用独立 Python 进程与一次性输入/输出文件，运行期间仍保护工程编辑。
+常驻 worker、双向 IPC、候选审核及按页并行界面尚未实现。
 
-每个脚本独立放在一个目录中，目录内至少包含 `script.json` 和入口 Python 文件，也可以附带 `requirements.txt` 与资源文件。`script.json` 示例：
+- [开发指南与 v2 SDK](docs/automation-scripting.md)：清单、范围、输入/输出、SDK 用法、密钥与示例。
+- [宿主基础契约](docs/automation-foundation.md)：身份、版本、依赖、统一提交与线程规则。
+- `scripts/official/test` 提供字数统计、所选文本处理和新增标签示例，仅用于开发构建，不进入发行包。
+- `scripts/official/sdk/labelqt_task.py` 仅依赖 Python 标准库；没有捆绑模型或网络服务。
 
-```json
-{
-  "apiVersion": 1,
-  "name": "Label Word Count",
-  "entry": "word_count.py",
-  "description": "Count characters in all non-deleted labels in the current project."
-}
-```
-
-一个脚本目录也可以在同一个 `script.json` 中定义多个菜单项。此时程序会在“自动化”菜单中为这个目录生成子菜单：
-
-```json
-{
-  "apiVersion": 1,
-  "name": "OCR",
-  "description": "Configure OCR and run OCR scripts.",
-  "scripts": [
-    {
-      "id": "configure",
-      "name": "Configure OCR",
-      "entry": "configure_ocr.py",
-      "parameters": [
-        {
-          "key": "engine",
-          "label": "Default OCR engine",
-          "type": "choice",
-          "default": "paddle",
-          "options": ["paddle", "manga-with-paddle"]
-        }
-      ]
-    },
-    {
-      "id": "preview",
-      "name": "OCR Preview",
-      "entry": "ocr_preview.py"
-    },
-    {
-      "id": "add_labels",
-      "name": "OCR Add Labels",
-      "entry": "ocr_preview.py",
-      "environment": {
-        "LABELQT_OCR_ACTION": "add-labels"
-      }
-    },
-    {
-      "id": "add_page_range_labels",
-      "name": "OCR Add Page Range Labels",
-      "entry": "ocr_preview.py",
-      "parameters": [
-        {
-          "key": "startPage",
-          "label": "Start page (1-based)",
-          "type": "text",
-          "default": "1"
-        },
-        {
-          "key": "endPage",
-          "label": "End page (1-based)",
-          "type": "text",
-          "default": "1"
-        }
-      ],
-      "environment": {
-        "LABELQT_OCR_ACTION": "add-page-range-labels"
-      }
-    }
-  ]
-}
-```
-
-`environment` 会被注入到对应脚本进程环境中，适合让多个菜单项复用同一个 Python 入口但采用不同运行参数。
-
-每个脚本还可以声明 `parameters`。只要参数列表非空，运行前主程序会弹出 Qt 参数窗口，把用户填写的值写入 `input.json` 的 `parameters` 字段。当前支持的参数类型包括：
-
-- `text`：普通文本输入框。
-- `textarea` / `multiline`：多行文本输入框，适合较长的 prompt 或说明文本。
-- `group`：当前工程分组下拉框。
-- `choice` / `select` / `enum`：通过 `options` 提供固定选项。
-- `boolean` / `bool`：复选框。
-- `file`：文件路径输入框，附带文件选择按钮。
-- `directory`：目录路径输入框，附带目录选择按钮。
-- `secret`：密码输入框。用户填写的值不会写入 `input.json`，而是由主程序保存到系统 keychain。
-
-例如：
-
-```json
-{
-  "key": "device",
-  "label": "PaddleOCR device",
-  "type": "choice",
-  "default": "cpu",
-  "options": ["cpu", "gpu"]
-}
-```
-
-`secret` 参数需要额外声明 keychain 元数据：
-
-```json
-{
-  "key": "deepseekApiKey",
-  "label": "DeepSeek API key",
-  "type": "secret",
-  "secretKey": "deepseekApiKey",
-  "service": "LabelQt",
-  "account": "deepseek_api_key",
-  "environment": "DEEPSEEK_API_KEY"
-}
-```
-
-真正运行时需要读取密钥的脚本，应在对应脚本条目上声明 `secrets`。主程序会从系统 keychain 读取该密钥，并只注入到子进程环境变量中：
-
-```json
-{
-  "id": "preview",
-  "name": "Translation Preview",
-  "entry": "translate.py",
-  "secrets": [
-    {
-      "key": "deepseekApiKey",
-      "label": "DeepSeek API key",
-      "service": "LabelQt",
-      "account": "deepseek_api_key",
-      "environment": "DEEPSEEK_API_KEY",
-      "required": true
-    }
-  ]
-}
-```
-
-脚本内只需要读取对应环境变量，例如 `DEEPSEEK_API_KEY`。不要把 API key 写入 `script.json`、`config.json`、`input.json` 或日志。
-
-更完整的脚本开发说明、输入/输出 JSON 格式和最小 SDK 用法见 [docs/automation-scripting.md](docs/automation-scripting.md)。
-
-运行脚本时，程序会通过外部 Python 进程调用：
-
-```bash
-python script.py --input input.json --output output.json
-```
-
-`input.json` 包含当前工程快照、当前页面与选中标签上下文、当前图像选区，以及用户在参数窗口填写的 `parameters`，`output.json` 返回脚本摘要、结果和可选的结构化 `operations`。如果 `output.json` 顶层包含 `"quiet": true`，脚本成功结束后不会弹出结果窗口，只会更新状态栏。脚本不应直接修改 LabelPlus 工程文件；需要修改工程时，应输出 `operations`，由主程序校验后应用到工程并注册撤销/重做。
-
-输入快照默认只包含未删除 label。每个 label 中的 `labelIndex` 是工程内部 label 下标，供未来 `operations` 精确引用；`visibleIndex` 是过滤掉已删除 label 后的可见序号，仅用于展示。
-
-`context` 描述当前 UI 上下文：
-
-```json
-{
-  "currentPage": {
-    "hasPage": true,
-    "index": 0,
-    "number": 1,
-    "name": "001.png",
-    "imagePath": "/path/to/001.png"
-  },
-  "selectedLabelIndexes": [0, 3],
-  "selectedLabels": [
-    {
-      "labelIndex": 0,
-      "visibleIndex": 1,
-      "group": "框内",
-      "x": 0.5,
-      "y": 0.5,
-      "text": "..."
-    }
-  ]
-}
-```
-
-`currentPage.index` 是从 `0` 开始的内部页下标；`currentPage.number` 是从 `1` 开始、适合显示给用户的页码。`selectedLabelIndexes` 和 `selectedLabels` 均只描述当前页的未删除已选标签，支持多选。
-
-`project.pages[].imagePath` 是每页图片路径；`project.imagePaths` 额外提供工程内所有图片路径列表，便于脚本批量处理。`selection` 描述当前图像预览区的选区：
-
-```json
-{
-  "hasSelection": true,
-  "imageIndex": 0,
-  "page": "001.png",
-  "imagePath": "/path/to/001.png",
-  "rect": {
-    "x": 0.12,
-    "y": 0.34,
-    "width": 0.2,
-    "height": 0.1,
-    "left": 0.12,
-    "top": 0.34,
-    "right": 0.32,
-    "bottom": 0.44
-  }
-}
-```
-
-选区坐标均为相对当前图片的归一化坐标，范围为 `0.0` 到 `1.0`。如果当前没有选区，`selection.hasSelection` 为 `false`。
-
-当前支持的修改操作包括：
-
-修改 label 类别：
-
-```json
-{
-  "type": "setLabelGroup",
-  "page": "012.png",
-  "labelIndex": 3,
-  "group": "框外"
-}
-```
-
-修改 label 文本：
-
-```json
-{
-  "type": "setLabelText",
-  "page": "012.png",
-  "labelIndex": 3,
-  "text": "新的文本内容"
-}
-```
-
-修改 marker 坐标：
-
-```json
-{
-  "type": "setLabelPosition",
-  "page": "012.png",
-  "labelIndex": 3,
-  "x": 0.4,
-  "y": 0.6
-}
-```
-
-删除 label：
-
-```json
-{
-  "type": "deleteLabel",
-  "page": "012.png",
-  "labelIndex": 3
-}
-```
-
-新增 label：
-
-```json
-{
-  "type": "addLabel",
-  "page": "012.png",
-  "group": "框内",
-  "text": "识别出的文本",
-  "x": 0.75,
-  "y": 0.25
-}
-```
-
-其中 `x` 和 `y` 是归一化图片坐标。主程序会校验页名、标签下标和分组名，应用成功后统一注册到撤销/重做栈。
-
-仓库提供的官方示例脚本包括：
-
-- `scripts/official/test`：仅供开发构建测试自动化框架和展示推荐写法，会在本地自动化菜单中显示为 `Test` 子菜单；正式 ZIP、MSI 和 RPM 会排除该目录。
-- `scripts/official/ocr_preview`：对当前选区、当前页或指定页码区间运行 OCR。`Configure OCR` 会通过参数窗口写入用户配置目录下的本机配置，用于保存 OCR 引擎、语言、设备、本地 manga-ocr 模型目录、默认标签分组、排序方向以及非预览入口完成后是否弹出结果报告等设置。预览入口会展示后处理后的文本块；生成标签入口会复用同一套后处理结果并输出 `addLabel` 操作。选区 OCR 会合并为一个 label，整页和跨页 OCR 会为每个文本块生成一个 label。
-- `scripts/official/ai_translate`：通过 DeepSeek API 翻译当前选中的 label；如果没有选中 label，则翻译当前页所有 label。`Configure AI Translation` 会将 API key 保存到系统 keychain，并在用户配置目录下保存 API base URL、模型、目标语言、翻译风格、自定义 prompt 以及应用翻译后是否弹出结果报告等非敏感设置。预览入口只展示译文或译文加分析；应用入口会输出 `setLabelText` 操作并由主程序注册撤销/重做；跨页入口会让用户输入 1-based 页码区间，并把整个区间的 label 一次性提交给模型作为上下文，再应用返回的译文。
-
-自动化脚本来源分为一个官方来源和一个用户来源。官方来源优先使用 exe 旁边的 `scripts/official`，否则使用 Linux 安装包中的 `/usr/share/labelqt/scripts/official`；用户来源优先使用 exe 旁边的 `scripts/custom`，否则使用程序打开的用户脚本目录。这样便携版可以直接携带脚本，RPM（以及实验性 DEB）用户也能看到系统安装的官方脚本，同时不会重复加载两套 official 或 custom。
+密钥仍通过 QtKeychain 保存并注入子进程环境，不能写入 JSON、日志或工程文件。
+只运行可信脚本：独立进程隔离不等于磁盘/网络访问沙箱。
 
 ## 开发检查
 
@@ -740,7 +486,7 @@ find src tests -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) -prin
 ```text
 src/core        平台无关的数据模型、LabelPlus 解析与保存、偏好设置、撤销栈
 src/ui          Qt Widgets 用户界面
-src/services    工程工作流、会话状态、自动备份、OCR 与图片缓存等服务层
+src/services    工程工作流、会话状态、自动备份、自动化与图片缓存等服务层
 translations    Qt Linguist 翻译源文件
 tests           Qt Test 单元测试
 docs            架构与开发文档

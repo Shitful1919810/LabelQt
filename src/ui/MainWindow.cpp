@@ -1,7 +1,7 @@
 #include "ui/MainWindow.h"
 
 #include "core/LabelPlusDocument.h"
-#include "services/automation/AutomationOperationApplier.h"
+#include "services/automation/ProjectTaskService.h"
 #include "services/label/LabelClipboardService.h"
 #include "services/label/LabelNavigator.h"
 #include "services/label/LabelPastePlanner.h"
@@ -156,20 +156,12 @@ MainWindow::MainWindow(QWidget* parent)
         [this]() { return project().groups(); },
         [this]() { return m_preferences.groupStyles(); },
         [this]() { return m_currentImageIndex; },
-        [this]() {
-            labelqt::services::AutomationSelection selection;
-            if (m_canvas != nullptr && m_canvas->hasSelection()) {
-                selection.hasSelection = true;
-                selection.normalizedRect = m_canvas->normalizedSelectionRect();
-            }
-            return selection;
+        [this]() -> std::optional<QRectF> {
+            if (m_canvas != nullptr && m_canvas->hasSelection())
+                return m_canvas->normalizedSelectionRect();
+            return std::nullopt;
         },
-        [this]() {
-            labelqt::services::AutomationContext context;
-            context.currentImageIndex = m_currentImageIndex;
-            context.selectedLabelIndexes = selectedLabelIndexes();
-            return context;
-        },
+        [this]() { return selectedLabelIndexes(); },
     });
     m_automationShortcutController = new AutomationShortcutController(this, this);
     m_automationShortcutController->setPreferences(m_preferences);
@@ -178,8 +170,6 @@ MainWindow::MainWindow(QWidget* parent)
     connect(m_automationController, &AutomationController::discoveryWarningsFound, this,
             &MainWindow::showAutomationDiscoveryWarnings);
     connect(m_automationController, &AutomationController::runningChanged, this, &MainWindow::setAutomationRunning);
-    connect(m_automationController, &AutomationController::operationsReady, this,
-            &MainWindow::applyAutomationOperations);
     connect(m_automationController, &AutomationController::statusMessageRequested, this,
             [this](const QString& message, int timeoutMs) {
                 if (timeoutMs > 0) {
@@ -265,7 +255,7 @@ MainWindow::MainWindow(QWidget* parent)
         },
         [this]() { markDirty(); });
     m_labelEditController =
-        std::make_unique<labelqt::services::LabelEditController>(project(), m_undoStack,
+        std::make_unique<labelqt::services::LabelEditController>(m_projectController, m_undoStack,
                                                                  labelqt::services::LabelEditCommandTexts{
                                                                      tr("Add label"),
                                                                      tr("Edit label text"),
@@ -298,6 +288,8 @@ MainWindow::MainWindow(QWidget* parent)
         },
         [this]() { markDirty(); });
     m_labelSelectionController = std::make_unique<LabelSelectionController>();
+    m_automationController->setTaskService(
+        new labelqt::services::ProjectTaskService(m_projectController, *m_labelEditController, m_automationController));
 
     setWindowTitle(QStringLiteral("LabelQt"));
     resize(1200, 800);
@@ -370,6 +362,8 @@ MainWindow::MainWindow(QWidget* parent)
 
 MainWindow::~MainWindow()
 {
+    delete m_automationController;
+    m_automationController = nullptr;
     if (qApp != nullptr) {
         qApp->removeEventFilter(this);
     }
@@ -1052,31 +1046,6 @@ void MainWindow::showAutomationDiscoveryWarnings(const QStringList& warnings)
         tr("Skipped %n invalid automation script(s): %1", nullptr, static_cast<int>(warnings.size()))
             .arg(warnings.first()),
         8000);
-}
-
-void MainWindow::applyAutomationOperations(const QString& scriptName,
-                                           const QVector<labelqt::services::AutomationOperation>& operations)
-{
-    const labelqt::services::AutomationOperationApplyPlan plan =
-        labelqt::services::AutomationOperationApplier::plan(project(), operations);
-    if (!plan.hasChanges()) {
-        return;
-    }
-
-    auto applyChanges = [this, plan](bool redo) {
-        labelqt::services::AutomationOperationApplier::apply(project(), plan, redo);
-        refreshLabelViews();
-        refreshCurrentLabelUi();
-        markDirty();
-    };
-
-    applyChanges(true);
-    m_undoStack.push(
-        tr("Run automation script"), tr("Automation script %1").arg(scriptName),
-        tr("Automation script %1").arg(scriptName), [applyChanges]() { applyChanges(false); },
-        [applyChanges]() { applyChanges(true); });
-    statusBar()->showMessage(tr("Automation applied %n change(s).", nullptr, static_cast<int>(plan.changeCount())),
-                             5000);
 }
 
 bool MainWindow::openProjectFile(const QString& path)

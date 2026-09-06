@@ -3,7 +3,9 @@
 #include "core/Label.h"
 #include "core/Project.h"
 #include "core/UndoStack.h"
+#include "services/label/LabelChange.h"
 #include "services/label/ProjectTextSearchService.h"
+#include <QThread>
 #include <expected>
 
 #include <QPointF>
@@ -13,6 +15,7 @@
 #include <functional>
 
 namespace labelqt::services {
+class ProjectController;
 
 struct LabelEditResult {
     bool changed{false};
@@ -52,6 +55,12 @@ public:
 
     LabelEditController(labelqt::core::Project& project, labelqt::core::UndoStack& undoStack,
                         LabelEditCommandTexts commandTexts);
+    LabelEditController(ProjectController& controller, labelqt::core::UndoStack& undoStack,
+                        LabelEditCommandTexts commandTexts);
+    bool belongsTo(const ProjectController& controller) const noexcept
+    {
+        return m_controller == &controller;
+    }
 
     void setCallbacks(LabelSelectedCallback labelSelected, LabelsSelectedCallback labelsSelected,
                       ImageSelectionClearedCallback imageSelectionCleared, ProjectChangedCallback projectChanged,
@@ -74,18 +83,26 @@ public:
     void registerLabelGroupUndo(int imageIndex, int labelIndex, const QString& oldGroup, const QString& newGroup);
     std::expected<bool, QString> replaceTexts(const QByteArray& revision, QVector<LabelTextReplacement> edits,
                                               const QString& commandText);
+    std::expected<LabelCommitReceipt, LabelCommitError> commitChanges(QVector<LabelChange> changes,
+                                                                      const QString& commandText);
 
 private:
     void applyLabelText(int imageIndex, int labelIndex, const QString& text);
     bool writeLabelText(int imageIndex, int labelIndex, const QString& text);
-    void applyTextReplacements(const QVector<LabelTextReplacement>& edits, bool forward);
+    struct CommittedLabelChange {
+        LabelChange forward;
+        LabelChange reverse;
+        std::optional<labelqt::core::Label> addition;
+    };
+    bool applyCommittedChanges(const QVector<CommittedLabelChange>& changes, bool forward);
     void applyLabelGroup(int imageIndex, int labelIndex, const QString& group);
     void applyLabelPosition(int imageIndex, int labelIndex, QPointF normalizedPosition);
     void applyBatchLabelPositions(int imageIndex, QVector<int> labelIndexes, QVector<QPointF> normalizedPositions);
     void applyLabelOrder(int imageIndex, QVector<labelqt::core::Label> labels, QVector<int> selectedIndexes);
     void applyBatchLabelGroups(int imageIndex, QVector<int> labelIndexes, QVector<QString> groups);
     void applyBatchLabelDeleted(int imageIndex, QVector<int> labelIndexes, QVector<bool> deleted);
-    void applyGroupsAndLabelGroups(QStringList groups, QVector<QVector<QString>> labelGroups);
+    void applyGroupsAndLabelGroups(QStringList groups, QHash<QString, QUuid> ids,
+                                   QVector<QVector<QString>> labelGroups);
     QVector<QVector<QString>> currentLabelGroups() const;
     labelqt::core::ImageEntry* imageAt(int imageIndex);
     const labelqt::core::ImageEntry* imageAt(int imageIndex) const;
@@ -93,6 +110,8 @@ private:
     void markDirty();
 
     labelqt::core::Project& m_project;
+    ProjectController* m_controller{nullptr};
+    QThread* const m_ownerThread{QThread::currentThread()};
     labelqt::core::UndoStack& m_undoStack;
     LabelEditCommandTexts m_commandTexts;
     LabelSelectedCallback m_labelSelected;

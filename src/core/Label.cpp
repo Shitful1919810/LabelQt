@@ -14,6 +14,13 @@ double clampUnit(double value)
 
 Label::Label() = default;
 
+Label Label::duplicate() const
+{
+    Label copy = *this;
+    copy.m_id = QUuid::createUuid();
+    return copy;
+}
+
 Label::Label(QString text, QString group, QPointF normalizedPosition)
     : m_text(std::move(text)), m_group(std::move(group))
 {

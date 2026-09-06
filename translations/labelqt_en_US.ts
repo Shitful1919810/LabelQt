@@ -4,6 +4,18 @@
 <context>
     <name>AutomationController</name>
     <message>
+        <source>Select the pages or labels required by this script.</source>
+        <translation>Select the pages or labels required by this script.</translation>
+    </message>
+    <message>
+        <source>The project changed while the script was running. No changes were applied.</source>
+        <translation>The project changed while the script was running. No changes were applied.</translation>
+    </message>
+    <message>
+        <source>The script returned invalid or unauthorized changes. No changes were applied.</source>
+        <translation>The script returned invalid or unauthorized changes. No changes were applied.</translation>
+    </message>
+    <message>
         <location filename="../src/ui/automation/AutomationController.cpp" line="74"/>
         <source>Automation script is no longer available: %1</source>
         <translation>Automation script is no longer available: %1</translation>
@@ -204,6 +216,10 @@
 </context>
 <context>
     <name>AutomationService</name>
+    <message>
+        <source>A version 2 manifest with a valid task scope is required.</source>
+        <translation>A version 2 manifest with a valid task scope is required.</translation>
+    </message>
     <message>
         <source>Python was not found. Install Python 3 or set LABELQT_PYTHON to the Python executable path.
 

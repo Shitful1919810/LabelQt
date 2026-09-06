@@ -12,6 +12,8 @@ bool Project::isEmpty() const noexcept
 
 void Project::clear()
 {
+    m_id = QUuid::createUuid();
+    m_groupIds.clear();
     m_images.clear();
     m_groups.clear();
     m_commentLines.clear();
@@ -67,14 +69,23 @@ const QStringList& Project::groups() const noexcept
     return m_groups;
 }
 
-QStringList& Project::groups() noexcept
+QString Project::groupName(const QUuid& id) const
 {
-    return m_groups;
+    return id.isNull() ? QString() : m_groupIds.key(id);
 }
 
 void Project::setGroups(QStringList groups)
 {
+    QHash<QString, QUuid> ids;
+    for (const auto& group : groups)
+        ids.insert(group, m_groupIds.contains(group) ? m_groupIds.value(group) : QUuid::createUuid());
+    restoreGroups(std::move(groups), std::move(ids));
+}
+
+void Project::restoreGroups(QStringList groups, QHash<QString, QUuid> ids)
+{
     m_groups = std::move(groups);
+    m_groupIds = std::move(ids);
 }
 
 QString Project::filePath() const

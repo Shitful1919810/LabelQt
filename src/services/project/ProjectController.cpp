@@ -2,6 +2,7 @@
 
 #include "core/AtomicFileWriter.h"
 #include "core/LabelPlusDocument.h"
+#include "core/ProjectIdentityService.h"
 #include "services/io/FileRenameTransaction.h"
 #include "services/project/ProjectLocationService.h"
 #include "services/project/ProjectRecoveryService.h"
@@ -84,10 +85,14 @@ const labelqt::core::Project& ProjectController::project() const noexcept
 
 void ProjectController::setProject(labelqt::core::Project project)
 {
+    if (!labelqt::core::ProjectIdentityService::valid(project))
+        throw std::runtime_error(
+            QCoreApplication::translate("LabelPlusDocument", "Invalid LabelPlus document structure.").toStdString());
     const auto revision = FileRevision::read(project.filePath());
     if (!revision)
         throw std::runtime_error(revision.error().toStdString());
     m_project = std::move(project);
+    m_revisions.reset(m_project);
     m_savedRevision = *revision;
     setDirty(false);
 }
@@ -107,6 +112,7 @@ void ProjectController::loadFromFile(const QString& path)
     if (!before->sameContent(*after))
         throw ProjectFileConflict(*after);
     m_project = std::move(loaded);
+    m_revisions.reset(m_project);
     m_savedRevision = *after;
     setDirty(false);
 }
@@ -139,6 +145,7 @@ void ProjectController::saveAs(const QString& path)
     const auto revision = writeProject(output);
     m_project.setFilePath(path);
     m_project.setCommentLines(output.commentLines());
+    m_revisions.reset(m_project);
     m_savedRevision = revision;
     setDirty(false);
 }
@@ -175,6 +182,7 @@ std::expected<void, QString> ProjectController::restoreBackup(const ProjectRecov
                 QCoreApplication::translate("ProjectController", "The project was changed on disk."));
         m_savedRevision = writeProject(output);
         m_project = std::move(output);
+        m_revisions.reset(m_project);
         setDirty(false);
         return {};
     }
@@ -275,15 +283,22 @@ bool ProjectController::isDirty() const noexcept
     return m_isDirty;
 }
 
-void ProjectController::setDirty(bool dirty) noexcept
+const ProjectRevisionTracker& ProjectController::revisions()
 {
+    m_revisions.checkpoint(m_project);
+    return m_revisions;
+}
+
+void ProjectController::setDirty(bool dirty)
+{
+    m_revisions.checkpoint(m_project);
     m_isDirty = dirty;
     if (!m_isDirty) {
         m_hasPendingBackup = false;
     }
 }
 
-void ProjectController::markDirty() noexcept
+void ProjectController::markDirty()
 {
     m_hasPendingBackup = true;
     setDirty(true);

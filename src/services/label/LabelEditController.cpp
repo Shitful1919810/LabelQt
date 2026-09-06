@@ -1,7 +1,6 @@
 #include "services/label/LabelEditController.h"
+#include "services/project/ProjectController.h"
 
-#include <QCoreApplication>
-#include <QSet>
 #include <algorithm>
 #include <utility>
 
@@ -34,8 +33,8 @@ QString labelMessage(const QString& messageTemplate, const QString& fallback, co
 
 bool labelEquals(const labelqt::core::Label& lhs, const labelqt::core::Label& rhs)
 {
-    return lhs.text() == rhs.text() && lhs.group() == rhs.group() && lhs.position() == rhs.position() &&
-           lhs.isDeleted() == rhs.isDeleted();
+    return lhs.id() == rhs.id() && lhs.text() == rhs.text() && lhs.group() == rhs.group() &&
+           lhs.position() == rhs.position() && lhs.isDeleted() == rhs.isDeleted();
 }
 
 bool labelVectorsEqual(const QVector<labelqt::core::Label>& lhs, const QVector<labelqt::core::Label>& rhs)
@@ -69,6 +68,13 @@ void LabelEditController::setCallbacks(LabelSelectedCallback labelSelected, Labe
     m_dirty = std::move(dirty);
 }
 
+LabelEditController::LabelEditController(ProjectController& controller, labelqt::core::UndoStack& undoStack,
+                                         LabelEditCommandTexts commandTexts)
+    : LabelEditController(controller.project(), undoStack, std::move(commandTexts))
+{
+    m_controller = &controller;
+}
+
 LabelEditResult LabelEditController::addGroup(const QString& group)
 {
     const QString trimmedGroup = group.trimmed();
@@ -77,20 +83,20 @@ LabelEditResult LabelEditController::addGroup(const QString& group)
     }
 
     const QStringList oldGroups = m_project.groups();
+    const auto oldIds = m_project.groupIds();
     const QVector<QVector<QString>> oldLabelGroups = currentLabelGroups();
     QStringList newGroups = oldGroups;
     newGroups.append(trimmedGroup);
 
     m_project.setGroups(newGroups);
+    const auto newIds = m_project.groupIds();
     const QString message = m_commandTexts.addGroupMessage.isEmpty()
                                 ? m_commandTexts.addGroup
                                 : QString(m_commandTexts.addGroupMessage).arg(trimmedGroup);
     m_undoStack.push(
-        m_commandTexts.addGroup,
-        message,
-        message,
-        [this, oldGroups, oldLabelGroups]() { applyGroupsAndLabelGroups(oldGroups, oldLabelGroups); },
-        [this, newGroups, oldLabelGroups]() { applyGroupsAndLabelGroups(newGroups, oldLabelGroups); });
+        m_commandTexts.addGroup, message, message,
+        [this, oldGroups, oldIds, oldLabelGroups]() { applyGroupsAndLabelGroups(oldGroups, oldIds, oldLabelGroups); },
+        [this, newGroups, newIds, oldLabelGroups]() { applyGroupsAndLabelGroups(newGroups, newIds, oldLabelGroups); });
     if (m_projectChanged) {
         m_projectChanged();
     }
@@ -108,6 +114,7 @@ LabelEditResult LabelEditController::removeGroup(const QString& group, const QSt
     }
 
     const QStringList oldGroups = m_project.groups();
+    const auto oldIds = m_project.groupIds();
     const QVector<QVector<QString>> oldLabelGroups = currentLabelGroups();
     QStringList newGroups = oldGroups;
     newGroups.removeAll(group);
@@ -121,16 +128,15 @@ LabelEditResult LabelEditController::removeGroup(const QString& group, const QSt
     }
     const QVector<QVector<QString>> newLabelGroups = currentLabelGroups();
     m_project.setGroups(newGroups);
+    const auto newIds = m_project.groupIds();
 
     const QString message = m_commandTexts.removeGroupMessage.isEmpty()
                                 ? m_commandTexts.removeGroup
                                 : QString(m_commandTexts.removeGroupMessage).arg(group);
     m_undoStack.push(
-        m_commandTexts.removeGroup,
-        message,
-        message,
-        [this, oldGroups, oldLabelGroups]() { applyGroupsAndLabelGroups(oldGroups, oldLabelGroups); },
-        [this, newGroups, newLabelGroups]() { applyGroupsAndLabelGroups(newGroups, newLabelGroups); });
+        m_commandTexts.removeGroup, message, message,
+        [this, oldGroups, oldIds, oldLabelGroups]() { applyGroupsAndLabelGroups(oldGroups, oldIds, oldLabelGroups); },
+        [this, newGroups, newIds, newLabelGroups]() { applyGroupsAndLabelGroups(newGroups, newIds, newLabelGroups); });
     if (m_projectChanged) {
         m_projectChanged();
     }
@@ -147,7 +153,7 @@ LabelEditResult LabelEditController::addLabel(int imageIndex, const labelqt::cor
         return {};
     }
 
-    image->labels.append(label);
+    image->labels.append(label.duplicate());
     const int labelIndex = static_cast<int>(image->labels.size()) - 1;
     const labelqt::core::Label addedLabel = image->labels.last();
     const QString message =
@@ -218,7 +224,7 @@ LabelEditResult LabelEditController::pasteLabels(int imageIndex, QVector<labelqt
     QVector<int> selectedIndexes;
     selectedIndexes.reserve(labels.size());
     for (int i = 0; i < labels.size(); ++i) {
-        image->labels.insert(insertIndex + i, labels.at(i));
+        image->labels.insert(insertIndex + i, labels.at(i).duplicate());
         selectedIndexes.append(insertIndex + i);
     }
     const QVector<labelqt::core::Label> newLabels = image->labels;
@@ -613,43 +619,6 @@ bool LabelEditController::writeLabelText(int imageIndex, int labelIndex, const Q
     return true;
 }
 
-std::expected<bool, QString> LabelEditController::replaceTexts(const QByteArray& revision,
-                                                               QVector<LabelTextReplacement> edits,
-                                                               const QString& commandText)
-{
-    const auto stale = []() -> std::expected<bool, QString> {
-        return std::unexpected(QCoreApplication::translate("LabelEditController",
-                                                           "The project changed. Refresh the replacement preview."));
-    };
-    if (revision != ProjectTextSearchService::revision(m_project))
-        return stale();
-    QSet<QPair<int, int>> seen;
-    for (const auto& edit : edits) {
-        const auto* image = imageAt(edit.imageIndex);
-        if (!image || edit.labelIndex < 0 || edit.labelIndex >= image->labels.size() ||
-            image->labels.at(edit.labelIndex).isDeleted() || image->labels.at(edit.labelIndex).text() != edit.before ||
-            seen.contains({edit.imageIndex, edit.labelIndex}))
-            return stale();
-        seen.insert({edit.imageIndex, edit.labelIndex});
-    }
-    if (edits.isEmpty())
-        return false;
-    applyTextReplacements(edits, true);
-    m_undoStack.push(
-        commandText, [this, edits] { applyTextReplacements(edits, false); },
-        [this, edits] { applyTextReplacements(edits, true); });
-    return true;
-}
-
-void LabelEditController::applyTextReplacements(const QVector<LabelTextReplacement>& edits, bool forward)
-{
-    for (const auto& edit : edits)
-        writeLabelText(edit.imageIndex, edit.labelIndex, forward ? edit.after : edit.before);
-    if (m_projectChanged)
-        m_projectChanged();
-    markDirty();
-}
-
 void LabelEditController::applyLabelGroup(int imageIndex, int labelIndex, const QString& group)
 {
     labelqt::core::ImageEntry* image = imageAt(imageIndex);
@@ -779,9 +748,10 @@ void LabelEditController::applyBatchLabelDeleted(int imageIndex, QVector<int> la
     markDirty();
 }
 
-void LabelEditController::applyGroupsAndLabelGroups(QStringList groups, QVector<QVector<QString>> labelGroups)
+void LabelEditController::applyGroupsAndLabelGroups(QStringList groups, QHash<QString, QUuid> ids,
+                                                    QVector<QVector<QString>> labelGroups)
 {
-    m_project.setGroups(std::move(groups));
+    m_project.restoreGroups(std::move(groups), std::move(ids));
     for (int imageIndex = 0; imageIndex < m_project.images().size() && imageIndex < labelGroups.size(); ++imageIndex) {
         labelqt::core::ImageEntry& image = m_project.images()[imageIndex];
         const QVector<QString>& imageLabelGroups = labelGroups.at(imageIndex);
@@ -835,6 +805,8 @@ bool LabelEditController::hasGroup(const QString& group) const
 
 void LabelEditController::markDirty()
 {
+    if (m_controller)
+        m_controller->markDirty();
     if (m_dirty) {
         m_dirty();
     }

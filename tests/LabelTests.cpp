@@ -2,29 +2,27 @@
 #include "core/Label.h"
 #include "core/LabelPlusDocument.h"
 #include "core/Project.h"
-#include "services/automation/AutomationManifestParser.h"
-#include "services/automation/AutomationOperationApplier.h"
+#include "core/ProjectMetadataService.h"
 #include "services/automation/AutomationService.h"
 #include "services/label/LabelClipboardService.h"
 #include "services/label/LabelEditController.h"
 #include "services/label/LabelNavigator.h"
 #include "services/label/LabelPastePlanner.h"
-#include "services/proofread/LabelSequenceDiffService.h"
 #include "services/project/PageSourceInfoService.h"
-#include "services/proofread/ProjectComparisonService.h"
 #include "services/project/ProjectController.h"
 #include "services/project/ProjectImageRenameService.h"
 #include "services/project/ProjectImageValidator.h"
-#include "core/ProjectMetadataService.h"
 #include "services/project/ProjectMergeService.h"
 #include "services/project/ProjectPageOrderService.h"
+#include "services/project/SaveChangesDecision.h"
+#include "services/project/SessionStateStore.h"
+#include "services/proofread/LabelSequenceDiffService.h"
+#include "services/proofread/ProjectComparisonService.h"
 #include "services/proofread/ProofreadReportService.h"
 #include "services/proofread/ReviewChangeClassifier.h"
 #include "services/proofread/ReviewMetadataService.h"
-#include "services/project/SaveChangesDecision.h"
-#include "services/project/SessionStateStore.h"
-#include "services/proofread/TextDiffService.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
+#include "services/proofread/TextDiffService.h"
 #include "ui/canvas/CanvasLabelItems.h"
 #include "ui/canvas/CanvasLabelTextEditController.h"
 #include "ui/canvas/CanvasLabelTextEditor.h"
@@ -581,49 +579,6 @@ private slots:
         QVERIFY(!undoStack.canUndo());
     }
 
-    void automationManifestRejectsInvalidOperationsOutput()
-    {
-        QJsonObject output;
-        output.insert(QStringLiteral("operations"), QStringLiteral("not-an-array"));
-
-        const std::expected<labelqt::services::AutomationRunResult, QString> result =
-            labelqt::services::AutomationManifestParser::tryResultFromOutput(output);
-
-        QVERIFY(!result.has_value());
-        QVERIFY(result.error().contains(QStringLiteral("operations")));
-    }
-
-    void automationManifestParsesQuietResultAndOperations()
-    {
-        QJsonObject operation;
-        operation.insert(QStringLiteral("type"), QStringLiteral("setLabelText"));
-        operation.insert(QStringLiteral("page"), QStringLiteral("001.png"));
-        operation.insert(QStringLiteral("labelIndex"), 2);
-        operation.insert(QStringLiteral("text"), QStringLiteral("translated"));
-
-        QJsonObject resultObject;
-        resultObject.insert(QStringLiteral("title"), QStringLiteral("OCR result"));
-        resultObject.insert(QStringLiteral("text"), QStringLiteral("recognized text"));
-
-        QJsonObject output;
-        output.insert(QStringLiteral("summary"), QStringLiteral("done"));
-        output.insert(QStringLiteral("quiet"), true);
-        output.insert(QStringLiteral("result"), resultObject);
-        output.insert(QStringLiteral("operations"), QJsonArray{operation});
-
-        const std::expected<labelqt::services::AutomationRunResult, QString> parsed =
-            labelqt::services::AutomationManifestParser::tryResultFromOutput(output);
-        QVERIFY(parsed.has_value());
-        QVERIFY(parsed->quiet);
-        QCOMPARE(parsed->summary, QStringLiteral("done"));
-        QCOMPARE(parsed->resultTitle, QStringLiteral("OCR result"));
-        QCOMPARE(parsed->resultText, QStringLiteral("recognized text"));
-        QCOMPARE(parsed->operations.size(), 1);
-        QCOMPARE(parsed->operations.first().type, QStringLiteral("setLabelText"));
-        QCOMPARE(parsed->operations.first().page, QStringLiteral("001.png"));
-        QCOMPARE(parsed->operations.first().labelIndex, 2);
-        QCOMPARE(parsed->operations.first().text, QStringLiteral("translated"));
-    }
 
     void automationRunnerReportsMissingPythonAsFailure()
     {
@@ -642,7 +597,6 @@ private slots:
         script.directoryPath = directory.path();
         script.entryPath = scriptPath;
 
-        labelqt::core::Project project;
         labelqt::services::AutomationPythonSettings pythonSettings;
         pythonSettings.command = directory.filePath(QStringLiteral("definitely_missing_python"));
 
@@ -655,7 +609,7 @@ private slots:
                     finished = true;
                 });
 
-        runner.start(script, project, -1, {}, {}, {}, {}, pythonSettings);
+        runner.start(script, {}, {}, {}, {}, pythonSettings);
         if (!finished) {
             QEventLoop loop;
             connect(&runner, &labelqt::services::AutomationRunner::finished, &loop, &QEventLoop::quit);
@@ -669,82 +623,6 @@ private slots:
         QVERIFY(result.error.contains(QStringLiteral("Python")) || result.error.contains(QStringLiteral("Failed")));
     }
 
-    void automationOperationApplierAddsLabelsWithUndo()
-    {
-        labelqt::core::Project project;
-        project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
-        project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
-
-        labelqt::services::AutomationOperation operation;
-        operation.type = QStringLiteral("addLabel");
-        operation.page = QStringLiteral("001.png");
-        operation.group = QStringLiteral("框内");
-        operation.text = QStringLiteral("识别文本");
-        operation.x = 0.75;
-        operation.y = 0.25;
-
-        const auto plan = labelqt::services::AutomationOperationApplier::plan(project, {operation});
-        QVERIFY(plan.hasChanges());
-        QCOMPARE(plan.changeCount(), 1);
-
-        labelqt::services::AutomationOperationApplier::apply(project, plan, true);
-        QCOMPARE(project.images().first().labels.size(), 1);
-        QCOMPARE(project.images().first().labels.first().text(), QStringLiteral("识别文本"));
-        QCOMPARE(project.images().first().labels.first().group(), QStringLiteral("框内"));
-        QCOMPARE(project.images().first().labels.first().position().x(), 0.75);
-        QCOMPARE(project.images().first().labels.first().position().y(), 0.25);
-
-        labelqt::services::AutomationOperationApplier::apply(project, plan, false);
-        QCOMPARE(project.images().first().labels.size(), 0);
-
-        labelqt::services::AutomationOperationApplier::apply(project, plan, true);
-        QCOMPARE(project.images().first().labels.size(), 1);
-        QCOMPARE(project.images().first().labels.first().text(), QStringLiteral("识别文本"));
-    }
-
-    void automationOperationApplierEditsAndDeletesLabelsWithUndo()
-    {
-        labelqt::core::Project project;
-        project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
-        project.images().append(labelqt::core::ImageEntry{QStringLiteral("001.png"), {}, {}});
-        project.images().last().labels.append(Label(QStringLiteral("原文本"), QStringLiteral("框内"), {0.2, 0.3}));
-        project.images().last().labels.append(Label(QStringLiteral("删除我"), QStringLiteral("框外"), {0.4, 0.5}));
-
-        labelqt::services::AutomationOperation textOperation;
-        textOperation.type = QStringLiteral("setLabelText");
-        textOperation.page = QStringLiteral("001.png");
-        textOperation.labelIndex = 0;
-        textOperation.text = QStringLiteral("新文本");
-
-        labelqt::services::AutomationOperation positionOperation;
-        positionOperation.type = QStringLiteral("setLabelPosition");
-        positionOperation.page = QStringLiteral("001.png");
-        positionOperation.labelIndex = 0;
-        positionOperation.x = 0.8;
-        positionOperation.y = 0.9;
-
-        labelqt::services::AutomationOperation deleteOperation;
-        deleteOperation.type = QStringLiteral("deleteLabel");
-        deleteOperation.page = QStringLiteral("001.png");
-        deleteOperation.labelIndex = 1;
-
-        const auto plan = labelqt::services::AutomationOperationApplier::plan(
-            project, {textOperation, positionOperation, deleteOperation});
-        QVERIFY(plan.hasChanges());
-        QCOMPARE(plan.changeCount(), 3);
-
-        labelqt::services::AutomationOperationApplier::apply(project, plan, true);
-        QCOMPARE(project.images().first().labels.at(0).text(), QStringLiteral("新文本"));
-        QCOMPARE(project.images().first().labels.at(0).position().x(), 0.8);
-        QCOMPARE(project.images().first().labels.at(0).position().y(), 0.9);
-        QVERIFY(project.images().first().labels.at(1).isDeleted());
-
-        labelqt::services::AutomationOperationApplier::apply(project, plan, false);
-        QCOMPARE(project.images().first().labels.at(0).text(), QStringLiteral("原文本"));
-        QCOMPARE(project.images().first().labels.at(0).position().x(), 0.2);
-        QCOMPARE(project.images().first().labels.at(0).position().y(), 0.3);
-        QVERIFY(!project.images().first().labels.at(1).isDeleted());
-    }
 
     void labelTableModelPassesModelTesterAndFiltersGroups()
     {
@@ -2124,7 +2002,12 @@ private slots:
         const auto reloaded = LabelPlusDocument::loadFromFile(filePath);
         QCOMPARE(reloaded.sourceName(), QStringLiteral("source.zip"));
         QVERIFY(reloaded.commentLines().contains(QStringLiteral("# ordinary comment")));
-        QVERIFY(!reloaded.commentLines().contains(QStringLiteral("# LabelQtMetadata v1")));
+        QCOMPARE(labelqt::core::ProjectMetadataService::metadataObject(reloaded.commentLines())
+                     .value(QStringLiteral("identities"))
+                     .toObject()
+                     .value(QStringLiteral("version"))
+                     .toInt(),
+                 1);
         QCOMPARE(reloaded.images().size(), 1);
         QCOMPARE(reloaded.images().first().labels.first().text(), QStringLiteral("text"));
     }

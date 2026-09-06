@@ -26,163 +26,9 @@
 namespace labelqt::services {
 
 namespace {
-constexpr int automationApiVersion = 1;
 constexpr int automationTimeoutMs = 300000;
 constexpr int automationProcessStopWaitMs = 3000;
 constexpr int automationLogMaxCharacters = 1024 * 1024;
-
-QJsonObject labelToJson(const labelqt::core::Label& label, int labelIndex, int visibleIndex)
-{
-    const QPointF position = label.position();
-    return {
-        {QStringLiteral("labelIndex"), labelIndex}, {QStringLiteral("visibleIndex"), visibleIndex},
-        {QStringLiteral("group"), label.group()},   {QStringLiteral("x"), position.x()},
-        {QStringLiteral("y"), position.y()},        {QStringLiteral("text"), label.text()},
-    };
-}
-
-int visibleIndexForLabel(const labelqt::core::ImageEntry& image, int targetLabelIndex)
-{
-    if (targetLabelIndex < 0 || targetLabelIndex >= image.labels.size() ||
-        image.labels.at(targetLabelIndex).isDeleted()) {
-        return 0;
-    }
-
-    int visibleIndex = 0;
-    for (int labelIndex = 0; labelIndex <= targetLabelIndex; ++labelIndex) {
-        if (!image.labels.at(labelIndex).isDeleted()) {
-            ++visibleIndex;
-        }
-    }
-    return visibleIndex;
-}
-
-QJsonObject projectToJson(const labelqt::core::Project& project, int currentImageIndex)
-{
-    QJsonArray groups;
-    for (const QString& group : project.groups()) {
-        groups.append(group);
-    }
-
-    QJsonArray imagePaths;
-    QJsonArray pages;
-    for (int imageIndex = 0; imageIndex < project.images().size(); ++imageIndex) {
-        const labelqt::core::ImageEntry& image = project.images().at(imageIndex);
-        imagePaths.append(image.path);
-        QJsonArray labels;
-        int visibleIndex = 1;
-        for (int labelIndex = 0; labelIndex < image.labels.size(); ++labelIndex) {
-            const labelqt::core::Label& label = image.labels.at(labelIndex);
-            if (label.isDeleted()) {
-                continue;
-            }
-            labels.append(labelToJson(label, labelIndex, visibleIndex));
-            ++visibleIndex;
-        }
-
-        pages.append(QJsonObject{
-            {QStringLiteral("index"), imageIndex},
-            {QStringLiteral("name"), image.name},
-            {QStringLiteral("imagePath"), image.path},
-            {QStringLiteral("labels"), labels},
-        });
-    }
-
-    const QString currentPage = currentImageIndex >= 0 && currentImageIndex < project.images().size()
-                                    ? project.images().at(currentImageIndex).name
-                                    : QString();
-    return {
-        {QStringLiteral("path"), project.filePath()}, {QStringLiteral("sourceName"), project.sourceName()},
-        {QStringLiteral("groups"), groups},           {QStringLiteral("currentPage"), currentPage},
-        {QStringLiteral("imagePaths"), imagePaths},   {QStringLiteral("pages"), pages},
-    };
-}
-
-QJsonObject selectionToJson(const labelqt::core::Project& project, int currentImageIndex, AutomationSelection selection)
-{
-    const bool hasSelection = selection.hasSelection && currentImageIndex >= 0 &&
-                              currentImageIndex < project.images().size() && selection.normalizedRect.width() > 0.0 &&
-                              selection.normalizedRect.height() > 0.0;
-    if (!hasSelection) {
-        return {{QStringLiteral("hasSelection"), false}};
-    }
-
-    QRectF rect = selection.normalizedRect.normalized();
-    const double left = std::clamp(rect.left(), 0.0, 1.0);
-    const double top = std::clamp(rect.top(), 0.0, 1.0);
-    const double right = std::clamp(rect.left() + rect.width(), 0.0, 1.0);
-    const double bottom = std::clamp(rect.top() + rect.height(), 0.0, 1.0);
-    rect = QRectF(QPointF(left, top), QPointF(right, bottom)).normalized();
-
-    const labelqt::core::ImageEntry& image = project.images().at(currentImageIndex);
-    return {
-        {QStringLiteral("hasSelection"), true},
-        {QStringLiteral("imageIndex"), currentImageIndex},
-        {QStringLiteral("page"), image.name},
-        {QStringLiteral("imagePath"), image.path},
-        {QStringLiteral("rect"),
-         QJsonObject{
-             {QStringLiteral("x"), rect.left()},
-             {QStringLiteral("y"), rect.top()},
-             {QStringLiteral("width"), rect.width()},
-             {QStringLiteral("height"), rect.height()},
-             {QStringLiteral("left"), rect.left()},
-             {QStringLiteral("top"), rect.top()},
-             {QStringLiteral("right"), rect.left() + rect.width()},
-             {QStringLiteral("bottom"), rect.top() + rect.height()},
-         }},
-    };
-}
-
-QJsonObject contextToJson(const labelqt::core::Project& project, AutomationContext context)
-{
-    const int currentImageIndex = context.currentImageIndex;
-    QJsonObject currentPage{{QStringLiteral("hasPage"), false}};
-    if (currentImageIndex >= 0 && currentImageIndex < project.images().size()) {
-        const labelqt::core::ImageEntry& image = project.images().at(currentImageIndex);
-        currentPage = {
-            {QStringLiteral("hasPage"), true},
-            {QStringLiteral("index"), currentImageIndex},
-            {QStringLiteral("number"), currentImageIndex + 1},
-            {QStringLiteral("name"), image.name},
-            {QStringLiteral("imagePath"), image.path},
-        };
-    }
-
-    QJsonArray selectedLabelIndexes;
-    QJsonArray selectedLabels;
-    if (currentImageIndex >= 0 && currentImageIndex < project.images().size()) {
-        const labelqt::core::ImageEntry& image = project.images().at(currentImageIndex);
-        for (int labelIndex : context.selectedLabelIndexes) {
-            if (labelIndex < 0 || labelIndex >= image.labels.size() || image.labels.at(labelIndex).isDeleted()) {
-                continue;
-            }
-            selectedLabelIndexes.append(labelIndex);
-            selectedLabels.append(
-                labelToJson(image.labels.at(labelIndex), labelIndex, visibleIndexForLabel(image, labelIndex)));
-        }
-    }
-
-    return {
-        {QStringLiteral("currentPage"), currentPage},
-        {QStringLiteral("selectedLabelIndexes"), selectedLabelIndexes},
-        {QStringLiteral("selectedLabels"), selectedLabels},
-    };
-}
-
-QJsonObject inputPayload(const labelqt::core::Project& project, int currentImageIndex, const QJsonObject& parameters,
-                         AutomationSelection selection, AutomationContext context)
-{
-    return {
-        {QStringLiteral("apiVersion"), automationApiVersion},
-        {QStringLiteral("scope"), QStringLiteral("project")},
-        {QStringLiteral("options"), QJsonObject{{QStringLiteral("includeDeletedLabels"), false}}},
-        {QStringLiteral("parameters"), parameters},
-        {QStringLiteral("context"), contextToJson(project, context)},
-        {QStringLiteral("selection"), selectionToJson(project, currentImageIndex, selection)},
-        {QStringLiteral("project"), projectToJson(project, currentImageIndex)},
-    };
-}
 
 QString commandDisplayText(const QString& program, const QStringList& arguments)
 {
@@ -221,7 +67,16 @@ bool readJsonFile(const QString& path, QJsonObject* object, QString* error)
     }
 
     QJsonParseError parseError;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    constexpr qint64 maxJsonBytes = 16 * 1024 * 1024;
+    const QByteArray bytes = file.read(maxJsonBytes + 1);
+    if (bytes.size() > maxJsonBytes || file.error() != QFileDevice::NoError) {
+        if (error != nullptr)
+            *error = QCoreApplication::translate(
+                "AutomationController",
+                "The script returned invalid or unauthorized changes. No changes were applied.");
+        return false;
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(bytes, &parseError);
     if (parseError.error != QJsonParseError::NoError) {
         if (error != nullptr) {
             *error = parseError.errorString();
@@ -289,7 +144,18 @@ bool appendScriptFromManifest(QVector<AutomationScript>* scripts, const QFileInf
         return false;
     }
 
+    const auto task = AutomationProtocol::parseTaskSpec(scriptManifest.value("task").toObject());
+    if (directoryManifest.value("apiVersion") != QJsonValue(AutomationProtocol::version) || !task) {
+        if (warnings)
+            warnings->append(
+                QCoreApplication::translate("AutomationService", "Skipped automation script directory %1: %2")
+                    .arg(scriptDirectory.fileName(),
+                         QCoreApplication::translate("AutomationService",
+                                                     "A version 2 manifest with a valid task scope is required.")));
+        return false;
+    }
     AutomationScript script;
+    script.task = *task;
     const QString scriptId = scriptManifest.value(QStringLiteral("id")).toString(QString::number(scriptIndex));
     script.id = QStringLiteral("%1:%2").arg(
         scriptIdForDirectory(scriptDirectory, official),
@@ -328,6 +194,8 @@ QVector<AutomationScript> AutomationService::discoverScripts(QStringList* warnin
         for (const QFileInfo& scriptDirectory : scriptDirectories) {
             const QString manifestPath =
                 QDir(scriptDirectory.absoluteFilePath()).filePath(QStringLiteral("script.json"));
+            if (!QFileInfo::exists(manifestPath))
+                continue;
             QJsonObject manifest;
             QString error;
             if (!readJsonFile(manifestPath, &manifest, &error)) {
@@ -379,9 +247,8 @@ std::expected<void, QString> AutomationService::tryStoreParameterSecrets(const A
             continue;
         }
 
-        const std::expected<void, QString> result = SecretStore::tryWriteText(parameter.secretService,
-                                                                             parameter.secretAccount,
-                                                                             secrets.value(parameter.secretKey));
+        const std::expected<void, QString> result = SecretStore::tryWriteText(
+            parameter.secretService, parameter.secretAccount, secrets.value(parameter.secretKey));
         if (!result.has_value()) {
             return std::unexpected(
                 QCoreApplication::translate("AutomationService", "Failed to store automation secret %1: %2")
@@ -417,10 +284,11 @@ std::expected<QMap<QString, QString>, QString> AutomationService::trySecretEnvir
         }
         if (!result->has_value() || result->value().isEmpty()) {
             if (secret.required) {
-                return std::unexpected(QCoreApplication::translate(
-                                           "AutomationService",
-                                           "Automation secret %1 is not configured. Run the script's configuration first.")
-                                           .arg(secret.label));
+                return std::unexpected(
+                    QCoreApplication::translate(
+                        "AutomationService",
+                        "Automation secret %1 is not configured. Run the script's configuration first.")
+                        .arg(secret.label));
             }
             continue;
         }
@@ -458,6 +326,8 @@ AutomationRunner::AutomationRunner(QObject* parent) : QObject(parent)
 
 AutomationRunner::~AutomationRunner()
 {
+    m_timeoutTimer->stop();
+    m_timeoutTimer->disconnect(this);
     if (m_process != nullptr) {
         m_process->disconnect(this);
         if (m_process->state() != QProcess::NotRunning) {
@@ -467,19 +337,17 @@ AutomationRunner::~AutomationRunner()
     }
 }
 
-void AutomationRunner::start(const AutomationScript& script, const labelqt::core::Project& project,
-                             int currentImageIndex, const QJsonObject& parameters, AutomationSelection selection,
-                             AutomationContext context, const QMap<QString, QString>& environmentOverrides,
+void AutomationRunner::start(const AutomationScript& script, const ProjectTaskSnapshot& snapshot,
+                             const QJsonObject& parameters, const QJsonObject& selection,
+                             const QMap<QString, QString>& environmentOverrides,
                              AutomationPythonSettings pythonSettings)
 {
-    if (m_running) {
-        AutomationRunResult result;
-        result.error = QStringLiteral("Automation script is already running.");
-        finishWithResult(result);
+    if (m_running)
         return;
-    }
 
     m_script = script;
+    m_taskId = snapshot.taskId;
+    m_sessionId = snapshot.sessionId;
     m_environmentOverrides = environmentOverrides;
     m_pythonSettings = std::move(pythonSettings);
     m_pythonCandidates = AutomationPythonResolver::candidates(m_pythonSettings);
@@ -499,7 +367,7 @@ void AutomationRunner::start(const AutomationScript& script, const labelqt::core
     const QString inputPath = m_temporaryDirectory->filePath(QStringLiteral("input.json"));
     m_outputPath = m_temporaryDirectory->filePath(QStringLiteral("output.json"));
     QString error;
-    if (!writeJsonFile(inputPath, inputPayload(project, currentImageIndex, parameters, selection, context), &error)) {
+    if (!writeJsonFile(inputPath, AutomationProtocol::input(snapshot, parameters, selection), &error)) {
         AutomationRunResult result;
         result.error = QStringLiteral("Failed to write automation input: %1").arg(error);
         finishWithResult(result);
@@ -646,14 +514,22 @@ void AutomationRunner::handleFinished(int exitCode, QProcess::ExitStatus exitSta
         return;
     }
 
-    std::expected<AutomationRunResult, QString> parsedResult = AutomationManifestParser::tryResultFromOutput(output);
+    const auto parsedResult = AutomationProtocol::result(output);
     if (!parsedResult.has_value()) {
         m_lastFailure.error = parsedResult.error();
         finishWithResult(m_lastFailure);
         return;
     }
 
-    AutomationRunResult result = *parsedResult;
+    if (parsedResult->taskId != m_taskId || parsedResult->sessionId != m_sessionId) {
+        m_lastFailure.error = QCoreApplication::translate(
+            "AutomationController", "The script returned invalid or unauthorized changes. No changes were applied.");
+        finishWithResult(m_lastFailure);
+        return;
+    }
+    AutomationRunResult result;
+    result.success = true;
+    result.output = *parsedResult;
     result.standardOutput = m_lastFailure.standardOutput;
     result.standardError = m_lastFailure.standardError;
     finishWithResult(result);
@@ -714,8 +590,8 @@ void AutomationRunner::finishWithResult(AutomationRunResult result)
     }
 
     m_running = false;
-    emit finished(result);
     m_temporaryDirectory.reset();
+    emit finished(result);
 }
 
 QStringList AutomationService::scriptsRootCandidates()

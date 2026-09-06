@@ -4,6 +4,7 @@
 #include "core/Project.h"
 #include "services/io/FileRevision.h"
 #include "services/project/ProjectImageRenameService.h"
+#include "services/project/ProjectRevisionTracker.h"
 
 #include <expected>
 #include <optional>
@@ -11,6 +12,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QThread>
 
 namespace labelqt::services {
 struct ProjectRecoveryEntry;
@@ -61,8 +63,16 @@ struct NewProjectError {
 
 class ProjectController {
 public:
+    ProjectController() = default;
+    ProjectController(const ProjectController&) = delete;
+    ProjectController& operator=(const ProjectController&) = delete;
     labelqt::core::Project& project() noexcept;
     const labelqt::core::Project& project() const noexcept;
+    const ProjectRevisionTracker& revisions();
+    bool isOwnerThread() const noexcept
+    {
+        return QThread::currentThread() == m_ownerThread;
+    }
 
     void setProject(labelqt::core::Project project);
     void loadFromFile(const QString& path);
@@ -80,8 +90,8 @@ public:
                                                      const QStringList& defaultGroups, bool useNextAvailableName);
 
     bool isDirty() const noexcept;
-    void setDirty(bool dirty) noexcept;
-    void markDirty() noexcept;
+    void setDirty(bool dirty);
+    void markDirty();
 
     std::expected<std::optional<QString>, QString> tryPerformAutoBackup(
         const labelqt::core::AppPreferences& preferences);
@@ -89,6 +99,8 @@ public:
 
 private:
     labelqt::core::Project m_project;
+    QThread* const m_ownerThread{QThread::currentThread()};
+    ProjectRevisionTracker m_revisions;
     bool m_isDirty{false};
     bool m_hasPendingBackup{false};
     FileRevision m_savedRevision;

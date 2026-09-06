@@ -1,6 +1,7 @@
 #include "core/LabelPlusDocument.h"
 
 #include "core/AtomicFileWriter.h"
+#include "core/ProjectIdentityService.h"
 #include "core/ProjectMetadataService.h"
 
 #include <QCoreApplication>
@@ -102,6 +103,7 @@ QStringList commentLinesWithMetadata(const Project& project)
 {
     QJsonObject metadata = checkedMetadata(project);
     metadata.remove(QStringLiteral("labelIds"));
+    metadata.insert(QStringLiteral("identities"), ProjectIdentityService::encode(project));
     QJsonObject imagePaths;
     const QDir directory(QFileInfo(project.filePath()).absolutePath());
     for (const ImageEntry& image : project.images()) {
@@ -252,8 +254,11 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
         }
 
         if (sectionSeparatorCount == 1) {
-            if (!line.isEmpty())
-                project.groups().append(line);
+            if (!line.isEmpty()) {
+                auto groups = project.groups();
+                groups.append(line);
+                project.setGroups(std::move(groups));
+            }
             continue;
         }
 
@@ -326,12 +331,20 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
         project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
     }
 
+    const auto identitySection = checkedMetadata(project).value("identities");
+    if (!identitySection.isUndefined() && !identitySection.isObject())
+        invalidDocument();
+    const auto identities = ProjectIdentityService::restore(project, identitySection.toObject());
+    if (!identities)
+        throw std::runtime_error(identities.error().toStdString());
     return project;
 }
 
 QString LabelPlusDocument::serialize(const Project& project)
 {
     validateSerializable(project);
+    if (!ProjectIdentityService::valid(project))
+        invalidDocument();
     QStringList groups = project.groups();
     if (groups.isEmpty()) {
         groups = {QStringLiteral("框内"), QStringLiteral("框外")};

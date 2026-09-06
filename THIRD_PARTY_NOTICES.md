@@ -68,27 +68,17 @@ The repository includes official Python automation scripts under `scripts/offici
 
 Current script groups:
 
-- `scripts/official/test`: development-only framework examples using the Python standard library; excluded from release packages.
-- `scripts/official/ocr_preview`: OCR configuration, preview and label-generation scripts.
-- `scripts/official/ai_translate`: DeepSeek-compatible AI translation scripts.
-- `scripts/official/sdk`: small helper library for LabelQt automation scripts.
+- `scripts/official/test`: native v2 development examples; excluded from release packages.
+- `scripts/official/sdk`: the MIT-licensed, standard-library-only Python 3.10+ task SDK.
 
-Python dependencies are declared in each script group's `requirements.txt`. The repository does not vendor Python wheels, Python runtimes, PaddleOCR models, manga-ocr models or Hugging Face model files. If a release package chooses to bundle any of them, add their exact license texts and notices to the release package.
-
-Known optional Python packages used by official scripts include:
-
-- Pillow
-- PaddleOCR
-- manga-ocr
-- Transformers
-
-Check the installed package metadata for exact versions and licenses before bundling these packages.
+The old OCR/translation scripts and their dependencies have been removed. No Python runtime, wheels or model
+weights are vendored. New extensions must declare their own dependencies and license notices.
 
 ## External APIs And Remote Services
 
-The official AI translation script can call a user-configured DeepSeek-compatible API endpoint. The API service, API keys, hosted models and remote runtime are not bundled in this repository.
-
-Users are responsible for configuring credentials and complying with the relevant service terms. Automation script secrets must be stored through LabelQt's QtKeychain-backed keychain path, not in `script.json`, local config files, logs or project files.
+The v2 examples do not contact remote services. User extensions may do so; users are responsible for the relevant
+service terms. Secrets must use LabelQt's QtKeychain-backed path, not JSON, logs or project files.
+Process isolation is not an operating-system sandbox.
 
 ## LabelPlus Format And LabelMinus Acknowledgement
 

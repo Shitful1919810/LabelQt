@@ -1,9 +1,8 @@
 #include "services/automation/AutomationManifestParser.h"
 
+#include <QCoreApplication>
 #include <QJsonArray>
 #include <QJsonValue>
-
-#include <expected>
 
 namespace labelqt::services::AutomationManifestParser {
 namespace {
@@ -21,29 +20,6 @@ QString stringFromJsonValue(const QJsonValue& value)
     return {};
 }
 
-QVector<AutomationOperation> operationsFromOutput(const QJsonObject& output)
-{
-    QVector<AutomationOperation> operations;
-    const QJsonArray operationArray = output.value(QStringLiteral("operations")).toArray();
-    for (const QJsonValue& value : operationArray) {
-        const QJsonObject object = value.toObject();
-        const QString type = object.value(QStringLiteral("type")).toString().trimmed();
-        if (type.isEmpty()) {
-            continue;
-        }
-
-        AutomationOperation operation;
-        operation.type = type;
-        operation.page = object.value(QStringLiteral("page")).toString();
-        operation.labelIndex = object.value(QStringLiteral("labelIndex")).toInt(-1);
-        operation.group = object.value(QStringLiteral("group")).toString();
-        operation.text = object.value(QStringLiteral("text")).toString();
-        operation.x = object.value(QStringLiteral("x")).toDouble(0.0);
-        operation.y = object.value(QStringLiteral("y")).toDouble(0.0);
-        operations.append(operation);
-    }
-    return operations;
-}
 } // namespace
 
 QVector<AutomationParameter> parametersFromManifest(const QJsonObject& manifest)
@@ -113,40 +89,6 @@ QMap<QString, QString> environmentFromManifest(const QJsonObject& manifest)
         environment.insert(it.key(), it.value().toString());
     }
     return environment;
-}
-
-AutomationRunResult resultFromOutput(const QJsonObject& output)
-{
-    AutomationRunResult result;
-    const std::expected<AutomationRunResult, QString> parsed = tryResultFromOutput(output);
-    if (parsed.has_value()) {
-        return *parsed;
-    }
-
-    result.success = false;
-    result.error = parsed.error();
-    return result;
-}
-
-std::expected<AutomationRunResult, QString> tryResultFromOutput(const QJsonObject& output)
-{
-    if (output.contains(QStringLiteral("operations")) && !output.value(QStringLiteral("operations")).isArray()) {
-        return std::unexpected(QStringLiteral("Automation output field \"operations\" must be an array."));
-    }
-
-    AutomationRunResult result;
-    result.success = true;
-    result.summary = output.value(QStringLiteral("summary")).toString();
-    result.operations = operationsFromOutput(output);
-    result.quiet = output.value(QStringLiteral("quiet")).toBool(false);
-
-    const QJsonObject resultObject = output.value(QStringLiteral("result")).toObject();
-    result.resultTitle = resultObject.value(QStringLiteral("title")).toString();
-    result.resultText = resultObject.value(QStringLiteral("text")).toString();
-    if (result.resultText.isEmpty() && output.contains(QStringLiteral("message"))) {
-        result.resultText = output.value(QStringLiteral("message")).toString();
-    }
-    return result;
 }
 
 } // namespace labelqt::services::AutomationManifestParser

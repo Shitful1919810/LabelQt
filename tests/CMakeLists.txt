@@ -8,11 +8,13 @@ add_library(LabelQtTestSupport STATIC
     ../src/core/LabelPlusDocument.cpp
     ../src/core/Label.cpp
     ../src/core/Project.cpp
+    ../src/core/ProjectIdentityService.cpp
     ../src/core/ProjectMetadataService.cpp
     ../src/core/RuntimePaths.cpp
     ../src/core/UndoStack.cpp
     ../src/services/automation/AutomationManifestParser.cpp
-    ../src/services/automation/AutomationOperationApplier.cpp
+    ../src/services/automation/AutomationProtocol.cpp
+    ../src/services/automation/ProjectTaskService.cpp
     ../src/services/automation/AutomationPythonResolver.cpp
     ../src/services/automation/AutomationService.cpp
     ../src/services/automation/SecretStore.cpp
@@ -20,12 +22,14 @@ add_library(LabelQtTestSupport STATIC
     ../src/services/io/FileRevision.cpp
     ../src/services/label/LabelClipboardService.cpp
     ../src/services/label/LabelEditController.cpp
+    ../src/services/label/LabelEditControllerBatch.cpp
     ../src/services/label/ProjectTextSearchService.cpp
     ../src/ui/search/ProjectTextSearchModel.cpp
     ../src/services/label/LabelNavigator.cpp
     ../src/services/label/LabelPastePlanner.cpp
     ../src/services/project/PageSourceInfoService.cpp
     ../src/services/project/ProjectController.cpp
+    ../src/services/project/ProjectRevisionTracker.cpp
     ../src/services/project/ProjectLocationService.cpp
     ../src/services/project/PageManagementDraft.cpp
     ../src/services/project/ProjectRecoveryService.cpp
@@ -89,6 +93,17 @@ labelqt_enable_warnings(LabelQtTestSupport)
 qt_add_executable(LabelQtTests LabelTests.cpp)
 target_link_libraries(LabelQtTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(LabelQtTests)
+
+qt_add_executable(AutomationTaskTests AutomationTaskTests.cpp)
+target_link_libraries(AutomationTaskTests PRIVATE LabelQtTestSupport)
+labelqt_enable_warnings(AutomationTaskTests)
+add_test(NAME AutomationTaskTests COMMAND $<TARGET_FILE:AutomationTaskTests>)
+
+qt_add_executable(AutomationProtocolTests AutomationProtocolTests.cpp)
+target_link_libraries(AutomationProtocolTests PRIVATE LabelQtTestSupport)
+target_compile_definitions(AutomationProtocolTests PRIVATE LABELQT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+labelqt_enable_warnings(AutomationProtocolTests)
+add_test(NAME AutomationProtocolTests COMMAND $<TARGET_FILE:AutomationProtocolTests>)
 
 qt_add_executable(PersistenceSafetyTests PersistenceSafetyTests.cpp)
 target_link_libraries(PersistenceSafetyTests PRIVATE LabelQtTestSupport)

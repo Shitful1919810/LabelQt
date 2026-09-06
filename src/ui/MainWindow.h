@@ -87,8 +87,6 @@ private:
     void showProofreadingChanges();
     void compareWithProject();
     void showAutomationDiscoveryWarnings(const QStringList& warnings);
-    void applyAutomationOperations(const QString& scriptName,
-                                   const QVector<labelqt::services::AutomationOperation>& operations);
     void openRecentProjectFromAction();
     void openPreferences();
     bool saveProject();

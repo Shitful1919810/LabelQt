@@ -398,7 +398,10 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 - `src/ui/automation/AutomationController.cpp`
 - `src/services/automation/AutomationService.cpp`
 - `src/services/automation/AutomationManifestParser.cpp`
-- `src/services/automation/AutomationOperationApplier.cpp`
+- `src/services/automation/AutomationProtocol.cpp`
+- `src/services/automation/ProjectTaskService.cpp`
+- `src/services/project/ProjectRevisionTracker.cpp`
+- `src/core/ProjectIdentityService.cpp`
 - `src/services/automation/AutomationPythonResolver.cpp`
 - `src/services/automation/SecretStore.cpp`
 
@@ -408,12 +411,15 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 2. 用户点击脚本动作。
 3. 如果脚本清单声明了 `parameters`，弹出 `AutomationParameterDialog`。
 4. 密钥参数写入系统密钥环，运行脚本前再读出并注入环境变量。
-5. `AutomationService` 导出 `input.json`，启动外部 Python。
+5. `AutomationProtocol` 按清单范围规划，`ProjectTaskService` 捕获快照，再由 runner 编码输入并启动 Python。
 6. `AutomationRunDialog` 可选显示 stdout/stderr，并允许取消。
 7. 脚本写出 `output.json`。
-8. `AutomationManifestParser` 解析输出。
-9. `AutomationOperationApplier` 校验并规划 `operations`。
-10. `MainWindow` 把合法操作作为一个撤销命令应用到工程。
+8. `AutomationProtocol` 严格解析 v2 输出并直接生成 `LabelChange`。
+9. runner 核对返回的任务和会话 ID，不接受旧协议或其他任务的结果。
+10. `ProjectTaskService` 校验会话、依赖与权限，由 `LabelEditController::commitChanges()` 整批提交并注册撤销。
+
+运行前宿主创建任务凭证；只接受稳定 ID，不以页名/下标寻址，也不保留整份 Project 供结果转换。
+完整的身份、版本和提交合约见 [自动化基础契约](automation-foundation.md)。
 
 脚本运行期间，项目编辑入口被禁用，但只读浏览操作仍允许。
 
@@ -421,12 +427,10 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 官方脚本在 `scripts/official`：
 
-- `sdk/labelqt_automation.py`：脚本开发辅助库。
-- `test`：自动化框架示例和测试脚本。
-- `ocr_preview`：OCR 配置、预览、生成标签和页码区间 OCR。
-- `ai_translate`：DeepSeek 配置、预览、应用翻译和跨页翻译。
+- `sdk/labelqt_task.py`：原生 v2 值快照、字段提案和一次性输出 SDK。
+- `test`：只读统计、所选文本处理与当前页新增示例。旧 OCR/翻译和配置脚本已移除。
 
-Python 脚本不应该直接写 `.txt` 工程文件。要修改工程时输出 `operations`。
+Python 脚本不应该直接写 `.txt` 工程文件。要修改工程时返回按 ID 定位的 `changes`，SDK 通过 `Task.update/create/finish` 构造。
 
 ## 偏好设置窗口
 
@@ -497,7 +501,7 @@ GUI 显示问题不一定都能单元测试，但容易回归的模型逻辑和�
 - 主窗口快捷键：`MainWindowShortcutController`。
 - 自动化脚本发现/运行：`AutomationController` / `AutomationService`。
 - 自动化脚本 JSON 词汇：`AutomationManifestParser` / `docs/automation-scripting.md`。
-- 自动化操作：`AutomationOperationApplier`，并补 SDK 示例。
+- 自动化操作：`ProjectTaskService` / `LabelEditController::commitChanges()`，补作用域与冲突测试。
 - 校对与工程对比：`ProjectComparisonService` / `LabelSequenceDiffService` / `TextDiffService`。
 - 校对 HTML 报告：`ProofreadReportService`。
 - 偏好设置：`AppPreferences`、`PreferenceDialog` 和对应子控件。

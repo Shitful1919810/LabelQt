@@ -1,12 +1,11 @@
 #pragma once
 
-#include "core/Project.h"
+#include "services/automation/AutomationProtocol.h"
 
 #include <QJsonObject>
 #include <QMap>
 #include <QObject>
 #include <QProcess>
-#include <QRectF>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -40,26 +39,6 @@ struct AutomationSecret {
     bool required{true};
 };
 
-struct AutomationOperation {
-    QString type;
-    QString page;
-    int labelIndex{-1};
-    QString group;
-    QString text;
-    double x{0.0};
-    double y{0.0};
-};
-
-struct AutomationSelection {
-    bool hasSelection{false};
-    QRectF normalizedRect;
-};
-
-struct AutomationContext {
-    int currentImageIndex{-1};
-    QVector<int> selectedLabelIndexes;
-};
-
 struct AutomationPythonSettings {
     QString command;
     QStringList arguments;
@@ -80,6 +59,7 @@ struct AutomationScript {
     QString directoryName;
     QString directoryPath;
     QString entryPath;
+    AutomationTaskSpec task;
     QVector<AutomationParameter> parameters;
     QVector<AutomationSecret> secrets;
     QMap<QString, QString> environment;
@@ -90,14 +70,10 @@ struct AutomationScript {
 
 struct AutomationRunResult {
     bool success{false};
-    QString summary;
-    QString resultTitle;
-    QString resultText;
+    AutomationTaskResult output;
     QString standardOutput;
     QString standardError;
     QString error;
-    QVector<AutomationOperation> operations;
-    bool quiet{false};
 };
 
 class AutomationService final {
@@ -121,9 +97,8 @@ public:
     explicit AutomationRunner(QObject* parent = nullptr);
     ~AutomationRunner() override;
 
-    void start(const AutomationScript& script, const labelqt::core::Project& project, int currentImageIndex,
-               const QJsonObject& parameters = {}, AutomationSelection selection = {}, AutomationContext context = {},
-               const QMap<QString, QString>& environmentOverrides = {},
+    void start(const AutomationScript& script, const ProjectTaskSnapshot& snapshot, const QJsonObject& parameters = {},
+               const QJsonObject& selection = {}, const QMap<QString, QString>& environmentOverrides = {},
                AutomationPythonSettings pythonSettings = {});
     void cancel();
     bool isRunning() const noexcept;
@@ -157,6 +132,8 @@ private:
     int m_candidateIndex{0};
     QStringList m_scriptArguments;
     QString m_outputPath;
+    QUuid m_taskId;
+    QUuid m_sessionId;
     QString m_requirementsPath;
     AutomationRunResult m_lastFailure;
     std::unique_ptr<QTemporaryDir> m_temporaryDirectory;

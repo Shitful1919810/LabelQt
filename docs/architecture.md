@@ -52,6 +52,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 `src/core` 是工程数据和基础规则层。
 
 - `Label`：单个标签，包含文本、分组、归一化坐标和软删除状态。
+- `ProjectIdentityService`：持久化稳定工程/页面/Label/分组 UUID，处理身份校验和复制语义。
 - `Project` / `ImageEntry`：当前工程的内存模型。`Project` 持有页面列表、分组、工程路径、注释区等信息；`ImageEntry` 持有图片名、图片路径和该页标签。
 - `LabelPlusDocument`：经典 LabelPlus `.txt` 工程格式的解析和保存。格式兼容逻辑应集中在这里，不要在 UI 中拼接工程文本。
 - `AtomicFileWriter`：可靠的原子字节写入入口，不负责具体文件格式。工程、HTML 和偏好保存必须校验最终提交成功。
@@ -95,10 +96,14 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `LabelEditController`：新增、删除、移动、改文本、改类别、批量切换、重排标签和分组编辑，并注册撤销/重做。
 - `LabelNavigator`：在当前分组筛选下查找上一条/下一条可见标签，跨页导航逻辑放这里而不是写在 UI 事件处理里。
 - `ImagePageCache`：异步加载图片、维护 LRU 缓存、预加载相邻页。UI 只请求“显示当前页”，不直接管理加载线程和缓存命中。
-- `AutomationService`：发现自动化脚本、生成输入 JSON、运行外部 Python 进程、读取输出 JSON。
-- `AutomationManifestParser`：解析 `script.json`、参数声明、密钥声明和脚本输出。脚本清单的字段变更应集中在这里。
+- `AutomationService` / `AutomationRunner`：脚本发现与密钥，以及进程、日志、取消和临时文件生命周期；不接收活动 Project。
+- `AutomationManifestParser`：解析参数、密钥和非敏感环境声明；任务协议不混入表单解析。
 - `AutomationPythonResolver`：根据偏好设置、内置候选和系统命令解析 Python 解释器，生成“Python 不可用”的用户提示。
-- `AutomationOperationApplier`：校验自动化脚本输出的 `operations`，把它们转换为项目变更计划，供 C++ 侧统一应用和撤销。
+- `ProjectRevisionTracker`：运行会话、单调字段版本与删除墓碑，随原生编辑和撤销发布检查点。
+- `ProjectTaskService`：作用域快照、宿主依赖与权限、取消和单次提交；工作线程不能直接访问活动工程。
+- `AutomationProtocol`：v2 任务范围规划、快照编码和严格输出解码，直接使用稳定 ID；不保留 v1 适配。
+- 自动化与全文替换共用 `LabelEditController::commitChanges()` 注册批量撤销，详见
+  [自动化基础契约](automation-foundation.md)。
 - `SecretStore`：QtKeychain 封装。自动化脚本的 API key 等敏感信息只能通过这里进入系统密钥环。
 
 ## `src/ui`
@@ -347,12 +352,15 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 持久化、重命名事务、正文保真和自动化窗口生命周期的失败语义见 [持久化安全说明](persistence-safety.md)。
 重命名后的工程保存必须属于事务提交步骤，成功前不发布候选工程，也不清空撤销历史。
 
-GUI 项目不应只依赖人工点击。当前测试分为 `LabelQtTests`、`ProofreadChangeTableModelTests`、`PersistenceSafetyTests` 和 `ProductWorkflowTests`，分别覆盖主要功能、校对表格合约、持久化失败路径及恢复/草稿/查找/审阅的跨模块工作流。主要覆盖：
+GUI 项目不应只依赖人工点击。当前测试包括 `LabelQtTests`、`ProofreadChangeTableModelTests`、
+`PersistenceSafetyTests`、`ProductWorkflowTests`、`AutomationTaskTests` 和 `AutomationProtocolTests`，覆盖主要功能、校对表格合约、
+持久化失败路径、跨模块工作流及自动化身份/并发提交。主要覆盖：
 
 - LabelPlus 读写 round-trip。
 - `AppPreferences` 默认值、错误回退和序列化。
 - `LabelNavigator` 跨页导航和分组筛选。
-- `AutomationOperationApplier` 的操作计划和撤销/重做应用。
+- `AutomationTaskTests` 的稳定身份、字段冲突、线程归属、取消与原子批量提交。
+- `AutomationProtocolTests` 的 v2 严格协议、范围和真实 Python SDK 到共用编辑撤销的端到端测试。
 - `LabelTableModel`、`PageOrderListModel` 的 `QAbstractItemModelTester` 合约测试。
 - `SessionStateStore` 多选恢复。
 - 缺失图片扫描。

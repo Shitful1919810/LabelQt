@@ -138,16 +138,24 @@ MODULE_TOPICS = (
         files=(
             "src/services/automation/AutomationService.*",
             "src/services/automation/AutomationManifestParser.*",
-            "src/services/automation/AutomationOperationApplier.*",
+            "src/services/automation/AutomationProtocol.*",
+            "src/services/automation/ProjectTaskService.*",
+            "src/services/label/LabelEditControllerBatch.cpp",
+            "src/services/project/ProjectRevisionTracker.*",
+            "src/core/ProjectIdentityService.*",
             "src/services/automation/AutomationPythonResolver.*",
             "src/ui/automation/AutomationController.*",
-            "scripts/official/sdk/labelqt_automation.py",
+            "scripts/official/sdk/labelqt_task.py",
+            "tests/AutomationTaskTests.cpp",
+            "tests/AutomationProtocolTests.cpp",
+            "scripts/test_automation_sdk.py",
         ),
         notes=(
             "自动化脚本通过外部 Python 进程运行，不嵌入解释器。",
+            "外部写入走 ProjectTaskService 的范围/版本校验，再交 LabelEditController 统一提交与撤销。",
             "脚本 secret 必须走 QtKeychain，不写入 JSON、日志或 preference。",
         ),
-        docs=("docs/automation-scripting.md",),
+        docs=("docs/automation-foundation.md", "docs/automation-scripting.md"),
     ),
     ModuleTopic(
         name="project-workflow",
@@ -337,8 +345,8 @@ def validate_manifest(manifest_path: Path, repo: Path) -> list[str]:
     group_name = manifest.get("name")
     if not isinstance(group_name, str) or not group_name:
         issues.append(f"{manifest_path.relative_to(repo)}: missing non-empty name")
-    if manifest.get("apiVersion") != 1:
-        issues.append(f"{manifest_path.relative_to(repo)}: apiVersion should be 1")
+    if manifest.get("apiVersion") != 2:
+        issues.append(f"{manifest_path.relative_to(repo)}: apiVersion should be 2")
 
     scripts = manifest_scripts(manifest)
     if not scripts:
@@ -348,6 +356,27 @@ def validate_manifest(manifest_path: Path, repo: Path) -> list[str]:
     seen_ids: set[str] = set()
     for script in scripts:
         script_name = str(script.get("name") or script.get("id") or "<unnamed>")
+        task = script.get("task")
+        task_keys = {"scope", "read", "write", "allowCreate", "pageOrder", "groups", "metadata"}
+        fields = {"text", "position", "group", "deleted"}
+        valid_task = isinstance(task, dict) and not task.keys() - task_keys
+        if valid_task:
+            valid_task = task.get("scope") in {"project", "currentPage", "selectedLabels"}
+            for name in ("read", "write"):
+                values = task.get(name)
+                allowed = fields | ({"imageSource"} if name == "read" else set())
+                valid_task = valid_task and isinstance(values, list)
+                if isinstance(values, list):
+                    valid_task = valid_task and all(isinstance(v, str) and v in allowed for v in values)
+                    if valid_task:
+                        valid_task = len(values) == len(set(values))
+            for name in ("allowCreate", "pageOrder", "groups", "metadata"):
+                valid_task = valid_task and (name not in task or type(task[name]) is bool)
+            valid_task = valid_task and not (
+                task.get("allowCreate") and task.get("scope") == "selectedLabels"
+            )
+        if not valid_task:
+            issues.append(f"{manifest_path.relative_to(repo)}: {script_name}: invalid v2 task scope/fields")
         script_id = script.get("id")
         entry = script.get("entry")
         if not isinstance(script_id, str) or not script_id:

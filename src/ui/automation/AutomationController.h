@@ -3,15 +3,18 @@
 #include "core/AppPreferences.h"
 #include "core/Project.h"
 #include "services/automation/AutomationService.h"
+#include "services/automation/ProjectTaskService.h"
 
 #include <QMap>
 #include <QObject>
 #include <QPointer>
+#include <QRectF>
 #include <QString>
 #include <QStringList>
 #include <QVector>
 
 #include <functional>
+#include <optional>
 
 class AutomationRunDialog;
 class QAction;
@@ -29,15 +32,20 @@ public:
         std::function<QStringList()> groups;
         std::function<QVector<labelqt::core::LabelGroupStyle>()> groupStyles;
         std::function<int()> currentImageIndex;
-        std::function<labelqt::services::AutomationSelection()> selection;
-        std::function<labelqt::services::AutomationContext()> context;
+        std::function<std::optional<QRectF>()> selection;
+        std::function<QVector<int>()> selectedLabels;
     };
 
     explicit AutomationController(QWidget* window, QObject* parent = nullptr);
+    ~AutomationController() override;
 
     void setMenu(QMenu* menu);
     void setPreferences(labelqt::core::AppPreferences preferences);
     void setCallbacks(Callbacks callbacks);
+    void setTaskService(labelqt::services::ProjectTaskService* service)
+    {
+        m_taskService = service;
+    }
     void refreshScripts();
     const QVector<labelqt::services::AutomationScript>& scripts() const noexcept;
     bool isRunning() const noexcept;
@@ -51,7 +59,6 @@ signals:
     void scriptsChanged(const QVector<labelqt::services::AutomationScript>& scripts);
     void discoveryWarningsFound(const QStringList& warnings);
     void runningChanged(bool running);
-    void operationsReady(const QString& scriptName, const QVector<labelqt::services::AutomationOperation>& operations);
     void statusMessageRequested(const QString& message, int timeoutMs);
 
 private:
@@ -72,4 +79,6 @@ private:
     QPointer<labelqt::services::AutomationRunner> m_runner;
     QPointer<AutomationRunDialog> m_runDialog;
     bool m_running{false};
+    QPointer<labelqt::services::ProjectTaskService> m_taskService;
+    QUuid m_taskId;
 };
