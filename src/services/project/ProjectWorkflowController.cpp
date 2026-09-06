@@ -8,9 +8,10 @@
 
 namespace labelqt::services {
 
-ProjectWorkflowController::ProjectWorkflowController(labelqt::core::Project& project,
-                                                     labelqt::core::UndoStack& undoStack, QString reorderPagesText)
-    : m_project(project), m_undoStack(undoStack), m_reorderPagesText(std::move(reorderPagesText))
+ProjectWorkflowController::ProjectWorkflowController(ProjectController& controller, labelqt::core::UndoStack& undoStack,
+                                                     QString reorderPagesText)
+    : m_controller(controller), m_project(controller.project()), m_undoStack(undoStack),
+      m_reorderPagesText(std::move(reorderPagesText))
 {
 }
 
@@ -95,15 +96,12 @@ bool ProjectWorkflowController::applyPageOrder(const QVector<int>& order, const 
 
 std::expected<void, QString> ProjectWorkflowController::applyImageRename(const ProjectImageRenamePlan& plan)
 {
-    const std::expected<void, QString> result = ProjectImageRenameService::applyPlan(m_project, plan);
+    const std::expected<void, QString> result = m_controller.renameImages(plan);
     if (!result) {
         return result;
     }
 
     m_undoStack.clear();
-    if (m_dirty) {
-        m_dirty();
-    }
     return {};
 }
 

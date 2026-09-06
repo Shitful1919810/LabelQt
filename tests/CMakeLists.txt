@@ -1,9 +1,9 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Gui Test Widgets)
 
-qt_add_executable(LabelQtTests
-    LabelTests.cpp
+add_library(LabelQtTestSupport STATIC
     ../src/core/ApplicationTheme.cpp
     ../src/core/AppPreferences.cpp
+    ../src/core/AtomicFileWriter.cpp
     ../src/core/CommandLineUtils.cpp
     ../src/core/LabelPlusDocument.cpp
     ../src/core/Label.cpp
@@ -16,6 +16,7 @@ qt_add_executable(LabelQtTests
     ../src/services/automation/AutomationPythonResolver.cpp
     ../src/services/automation/AutomationService.cpp
     ../src/services/automation/SecretStore.cpp
+    ../src/services/io/FileRenameTransaction.cpp
     ../src/services/label/LabelClipboardService.cpp
     ../src/services/label/LabelEditController.cpp
     ../src/services/label/LabelNavigator.cpp
@@ -26,6 +27,7 @@ qt_add_executable(LabelQtTests
     ../src/services/project/ProjectImageValidator.cpp
     ../src/services/project/ProjectMergeService.cpp
     ../src/services/project/ProjectPageOrderService.cpp
+    ../src/services/project/ProjectWorkflowController.cpp
     ../src/services/project/SaveChangesDecision.cpp
     ../src/services/project/SessionStateStore.cpp
     ../src/services/proofread/LabelSequenceDiffService.cpp
@@ -45,15 +47,16 @@ qt_add_executable(LabelQtTests
     ../src/ui/labeltable/LabelTableModel.cpp
     ../src/ui/labeltable/LabelTableView.cpp
     ../src/ui/project/PageOrderListModel.cpp
+    ../src/ui/automation/AutomationRunDialog.cpp
 )
 
-target_include_directories(LabelQtTests
-    PRIVATE
+target_include_directories(LabelQtTestSupport
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
-target_link_libraries(LabelQtTests
-    PRIVATE
+target_link_libraries(LabelQtTestSupport
+    PUBLIC
         DiffMatchPatch
         Qt6::Core
         Qt6::Gui
@@ -62,7 +65,17 @@ target_link_libraries(LabelQtTests
         Qt6Keychain::Qt6Keychain
 )
 
+labelqt_enable_warnings(LabelQtTestSupport)
+
+qt_add_executable(LabelQtTests LabelTests.cpp)
+target_link_libraries(LabelQtTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(LabelQtTests)
+
+qt_add_executable(PersistenceSafetyTests PersistenceSafetyTests.cpp)
+target_link_libraries(PersistenceSafetyTests PRIVATE LabelQtTestSupport)
+labelqt_enable_warnings(PersistenceSafetyTests)
+add_test(NAME PersistenceSafetyTests COMMAND $<TARGET_FILE:PersistenceSafetyTests>)
+set_tests_properties(PersistenceSafetyTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_test(NAME LabelQtTests COMMAND $<TARGET_FILE:LabelQtTests>)
 set_tests_properties(LabelQtTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

@@ -6,6 +6,7 @@
 #include <QVector>
 
 #include <expected>
+#include <functional>
 
 namespace labelqt::services {
 
@@ -52,13 +53,14 @@ struct ProjectImageRenamePatternAnalysis {
 
 class ProjectImageRenameService final {
 public:
+    using CommitProject = std::function<std::expected<void, QString>(const labelqt::core::Project&)>;
     static ProjectImageRenamePlan createPlan(const labelqt::core::Project& project,
                                              const ProjectImageRenameOptions& options);
     static ProjectImageRenamePlan mergePlans(ProjectImageRenamePlan currentPlan,
                                              const ProjectImageRenamePlan& incomingPlan);
     static ProjectImageRenamePatternAnalysis analyzePattern(const QString& pattern);
-    static std::expected<void, QString> applyPlan(labelqt::core::Project& project,
-                                                  const ProjectImageRenamePlan& plan);
+    static std::expected<void, QString> applyPlan(labelqt::core::Project& project, const ProjectImageRenamePlan& plan,
+                                                  const CommitProject& commitProject = {});
 
 private:
     ProjectImageRenameService() = default;

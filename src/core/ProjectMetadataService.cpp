@@ -1,6 +1,7 @@
 #include "core/ProjectMetadataService.h"
 
 #include <QByteArray>
+#include <QCoreApplication>
 #include <QJsonDocument>
 
 #include <algorithm>
@@ -91,36 +92,58 @@ QStringList encodedPayloadLines(const QJsonObject& metadata)
     return lines;
 }
 
-QJsonObject metadataFromPayload(const QString& encodedPayload)
+std::expected<QJsonObject, QString> invalidMetadata()
 {
-    const QByteArray compressedBytes = QByteArray::fromBase64(encodedPayload.toLatin1());
+    return std::unexpected(QCoreApplication::translate(
+        "ProjectMetadataService",
+        "Project metadata is damaged or uses an unsupported format. The original file has not been changed."));
+}
+
+std::expected<QJsonObject, QString> metadataFromPayload(const QString& encodedPayload)
+{
+    const QByteArray compressedBytes =
+        QByteArray::fromBase64(encodedPayload.toLatin1(), QByteArray::AbortOnBase64DecodingErrors);
     if (compressedBytes.isEmpty()) {
-        return {};
+        return invalidMetadata();
     }
 
     const QByteArray jsonBytes = qUncompress(compressedBytes);
     if (jsonBytes.isEmpty()) {
-        return {};
+        return invalidMetadata();
     }
 
     const QJsonDocument document = QJsonDocument::fromJson(jsonBytes);
-    return document.isObject() ? document.object() : QJsonObject{};
+    if (!document.isObject())
+        return invalidMetadata();
+    return document.object();
 }
 } // namespace
 
 QJsonObject ProjectMetadataService::metadataObject(const QStringList& commentLines)
 {
+    return tryMetadataObject(commentLines).value_or(QJsonObject{});
+}
+
+std::expected<QJsonObject, QString> ProjectMetadataService::tryMetadataObject(const QStringList& commentLines)
+{
     bool isInMetadataBlock = false;
+    bool hasMetadataBlock = false;
+    bool hasEnd = false;
     QString encodedPayload;
 
     for (const QString& line : commentLines) {
         const QString trimmedLine = line.trimmed();
         if (trimmedLine.startsWith(metadataStartMarker)) {
+            if (hasMetadataBlock || trimmedLine != QStringLiteral("# LabelQtMetadata v1"))
+                return invalidMetadata();
             isInMetadataBlock = true;
+            hasMetadataBlock = true;
             continue;
         }
         if (isInMetadataBlock && trimmedLine.startsWith(metadataEndMarker)) {
-            break;
+            hasEnd = true;
+            isInMetadataBlock = false;
+            continue;
         }
         if (!isInMetadataBlock) {
             continue;
@@ -130,8 +153,16 @@ QJsonObject ProjectMetadataService::metadataObject(const QStringList& commentLin
         if (content.startsWith(QStringLiteral("payload="))) {
             encodedPayload.append(content.sliced(QStringLiteral("payload=").size()).trimmed());
         }
+        else if ((content.startsWith(QStringLiteral("compression=")) &&
+                  content != QStringLiteral("compression=qCompress")) ||
+                 (content.startsWith(QStringLiteral("encoding=")) && content != QStringLiteral("encoding=base64"))) {
+            return invalidMetadata();
+        }
     }
-
+    if (!hasMetadataBlock)
+        return QJsonObject{};
+    if (!hasEnd)
+        return invalidMetadata();
     return metadataFromPayload(encodedPayload);
 }
 

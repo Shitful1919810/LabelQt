@@ -251,7 +251,8 @@ void AutomationController::runScript(const labelqt::services::AutomationScript& 
                 &AutomationRunDialog::appendStandardError);
     }
     connect(runner, &labelqt::services::AutomationRunner::finished, this,
-            [this, runner, dialog, script](const labelqt::services::AutomationRunResult& result) {
+            [this, runner, dialog = QPointer<AutomationRunDialog>(dialog),
+             script](const labelqt::services::AutomationRunResult& result) {
                 finishScript(runner, dialog, script, result);
             });
 
@@ -293,15 +294,15 @@ void AutomationController::openUserScriptFolder()
     }
 }
 
-void AutomationController::finishScript(labelqt::services::AutomationRunner* runner, AutomationRunDialog* dialog,
+void AutomationController::finishScript(labelqt::services::AutomationRunner* runner,
+                                        QPointer<AutomationRunDialog> dialog,
                                         labelqt::services::AutomationScript script,
                                         const labelqt::services::AutomationRunResult& result)
 {
-    setRunning(false);
     if (m_runner == runner) {
         m_runner.clear();
     }
-    const QPointer<AutomationRunDialog> dialogPointer(dialog);
+    const QPointer<AutomationRunDialog> dialogPointer = dialog;
     runner->deleteLater();
     QTimer::singleShot(0, this, [this, dialogPointer, script, result]() {
         if (!dialogPointer.isNull()) {
@@ -309,6 +310,7 @@ void AutomationController::finishScript(labelqt::services::AutomationRunner* run
         }
 
         if (!result.success) {
+            setRunning(false);
             const QString errorMessage = result.error == QStringLiteral("Automation script was canceled.")
                                              ? tr("Automation script was canceled.")
                                              : result.error;
@@ -327,6 +329,7 @@ void AutomationController::finishScript(labelqt::services::AutomationRunner* run
         }
 
         emit operationsReady(script.name, result.operations);
+        setRunning(false);
 
         if (!result.quiet) {
             const QString title = result.resultTitle.isEmpty() ? script.name : result.resultTitle;

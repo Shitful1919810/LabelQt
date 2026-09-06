@@ -17,6 +17,7 @@ public:
     void appendStandardError(const QString& text);
     void setFinished(bool success);
     void setCanceling();
+    void reject() override;
 
 signals:
     void cancelRequested();

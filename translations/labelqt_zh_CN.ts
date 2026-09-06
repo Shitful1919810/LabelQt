@@ -2618,4 +2618,44 @@ Last error: %1</source>
         <translation>要打开的 LabelPlus 文本工程。</translation>
     </message>
 </context>
+<context>
+    <name>AtomicFileWriter</name>
+    <message>
+        <source>Not a regular file: %1</source>
+        <translation>不是普通文件：%1</translation>
+    </message>
+</context>
+<context>
+    <name>LabelPlusDocument</name>
+    <message>
+        <source>Invalid LabelPlus document structure.</source>
+        <translation>LabelPlus 工程结构无效。</translation>
+    </message>
+    <message>
+        <source>A label contains a reserved header line. Saving was canceled.</source>
+        <translation>标签正文中包含独占一行的页面或标签结构标记，工程未保存。</translation>
+    </message>
+</context>
+<context>
+    <name>FileRenameTransaction</name>
+    <message>
+        <source>Unresolved rename record: %1. Recover the files before continuing.</source>
+        <translation>存在未解决的重命名记录：%1。请先恢复文件再继续。</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to %2.</source>
+        <translation>无法将 %1 重命名为 %2。</translation>
+    </message>
+    <message>
+        <source>Recovery mapping retained at %1. Do not discard the remaining temporary files.</source>
+        <translation>恢复映射已保留在 %1。请勿删除剩余的临时文件。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectMetadataService</name>
+    <message>
+        <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
+        <translation>工程元数据已损坏或使用了不受支持的格式。原文件未被修改。</translation>
+    </message>
+</context>
 </TS>

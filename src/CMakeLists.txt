@@ -1,6 +1,7 @@
 set(LABELQT_CORE_SOURCES
     core/ApplicationTheme.cpp
     core/AppPreferences.cpp
+    core/AtomicFileWriter.cpp
     core/CommandLineUtils.cpp
     core/CommandLineUtils.h
     core/Label.cpp
@@ -22,6 +23,7 @@ set(LABELQT_SERVICE_SOURCES
     services/automation/AutomationService.cpp
     services/automation/SecretStore.cpp
     services/io/ImagePageCache.cpp
+    services/io/FileRenameTransaction.cpp
     services/io/ImagePageCache.h
     services/label/LabelClipboardService.cpp
     services/label/LabelClipboardService.h

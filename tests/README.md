@@ -1,9 +1,12 @@
 # 测试说明
 
-本目录提供两个 Qt Test 测试目标，由 `tests/CMakeLists.txt` 注册到 CTest：
+本目录提供三个 Qt Test 测试目标，由 `tests/CMakeLists.txt` 注册到 CTest：
 
 - `LabelQtTests`：覆盖核心模型、服务和主要 Widget 交互。
 - `ProofreadChangeTableModelTests`：独立覆盖校对变更表的 model/proxy、组合筛选和稳定排序。
+- `PersistenceSafetyTests`：覆盖原子保存、正文保真、元数据损坏、重命名失败回滚与保存提交、撤销清理时机和自动化日志窗口生命周期。
+
+`LabelQtTests` 与 `PersistenceSafetyTests` 通过 `LabelQtTestSupport` 复用测试依赖实现，不重复编译同一套服务。
 
 ## 运行方式
 

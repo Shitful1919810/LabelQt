@@ -252,8 +252,8 @@ MainWindow::MainWindow(QWidget* parent)
     m_labelTextDelegate->setCommitShortcut(m_preferences.commitLabelTextShortcut());
     m_labelTextDelegate->setMaximumTextRows(m_labelTableMaxTextRows);
     m_undoStack.setChangedCallback([this]() { updateUndoRedoActions(); });
-    m_projectWorkflowController =
-        std::make_unique<labelqt::services::ProjectWorkflowController>(project(), m_undoStack, tr("Reorder pages"));
+    m_projectWorkflowController = std::make_unique<labelqt::services::ProjectWorkflowController>(
+        m_projectController, m_undoStack, tr("Reorder pages"));
     m_projectWorkflowController->setCallbacks(
         [this](QVector<labelqt::core::ImageEntry> images, const QString& preferredImageName, int fallbackImageIndex,
                int zoomPercent, QPointF normalizedCenter, std::optional<QStringList> commentLines) {
@@ -929,29 +929,17 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
         return false;
     }
 
-    if (!saveProject()) {
+    if (project().filePath().isEmpty() && !saveProjectAs()) {
         return false;
     }
 
     const int oldImageIndex = m_currentImageIndex;
     const int oldZoomPercent = m_canvas == nullptr ? 100 : m_canvas->zoomPercent();
     const QPointF oldCenter = m_canvas == nullptr ? QPointF(0.5, 0.5) : m_canvas->normalizedViewCenter();
+    const int oldLabelIndex = m_currentLabelIndex;
+    const QVector<int> oldSelection = m_labelSelectionController->selectedLabelIndexes();
+    detachProjectViewsFromProjectData();
     const std::expected<void, QString> result = m_projectWorkflowController->applyImageRename(plan);
-    if (!result) {
-        showMainWindowCritical(this, tr("Rename failed"), result.error());
-        return false;
-    }
-
-    try {
-        m_projectController.save();
-    }
-    catch (const std::exception& error) {
-        showMainWindowCritical(
-            this, tr("Save failed"),
-            tr("Image files or references were updated, but the project file could not be saved. Please save the project before closing LabelQt.\n\nLast error: %1")
-                .arg(QString::fromUtf8(error.what())));
-        return false;
-    }
 
     refreshProjectUi();
     if (oldImageIndex >= 0 && oldImageIndex < project().images().size()) {
@@ -960,6 +948,12 @@ bool MainWindow::executeImageRenamePlan(const labelqt::services::ProjectImageRen
         if (m_imagePageViewController != nullptr) {
             m_imagePageViewController->restoreViewAfterCurrentImageDisplayed(oldZoomPercent, oldCenter);
         }
+        m_labelSelectionController->selectIndexes(oldSelection, oldLabelIndex,
+                                                  {LabelSelectionController::SelectionOrigin::Programmatic, false});
+    }
+    if (!result) {
+        showMainWindowCritical(this, tr("Rename failed"), result.error());
+        return false;
     }
     statusBar()->showMessage(tr("Updated image files and page references by page order."), 4000);
     return true;

@@ -2,6 +2,7 @@
 
 #include "core/AppPreferences.h"
 #include "core/Project.h"
+#include "services/project/ProjectImageRenameService.h"
 
 #include <expected>
 #include <optional>
@@ -58,6 +59,7 @@ public:
     void loadFromFile(const QString& path);
     void save();
     void saveAs(const QString& path);
+    std::expected<void, QString> renameImages(const ProjectImageRenamePlan& plan);
     std::expected<QString, NewProjectError> tryCreateProjectFromImageDirectory(const QString& directoryPath,
                                                                                const QString& projectBaseName,
                                                                                const QStringList& defaultGroups,

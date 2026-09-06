@@ -2618,4 +2618,44 @@ Last error: %1</source>
         <translation>開く LabelPlus テキストプロジェクト。</translation>
     </message>
 </context>
+<context>
+    <name>AtomicFileWriter</name>
+    <message>
+        <source>Not a regular file: %1</source>
+        <translation>通常のファイルではありません：%1</translation>
+    </message>
+</context>
+<context>
+    <name>LabelPlusDocument</name>
+    <message>
+        <source>Invalid LabelPlus document structure.</source>
+        <translation>LabelPlus プロジェクトの構造が不正です。</translation>
+    </message>
+    <message>
+        <source>A label contains a reserved header line. Saving was canceled.</source>
+        <translation>ラベル本文にページまたはラベルの構造ヘッダーだけの行があります。プロジェクトは保存されませんでした。</translation>
+    </message>
+</context>
+<context>
+    <name>FileRenameTransaction</name>
+    <message>
+        <source>Unresolved rename record: %1. Recover the files before continuing.</source>
+        <translation>未解決の名前変更記録：%1。ファイルを復旧してから続行してください。</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to %2.</source>
+        <translation>%1 を %2 に変更できませんでした。</translation>
+    </message>
+    <message>
+        <source>Recovery mapping retained at %1. Do not discard the remaining temporary files.</source>
+        <translation>復旧用の対応表を %1 に保存しました。残った一時ファイルを削除しないでください。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectMetadataService</name>
+    <message>
+        <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
+        <translation>プロジェクトのメタデータが破損しているか、未対応の形式です。元のファイルは変更されていません。</translation>
+    </message>
+</context>
 </TS>

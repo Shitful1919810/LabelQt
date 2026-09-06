@@ -1,15 +1,17 @@
 #include "services/project/ProjectController.h"
 
 #include "core/LabelPlusDocument.h"
+#include "services/io/FileRenameTransaction.h"
 
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QImageReader>
 
-#include <expected>
 #include <exception>
+#include <expected>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 
 namespace labelqt::services {
@@ -65,11 +67,18 @@ void ProjectController::setProject(labelqt::core::Project project)
 
 void ProjectController::loadFromFile(const QString& path)
 {
+    const auto recovered = FileRenameTransaction::checkRecoveryDirectory(QFileInfo(path).absolutePath());
+    if (!recovered)
+        throw std::runtime_error(recovered.error().toStdString());
     setProject(labelqt::core::LabelPlusDocument::loadFromFile(path));
 }
 
 void ProjectController::save()
 {
+    const auto recovered =
+        FileRenameTransaction::checkRecoveryDirectory(QFileInfo(m_project.filePath()).absolutePath());
+    if (!recovered)
+        throw std::runtime_error(recovered.error().toStdString());
     labelqt::core::LabelPlusDocument::saveToFile(m_project, m_project.filePath());
     setDirty(false);
 }
@@ -78,6 +87,24 @@ void ProjectController::saveAs(const QString& path)
 {
     m_project.setFilePath(path);
     save();
+}
+
+std::expected<void, QString> ProjectController::renameImages(const ProjectImageRenamePlan& plan)
+{
+    try {
+        save();
+        const auto result = ProjectImageRenameService::applyPlan(
+            m_project, plan, [](const labelqt::core::Project& updated) -> std::expected<void, QString> {
+                labelqt::core::LabelPlusDocument::saveToFile(updated, updated.filePath());
+                return {};
+            });
+        if (result)
+            setDirty(false);
+        return result;
+    }
+    catch (const std::exception& error) {
+        return std::unexpected(QString::fromUtf8(error.what()));
+    }
 }
 
 std::expected<QString, NewProjectError> ProjectController::tryCreateProjectFromImageDirectory(

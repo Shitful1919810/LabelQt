@@ -2631,4 +2631,44 @@ Last error: %1</translation>
         <translation>LabelPlus text project to open.</translation>
     </message>
 </context>
+<context>
+    <name>AtomicFileWriter</name>
+    <message>
+        <source>Not a regular file: %1</source>
+        <translation>Not a regular file: %1</translation>
+    </message>
+</context>
+<context>
+    <name>LabelPlusDocument</name>
+    <message>
+        <source>Invalid LabelPlus document structure.</source>
+        <translation>Invalid LabelPlus document structure.</translation>
+    </message>
+    <message>
+        <source>A label contains a reserved header line. Saving was canceled.</source>
+        <translation>Label text contains a reserved page or label header on a separate line. The project was not saved.</translation>
+    </message>
+</context>
+<context>
+    <name>FileRenameTransaction</name>
+    <message>
+        <source>Unresolved rename record: %1. Recover the files before continuing.</source>
+        <translation>Unresolved rename record: %1. Recover the files before continuing.</translation>
+    </message>
+    <message>
+        <source>Failed to rename %1 to %2.</source>
+        <translation>Failed to rename %1 to %2.</translation>
+    </message>
+    <message>
+        <source>Recovery mapping retained at %1. Do not discard the remaining temporary files.</source>
+        <translation>Recovery mapping retained at %1. Do not discard the remaining temporary files.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectMetadataService</name>
+    <message>
+        <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
+        <translation>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</translation>
+    </message>
+</context>
 </TS>

@@ -1,5 +1,6 @@
 #include "ui/preferences/PreferenceDialog.h"
 
+#include "core/AtomicFileWriter.h"
 #include "core/CommandLineUtils.h"
 #include "core/TranslationManager.h"
 #include "ui/automation/AutomationShortcutEditorWidget.h"
@@ -13,7 +14,6 @@
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QDir>
-#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDialog>
@@ -843,15 +843,12 @@ void PreferenceDialog::savePreferences()
         return;
     }
 
-    QFile file(m_preferencePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        setMessage(tr("Could not save preference file."), true);
+    const auto saved =
+        labelqt::core::AtomicFileWriter::write(m_preferencePath, document.toJson(QJsonDocument::Indented));
+    if (!saved) {
+        setMessage(tr("Could not save preference file.") + QLatin1Char('\n') + saved.error(), true);
         return;
     }
-
-    file.write(document.toJson(QJsonDocument::Indented));
-    file.write("\n");
-    file.close();
 
     labelqt::core::AppPreferencesLoadResult result =
         labelqt::core::AppPreferences::loadFromJson(document.toJson(QJsonDocument::Compact));

@@ -1,10 +1,14 @@
 #include "core/LabelPlusDocument.h"
 
+#include "core/AtomicFileWriter.h"
 #include "core/ProjectMetadataService.h"
 
+#include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QTextStream>
@@ -16,8 +20,48 @@
 namespace labelqt::core {
 
 namespace {
-const QRegularExpression imageLineRegex(R"(>>>>>>>>\[(.*?)\]<<<<<<<<)");
-const QRegularExpression labelLineRegex(R"(----------------\[(\d+)\]----------------\[([0-9.]+),([0-9.]+),(\d+)\])");
+const QRegularExpression imageLineRegex(R"(^>>>>>>>>\[(.*?)\]<<<<<<<<$)");
+const QRegularExpression labelLineRegex(R"(^----------------\[(\d+)\]----------------\[([0-9.]+),([0-9.]+),(\d+)\]$)");
+
+[[noreturn]] void invalidDocument()
+{
+    throw std::runtime_error(
+        QCoreApplication::translate("LabelPlusDocument", "Invalid LabelPlus document structure.").toStdString());
+}
+
+QString normalizedText(QString text)
+{
+    text.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+    text.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+    return text;
+}
+
+QString bodyText(QString text)
+{
+    text = normalizedText(std::move(text));
+    while (text.endsWith(QLatin1Char('\n'))) {
+        text.chop(1);
+    }
+    return text;
+}
+
+QString textDigest(const QString& text)
+{
+    return QString::fromLatin1(QCryptographicHash::hash(text.toUtf8(), QCryptographicHash::Sha256).toHex());
+}
+
+QString imageNameFor(const ImageEntry& image)
+{
+    return image.name.isEmpty() ? QFileInfo(image.path).fileName() : image.name;
+}
+
+QJsonObject checkedMetadata(const Project& project)
+{
+    const auto result = ProjectMetadataService::tryMetadataObject(project.commentLines());
+    if (!result)
+        throw std::runtime_error(result.error().toStdString());
+    return *result;
+}
 
 QString readTextFile(const QString& filePath)
 {
@@ -28,27 +72,19 @@ QString readTextFile(const QString& filePath)
 
     QTextStream stream(&file);
     stream.setEncoding(QStringConverter::Utf8);
-    return stream.readAll();
+    const QString text = stream.readAll();
+    if (stream.status() != QTextStream::Ok || file.error() != QFileDevice::NoError) {
+        throw std::runtime_error(file.errorString().toStdString());
+    }
+    return text;
 }
 
 void writeTextFile(const QString& filePath, const QString& content)
 {
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-        throw std::runtime_error(QStringLiteral("Cannot write %1").arg(filePath).toStdString());
+    const auto result = AtomicFileWriter::write(filePath, content.toUtf8());
+    if (!result) {
+        throw std::runtime_error(result.error().toStdString());
     }
-
-    QTextStream stream(&file);
-    stream.setEncoding(QStringConverter::Utf8);
-    stream << content;
-}
-
-QString normalizeLine(QString line)
-{
-    if (line.startsWith(QChar::ByteOrderMark)) {
-        line.remove(0, 1);
-    }
-    return line.trimmed();
 }
 
 QString imagePathFor(const QString& baseFolder, const QString& imageName)
@@ -64,9 +100,79 @@ int groupIndex(const QStringList& groups, const QString& group)
 
 QStringList commentLinesWithMetadata(const Project& project)
 {
-    QJsonObject metadata = labelqt::core::ProjectMetadataService::metadataObject(project.commentLines());
+    QJsonObject metadata = checkedMetadata(project);
     metadata.remove(QStringLiteral("labelIds"));
+    QJsonArray textOverrides;
+    for (const ImageEntry& image : project.images()) {
+        int visibleIndex = 0;
+        for (const Label& label : image.labels) {
+            if (label.isDeleted())
+                continue;
+            const QString body = bodyText(label.text());
+            if (body != label.text()) {
+                textOverrides.append(QJsonObject{{QStringLiteral("image"), imageNameFor(image)},
+                                                 {QStringLiteral("label"), visibleIndex},
+                                                 {QStringLiteral("bodySha256"), textDigest(body)},
+                                                 {QStringLiteral("text"), label.text()}});
+            }
+            ++visibleIndex;
+        }
+    }
+    metadata.remove(QStringLiteral("labelText"));
+    if (!textOverrides.isEmpty()) {
+        metadata.insert(QStringLiteral("labelText"),
+                        QJsonObject{{QStringLiteral("version"), 1}, {QStringLiteral("entries"), textOverrides}});
+    }
     return labelqt::core::ProjectMetadataService::rewriteCommentLines(project.commentLines(), metadata);
+}
+
+void restoreTextMetadata(Project& project)
+{
+    const QJsonObject section = checkedMetadata(project).value(QStringLiteral("labelText")).toObject();
+    if (section.value(QStringLiteral("version")).toInt() != 1)
+        return;
+    for (const QJsonValue& value : section.value(QStringLiteral("entries")).toArray()) {
+        const QJsonObject item = value.toObject();
+        ImageEntry* image = project.imageByName(item.value(QStringLiteral("image")).toString());
+        const int labelIndex = item.value(QStringLiteral("label")).toInt(-1);
+        if (image == nullptr || labelIndex < 0 || labelIndex >= image->labels.size() ||
+            !item.value(QStringLiteral("text")).isString())
+            continue;
+        Label& label = image->labels[labelIndex];
+        const QString original = item.value(QStringLiteral("text")).toString();
+        if (textDigest(label.text()) == item.value(QStringLiteral("bodySha256")).toString() &&
+            bodyText(original) == label.text()) {
+            label.setText(original);
+        }
+    }
+}
+
+void validateSerializable(const Project& project)
+{
+    if (project.sourceName().contains(QLatin1Char('\n')) || project.sourceName().contains(QLatin1Char('\r')))
+        invalidDocument();
+    for (const QString& group : project.groups()) {
+        if (group.trimmed().isEmpty() || group != group.trimmed() || group == QStringLiteral("-") ||
+            group.contains(QLatin1Char('\n')) || group.contains(QLatin1Char('\r')))
+            invalidDocument();
+    }
+    for (const ImageEntry& image : project.images()) {
+        if (image.name.contains(QLatin1Char('\n')) || image.name.contains(QLatin1Char('\r')))
+            invalidDocument();
+        for (const Label& label : image.labels) {
+            if (label.isDeleted())
+                continue;
+            for (const QString& line : normalizedText(label.text()).split(QLatin1Char('\n'))) {
+                if (imageLineRegex.match(line.trimmed()).hasMatch() ||
+                    labelLineRegex.match(line.trimmed()).hasMatch()) {
+                    throw std::runtime_error(
+                        QCoreApplication::translate("LabelPlusDocument",
+                                                    "A label contains a reserved header line. Saving was canceled.")
+                            .toStdString());
+                }
+            }
+        }
+    }
 }
 } // namespace
 
@@ -87,48 +193,66 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
 
     const QFileInfo txtInfo(filePath);
     const QString baseFolder = txtInfo.absolutePath();
-    const QStringList lines = content.split(QRegularExpression(R"(\r\n|\r|\n)"));
+    QString normalized = normalizedText(content);
+    if (normalized.startsWith(QChar::ByteOrderMark))
+        normalized.remove(0, 1);
+    const QStringList lines = normalized.split(QLatin1Char('\n'));
 
     int sectionSeparatorCount = 0;
     ImageEntry* currentImage = nullptr;
     Label* currentLabel = nullptr;
-    QString pendingText;
+    QStringList pendingLines;
+    bool hasVersion = false;
 
     auto commitText = [&]() {
         if (currentLabel == nullptr) {
             return;
         }
-        currentLabel->setText(pendingText.trimmed());
-        pendingText.clear();
+        while (!pendingLines.isEmpty() && pendingLines.last().isEmpty())
+            pendingLines.removeLast();
+        currentLabel->setText(pendingLines.join(QLatin1Char('\n')));
+        pendingLines.clear();
         currentLabel = nullptr;
     };
 
     for (const QString& rawLine : lines) {
-        const QString line = normalizeLine(rawLine);
-        if (line.isEmpty()) {
+        const QString line = sectionSeparatorCount < 2 ? rawLine.trimmed() : rawLine;
+        if (!hasVersion) {
+            if (line.isEmpty())
+                continue;
+            if (line != QStringLiteral("1,0"))
+                invalidDocument();
+            hasVersion = true;
             continue;
         }
-
-        if (line == "-") {
+        if (sectionSeparatorCount < 2 && line == "-") {
             ++sectionSeparatorCount;
             continue;
         }
 
+        if (sectionSeparatorCount == 0) {
+            if (!line.isEmpty())
+                invalidDocument();
+            continue;
+        }
+
         if (sectionSeparatorCount == 1) {
-            project.groups().append(line);
+            if (!line.isEmpty())
+                project.groups().append(line);
             continue;
         }
 
-        if (sectionSeparatorCount >= 2 && line.startsWith(QStringLiteral("关联文件:"))) {
-            project.setSourceName(line.mid(QStringLiteral("关联文件:").size()).trimmed());
+        const QString structureLine = line.trimmed();
+        if (currentImage == nullptr && structureLine.startsWith(QStringLiteral("关联文件:"))) {
+            project.setSourceName(structureLine.mid(QStringLiteral("关联文件:").size()).trimmed());
             continue;
         }
 
-        const QRegularExpressionMatch imageMatch = imageLineRegex.match(line);
+        const QRegularExpressionMatch imageMatch = imageLineRegex.match(structureLine);
         if (imageMatch.hasMatch()) {
             commitText();
 
-            const QString imageName = imageMatch.captured(1).trimmed();
+            const QString imageName = imageMatch.captured(1);
             ImageEntry entry;
             entry.name = imageName;
             entry.path = imagePathFor(baseFolder, imageName);
@@ -138,11 +262,12 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
         }
 
         if (sectionSeparatorCount >= 2 && currentImage == nullptr && currentLabel == nullptr) {
-            project.commentLines().append(line);
+            if (!line.isEmpty())
+                project.commentLines().append(line);
             continue;
         }
 
-        const QRegularExpressionMatch labelMatch = labelLineRegex.match(line);
+        const QRegularExpressionMatch labelMatch = labelLineRegex.match(structureLine);
         if (labelMatch.hasMatch() && currentImage != nullptr) {
             commitText();
 
@@ -159,14 +284,14 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
         }
 
         if (currentLabel != nullptr && sectionSeparatorCount >= 2) {
-            if (!pendingText.isEmpty()) {
-                pendingText.append('\n');
-            }
-            pendingText.append(line);
+            pendingLines.append(line);
         }
     }
 
     commitText();
+    if (!hasVersion || sectionSeparatorCount != 2)
+        invalidDocument();
+    restoreTextMetadata(project);
 
     if (project.groups().isEmpty()) {
         project.setGroups({QStringLiteral("框内"), QStringLiteral("框外")});
@@ -177,6 +302,7 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
 
 QString LabelPlusDocument::serialize(const Project& project)
 {
+    validateSerializable(project);
     QStringList groups = project.groups();
     if (groups.isEmpty()) {
         groups = {QStringLiteral("框内"), QStringLiteral("框外")};
@@ -201,7 +327,7 @@ QString LabelPlusDocument::serialize(const Project& project)
     stream << '\n';
 
     for (const ImageEntry& image : project.images()) {
-        const QString imageName = image.name.isEmpty() ? QFileInfo(image.path).fileName() : image.name;
+        const QString imageName = imageNameFor(image);
         stream << ">>>>>>>>[" << imageName << "]<<<<<<<<\n";
 
         int visibleIndex = 1;
@@ -214,7 +340,7 @@ QString LabelPlusDocument::serialize(const Project& project)
             stream << "----------------[" << visibleIndex++ << "]----------------["
                    << QString::number(position.x(), 'f', 3) << ',' << QString::number(position.y(), 'f', 3) << ','
                    << groupIndex(groups, label.group()) << "]\n";
-            stream << label.text() << "\n\n";
+            stream << bodyText(label.text()) << "\n\n";
         }
 
         stream << '\n';

@@ -53,6 +53,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `Label`：单个标签，包含文本、分组、归一化坐标和软删除状态。
 - `Project` / `ImageEntry`：当前工程的内存模型。`Project` 持有页面列表、分组、工程路径、注释区等信息；`ImageEntry` 持有图片名、图片路径和该页标签。
 - `LabelPlusDocument`：经典 LabelPlus `.txt` 工程格式的解析和保存。格式兼容逻辑应集中在这里，不要在 UI 中拼接工程文本。
+- `AtomicFileWriter`：可靠的原子字节写入入口，不负责具体文件格式。工程、HTML 和偏好保存必须校验最终提交成功。
 - `AppPreferences`：`preference.json` 的类型化读取、默认值、序列化和诊断警告。偏好缺失、JSON 损坏或类型错误时应回退到内置默认值并返回警告。
 - `ApplicationTheme`：内置 Breeze 样式表主题注册。
 - `TranslationManager`：发现和加载 `labelqt_*.qm` 翻译资源。
@@ -71,6 +72,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 `src/services` 放应用服务。它们可以被 UI 调用，但不应该弹窗口或操作控件。
 
 - `ProjectController`：持有当前打开的 `Project`，负责打开、保存、新建工程、未保存修改状态和自动备份写入。
+- `FileRenameTransaction`：文件系统两阶段移动与两阶段回滚，保留无法恢复的文件及恢复映射；不操作工程模型或撤销栈。
 - `ProjectWorkflowController`：承接合并工程、保存合并结果、页面顺序调整与对应撤销命令的项目级工作流。`MainWindow` 只负责弹出对话框和刷新 UI。
 - `ProjectMergeService`：读取多个 LabelPlus 工程，按页生成合并计划，生成最终合并工程，并写入合并来源元数据。
 - `ProjectPageOrderService`：校验并应用页面重排，负责在重排后保持来源元数据仍绑定到图片名。
@@ -231,6 +233,7 @@ LabelQt 会把自身需要随工程流转的内部元数据写入 LabelPlus comm
 
 - `mergeSources`：合并工程后每段页面来源，由 `PageSourceInfoService` 读写。
 - `review`：校对基线快照，由 `ReviewMetadataService` 读写。
+- `labelText`：经典文本格式中结尾空行、CR/LF 等歧义的原文保真信息，由 `LabelPlusDocument` 按正文校验值恢复。
 
 这个块只是 `qCompress` 压缩和 base64 编码，不是加密。不要在其中保存 API key、访问令牌或其他秘密。
 新增工程内 metadata 时，应给统一 JSON object 增加新 section，并让对应服务只读写自己的 section。这样可以
@@ -332,7 +335,10 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 
 ## 测试策略
 
-GUI 项目不应只依赖人工点击。当前测试集中在 `tests/LabelTests.cpp`，覆盖：
+持久化、重命名事务、正文保真和自动化窗口生命周期的失败语义见 [持久化安全说明](persistence-safety.md)。
+重命名后的工程保存必须属于事务提交步骤，成功前不发布候选工程，也不清空撤销历史。
+
+GUI 项目不应只依赖人工点击。当前测试分为 `LabelQtTests`、`ProofreadChangeTableModelTests` 和 `PersistenceSafetyTests`；前者承担主要功能回归，后两者分别覆盖校对表格合约和持久化失败路径。主要覆盖：
 
 - LabelPlus 读写 round-trip。
 - `AppPreferences` 默认值、错误回退和序列化。

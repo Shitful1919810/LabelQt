@@ -3,13 +3,12 @@
 #include "services/proofread/ReviewChangeClassifier.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
 
+#include "core/AtomicFileWriter.h"
 #include <QBuffer>
 #include <QDateTime>
-#include <QFile>
 #include <QImage>
 #include <QImageReader>
 #include <QSet>
-#include <QTextStream>
 
 #include <algorithm>
 #include <utility>
@@ -367,15 +366,8 @@ std::expected<void, QString> ProofreadReportService::saveHtmlReport(const QStrin
                                                                     const QString& filterDescription,
                                                                     ProofreadReportOptions options)
 {
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-        return std::unexpected(file.errorString());
-    }
-
-    QTextStream stream(&file);
-    stream.setEncoding(QStringConverter::Utf8);
-    stream << htmlReport(changes, beforeProject, currentProject, texts, filterDescription, options);
-    return {};
+    return labelqt::core::AtomicFileWriter::write(
+        filePath, htmlReport(changes, beforeProject, currentProject, texts, filterDescription, options).toUtf8());
 }
 
 } // namespace labelqt::services

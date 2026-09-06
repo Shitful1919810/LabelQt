@@ -2,8 +2,9 @@
 
 #include "core/Project.h"
 #include "core/UndoStack.h"
-#include "services/project/ProjectMergeService.h"
+#include "services/project/ProjectController.h"
 #include "services/project/ProjectImageRenameService.h"
+#include "services/project/ProjectMergeService.h"
 
 #include <QPointF>
 #include <QString>
@@ -30,7 +31,7 @@ public:
         int zoomPercent, QPointF normalizedCenter, std::optional<QStringList> commentLines)>;
     using DirtyCallback = std::function<void()>;
 
-    ProjectWorkflowController(labelqt::core::Project& project, labelqt::core::UndoStack& undoStack,
+    ProjectWorkflowController(ProjectController& controller, labelqt::core::UndoStack& undoStack,
                               QString reorderPagesText);
 
     void setCallbacks(ReplaceImagesCallback replaceImages, DirtyCallback dirty);
@@ -45,6 +46,7 @@ public:
     std::expected<void, QString> applyImageRename(const ProjectImageRenamePlan& plan);
 
 private:
+    ProjectController& m_controller;
     labelqt::core::Project& m_project;
     labelqt::core::UndoStack& m_undoStack;
     QString m_reorderPagesText;

@@ -81,6 +81,15 @@ void AutomationRunDialog::closeEvent(QCloseEvent* event)
     QDialog::closeEvent(event);
 }
 
+void AutomationRunDialog::reject()
+{
+    if (!m_finished) {
+        hide();
+        return;
+    }
+    QDialog::reject();
+}
+
 void AutomationRunDialog::appendText(const QString& text, const QColor& color)
 {
     if (text.isEmpty()) {
