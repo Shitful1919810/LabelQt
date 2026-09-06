@@ -1,11 +1,8 @@
 #include "services/io/ImagePageCache.h"
 
-#include <QFileInfo>
+#include <QFutureWatcher>
 #include <QImageReader>
-#include <QMetaObject>
-#include <QPointer>
-#include <QRunnable>
-#include <QThreadPool>
+#include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
 #include <utility>
@@ -17,7 +14,9 @@ bool ImagePageLoadResult::isValid() const noexcept
     return !image.isNull();
 }
 
-ImagePageCache::ImagePageCache(QObject* parent) : QObject(parent) {}
+ImagePageCache::ImagePageCache(QObject* parent) : ImagePageCache(loadImage, parent) {}
+
+ImagePageCache::ImagePageCache(Loader loader, QObject* parent) : QObject(parent), m_loader(std::move(loader)) {}
 
 void ImagePageCache::setMaxCachedPages(int maxCachedPages)
 {
@@ -37,7 +36,7 @@ std::optional<ImagePageLoadResult> ImagePageCache::cachedImage(const QString& pa
     }
 
     touchLru(path);
-    ImagePageLoadResult result = it.value().result;
+    ImagePageLoadResult result = it.value();
     result.requestedPreviewSize = requestedPreviewSize;
     return result;
 }
@@ -73,6 +72,8 @@ void ImagePageCache::preloadImages(const QStringList& paths, QSize requestedPrev
 
 void ImagePageCache::clear()
 {
+    ++m_generation;
+    m_pendingLoads.clear();
     m_cache.clear();
     m_lruPaths.clear();
 }
@@ -82,6 +83,11 @@ ImagePageLoadResult ImagePageCache::loadImage(const QString& path, QSize request
     ImagePageLoadResult result;
     result.path = path;
     result.requestedPreviewSize = requestedPreviewSize;
+
+    const auto before = FileRevision::read(path);
+    if (!before || !before->exists)
+        return result;
+    result.sourceRevision = *before;
 
     QImageReader reader(path);
     reader.setAutoTransform(true);
@@ -93,46 +99,57 @@ ImagePageLoadResult ImagePageCache::loadImage(const QString& path, QSize request
     if (result.image.isNull()) {
         result.errorMessage = reader.errorString();
     }
+    const auto after = FileRevision::read(path);
+    if (!after || !after->sameContent(*before)) {
+        result.image = {};
+        return result;
+    }
     return result;
 }
 
-QDateTime ImagePageCache::lastModified(const QString& path)
+bool ImagePageCache::isCacheEntryFresh(const ImagePageLoadResult& entry) const
 {
-    return QFileInfo(path).lastModified();
-}
-
-qsizetype ImagePageCache::fileSize(const QString& path)
-{
-    return static_cast<qsizetype>(QFileInfo(path).size());
-}
-
-bool ImagePageCache::isCacheEntryFresh(const CacheEntry& entry) const
-{
-    return entry.lastModified == lastModified(entry.result.path) && entry.fileSize == fileSize(entry.result.path);
+    const auto revision = FileRevision::read(entry.path);
+    return revision && revision->sameContent(entry.sourceRevision);
 }
 
 void ImagePageCache::startLoadIfNeeded(const QString& path, QSize requestedPreviewSize)
 {
-    const QPointer<ImagePageCache> self(this);
-    QThreadPool::globalInstance()->start(QRunnable::create([self, path, requestedPreviewSize]() {
-        ImagePageLoadResult result = ImagePageCache::loadImage(path, requestedPreviewSize);
-        if (self == nullptr) {
-            return;
+    auto* watcher = new QFutureWatcher<ImagePageLoadResult>(this);
+    connect(watcher, &QFutureWatcher<ImagePageLoadResult>::finished, this, [this, watcher, generation = m_generation] {
+        auto result = watcher->result();
+        watcher->deleteLater();
+        if (generation == m_generation)
+            finishLoad(std::move(result));
+    });
+    // The worker owns values only. Destroying the cache disconnects its GUI-side watcher.
+    watcher->setFuture(QtConcurrent::run([loader = m_loader, path, requestedPreviewSize] {
+        try {
+            return loader(path, requestedPreviewSize);
         }
-        QMetaObject::invokeMethod(
-            self.data(),
-            [self, result = std::move(result)]() mutable {
-                if (self != nullptr) {
-                    self->finishLoad(std::move(result));
-                }
-            },
-            Qt::QueuedConnection);
+        catch (...) {
+            ImagePageLoadResult failed;
+            failed.path = path;
+            failed.requestedPreviewSize = requestedPreviewSize;
+            return failed;
+        }
     }));
 }
 
 void ImagePageCache::finishLoad(ImagePageLoadResult result)
 {
     const QString path = result.path;
+    auto pending = m_pendingLoads.find(path);
+    if (pending == m_pendingLoads.end())
+        return;
+    const auto revision = FileRevision::read(path);
+    if (!revision || !revision->sameContent(result.sourceRevision)) {
+        if (pending->retries++ == 0) {
+            startLoadIfNeeded(path, pending->requestedPreviewSize);
+            return;
+        }
+        result.image = {};
+    }
     const PendingLoad pendingLoad = m_pendingLoads.take(path);
     if (result.isValid()) {
         storeInCache(result);
@@ -146,7 +163,7 @@ void ImagePageCache::finishLoad(ImagePageLoadResult result)
 void ImagePageCache::storeInCache(ImagePageLoadResult result)
 {
     const QString path = result.path;
-    m_cache.insert(path, CacheEntry{std::move(result), lastModified(path), fileSize(path)});
+    m_cache.insert(path, std::move(result));
     touchLru(path);
     trimCache();
 }

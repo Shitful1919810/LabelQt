@@ -362,6 +362,7 @@ MainWindow::MainWindow(QWidget* parent)
 
 MainWindow::~MainWindow()
 {
+    m_labelModel->setLabelsProvider({});
     delete m_automationController;
     m_automationController = nullptr;
     if (qApp != nullptr) {
@@ -2415,7 +2416,7 @@ void MainWindow::detachProjectViewsFromProjectData()
         m_labelView->selectionModel()->clear();
     }
     if (m_labelModel != nullptr) {
-        m_labelModel->setLabels(nullptr);
+        m_labelModel->setLabelsProvider({});
     }
     if (m_canvas != nullptr) {
         m_canvas->setLabels({});
@@ -2462,7 +2463,7 @@ void MainWindow::refreshImageUi()
     m_isUpdatingUi = true;
     const labelqt::core::ImageEntry* image = currentImage();
     if (image == nullptr) {
-        m_labelModel->setLabels(nullptr);
+        m_labelModel->setLabelsProvider({});
         m_imagePageViewController->clear();
         if (m_projectViewController != nullptr) {
             m_projectViewController->refreshCurrentPage(project(), m_currentImageIndex);
@@ -2481,7 +2482,10 @@ void MainWindow::refreshImageUi()
         m_canvas->setSelectedLabels({});
     }
     m_imagePageViewController->displayCurrentImage();
-    m_labelModel->setLabels(&project().images()[m_currentImageIndex].labels);
+    m_labelModel->setLabelsProvider([this]() -> const QVector<labelqt::core::Label>* {
+        const auto* page = std::as_const(*this).currentImage();
+        return page ? &page->labels : nullptr;
+    });
     resizeLabelRowsToContents();
     m_textEdit->clear();
     resetPendingTextEdit();

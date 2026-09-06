@@ -7,6 +7,7 @@
 #include "ui/labeltable/ViewportFittedTableColumns.h"
 #include "ui/proofread/ProofreadChangeTableModel.h"
 #include "ui/proofread/ProofreadReviewPanel.h"
+#include "ui/widgets/BackgroundTask.h"
 #include "ui/widgets/BusyTaskDialog.h"
 #include "ui/widgets/CheckableFilterButton.h"
 #include "ui/widgets/DialogWindowUtils.h"
@@ -20,7 +21,6 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
-#include <QFutureWatcher>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -109,43 +109,29 @@ runProofreadReportExportTask(QWidget* parent, const QString& title, const QStrin
     progress.setWindowTitle(title);
 
     const QString temporaryPath = temporaryExportPathFor(filePath);
-    auto* watcher = new QFutureWatcher<std::expected<void, QString>>(&progress);
-    QObject::connect(watcher, &QFutureWatcher<std::expected<void, QString>>::finished, &progress,
-                     &QDialog::accept);
-    watcher->setFuture(QtConcurrent::run([temporaryPath, changes = std::move(changes),
-                                          beforeProject = std::move(beforeProject),
-                                          currentProject = std::move(currentProject), texts = std::move(texts),
-                                          filterDescription = std::move(filterDescription), options]() {
-        return labelqt::services::ProofreadReportService::saveHtmlReport(
-            temporaryPath, changes, beforeProject, currentProject, texts, filterDescription, options);
-    }));
-
-    if (watcher->isFinished()) {
-        const std::expected<void, QString> temporaryResult = watcher->result();
-        watcher->deleteLater();
-        if (!temporaryResult.has_value()) {
-            QFile::remove(temporaryPath);
-            return temporaryResult;
-        }
-        return commitTemporaryExportFile(temporaryPath, filePath);
-    }
-
-    if (progress.exec() == QDialog::Rejected && !watcher->isFinished()) {
-        QObject::disconnect(watcher, nullptr, &progress, nullptr);
-        watcher->setParent(QApplication::instance());
-        QObject::connect(watcher, &QFutureWatcher<std::expected<void, QString>>::finished, watcher,
-                         [watcher, temporaryPath]() {
-                             QFile::remove(temporaryPath);
-                             watcher->deleteLater();
-                         });
+    auto future =
+        QtConcurrent::run([temporaryPath, changes = std::move(changes), beforeProject = std::move(beforeProject),
+                           currentProject = std::move(currentProject), texts = std::move(texts),
+                           filterDescription = std::move(filterDescription), options]() {
+            try {
+                return labelqt::services::ProofreadReportService::saveHtmlReport(
+                    temporaryPath, changes, beforeProject, currentProject, texts, filterDescription, options);
+            }
+            catch (const std::exception& error) {
+                return std::expected<void, QString>(std::unexpected(QString::fromUtf8(error.what())));
+            }
+            catch (...) {
+                return std::expected<void, QString>(
+                    std::unexpected(QCoreApplication::translate("MainWindow", "Unknown error")));
+            }
+        });
+    const auto result = labelqt::ui::waitForBackgroundTask(std::move(future), progress,
+                                                           [temporaryPath] { QFile::remove(temporaryPath); });
+    if (!result)
         return std::nullopt;
-    }
-
-    const std::expected<void, QString> temporaryResult = watcher->result();
-    watcher->deleteLater();
-    if (!temporaryResult.has_value()) {
+    if (!result->has_value()) {
         QFile::remove(temporaryPath);
-        return temporaryResult;
+        return result;
     }
     return commitTemporaryExportFile(temporaryPath, filePath);
 }

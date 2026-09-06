@@ -20,6 +20,8 @@ add_library(LabelQtTestSupport STATIC
     ../src/services/automation/SecretStore.cpp
     ../src/services/io/FileRenameTransaction.cpp
     ../src/services/io/FileRevision.cpp
+    ../src/services/io/ProjectFileTransaction.cpp
+    ../src/services/io/ImagePageCache.cpp
     ../src/services/label/LabelClipboardService.cpp
     ../src/services/label/LabelEditController.cpp
     ../src/services/label/LabelEditControllerBatch.cpp
@@ -70,6 +72,8 @@ add_library(LabelQtTestSupport STATIC
     ../src/ui/widgets/BusyTaskDialog.cpp
     ../src/ui/widgets/CheckableFilterButton.cpp
     ../src/ui/automation/AutomationRunDialog.cpp
+    ../src/ui/automation/AutomationController.cpp
+    ../src/ui/automation/AutomationParameterDialog.cpp
 )
 
 target_include_directories(LabelQtTestSupport
@@ -86,6 +90,7 @@ target_link_libraries(LabelQtTestSupport
         Qt6::Widgets
         Qt6::Concurrent
         Qt6Keychain::Qt6Keychain
+        ZLIB::ZLIB
 )
 
 labelqt_enable_warnings(LabelQtTestSupport)
@@ -106,6 +111,11 @@ labelqt_enable_warnings(AutomationProtocolTests)
 add_test(NAME AutomationProtocolTests COMMAND $<TARGET_FILE:AutomationProtocolTests>)
 
 qt_add_executable(PersistenceSafetyTests PersistenceSafetyTests.cpp)
+qt_add_executable(RiskRegressionTests RiskRegressionTests.cpp)
+target_link_libraries(RiskRegressionTests PRIVATE LabelQtTestSupport)
+labelqt_enable_warnings(RiskRegressionTests)
+add_test(NAME RiskRegressionTests COMMAND $<TARGET_FILE:RiskRegressionTests>)
+set_tests_properties(RiskRegressionTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
 target_link_libraries(PersistenceSafetyTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(PersistenceSafetyTests)
 add_test(NAME PersistenceSafetyTests COMMAND $<TARGET_FILE:PersistenceSafetyTests>)

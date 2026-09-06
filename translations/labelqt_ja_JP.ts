@@ -2850,6 +2850,10 @@ Last error: %1</source>
 <context>
     <name>ProjectMetadataService</name>
     <message>
+        <source>Project metadata exceeds the size limit.</source>
+        <translation>プロジェクトのメタデータがサイズ上限を超えています。</translation>
+    </message>
+    <message>
         <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
         <translation>プロジェクトのメタデータが破損しているか、未対応の形式です。元のファイルは変更されていません。</translation>
     </message>
@@ -3293,6 +3297,13 @@ Missing images: %2</source>
     <message>
         <source>Unsupported or damaged review session.</source>
         <translation>確認記録が破損しているか、未対応の形式です。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectFileTransaction</name>
+    <message>
+        <source>Could not lock the project for writing: %1</source>
+        <translation>書き込み用にプロジェクトをロックできません。他のプロセスが保存中でないか、ディレクトリの権限を確認してください：%1</translation>
     </message>
 </context>
 </TS>

@@ -14,10 +14,10 @@ constexpr auto labelRowsMimeType = "application/x-labelqt-label-rows";
 
 LabelTableModel::LabelTableModel(QObject* parent) : QAbstractTableModel(parent) {}
 
-void LabelTableModel::setLabels(QVector<labelqt::core::Label>* labels)
+void LabelTableModel::setLabelsProvider(CurrentPageLabelContext::LabelsProvider provider)
 {
     beginResetModel();
-    m_labelContext.setLabels(labels);
+    m_labelContext.setLabelsProvider(std::move(provider));
     endResetModel();
 }
 

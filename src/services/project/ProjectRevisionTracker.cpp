@@ -123,8 +123,7 @@ void ProjectRevisionTracker::checkpoint(const labelqt::core::Project& project)
     publish({project.id(), ProjectField::Metadata}, project.commentLines());
     // Version tombstones are intentionally not rolled back with the implicitly shared content snapshot.
     m_previous = project;
-    // Views borrow each ImageEntry's labels container. Sharing the outer array would relocate those containers
-    // on the next live edit; detach only that layer while retaining cheap label/text value snapshots.
+    // Keep checkpoint storage independent of native edits' short-lived page references, while sharing label values.
     m_previous.images().detach();
 }
 } // namespace labelqt::services

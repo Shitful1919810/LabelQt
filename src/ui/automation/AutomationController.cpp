@@ -12,12 +12,22 @@
 #include <QHash>
 #include <QMenu>
 #include <QMessageBox>
+#include <QScopeGuard>
 #include <QTimer>
 #include <QUrl>
 
 #include <algorithm>
 #include <optional>
 #include <utility>
+
+struct AutomationController::Run {
+    labelqt::services::AutomationScript script;
+    QUuid taskId;
+    QPointer<labelqt::services::AutomationRunner> runner;
+    QPointer<AutomationRunDialog> dialog;
+    bool started{false};
+    bool canceled{false};
+};
 
 AutomationController::AutomationController(QWidget* window, QObject* parent) : QObject(parent), m_window(window) {}
 
@@ -39,6 +49,8 @@ void AutomationController::setCallbacks(Callbacks callbacks)
 
 void AutomationController::refreshScripts()
 {
+    if (isRunning())
+        return;
     QStringList warnings;
     m_scripts = labelqt::services::AutomationService::discoverScripts(&warnings);
     emit scriptsChanged(m_scripts);
@@ -55,11 +67,13 @@ const QVector<labelqt::services::AutomationScript>& AutomationController::script
 
 bool AutomationController::isRunning() const noexcept
 {
-    return m_running;
+    return m_run != nullptr;
 }
 
 void AutomationController::runScriptById(const QString& scriptId)
 {
+    if (isRunning())
+        return;
     const auto script = std::find_if(m_scripts.cbegin(), m_scripts.cend(),
                                      [&scriptId](const auto& candidate) { return candidate.id == scriptId; });
     if (script == m_scripts.cend()) {
@@ -77,13 +91,17 @@ void AutomationController::showMissingScriptMessage(const QString& scriptId)
 
 void AutomationController::cancelRunningScript()
 {
+    const auto run = m_run;
+    if (!run)
+        return;
+    run->canceled = true;
     if (m_taskService)
-        (void)m_taskService->cancel(m_taskId);
-    if (!m_runner.isNull()) {
-        m_runner->cancel();
+        (void)m_taskService->cancel(run->taskId);
+    if (run->runner) {
+        run->runner->cancel();
     }
-    if (!m_runDialog.isNull()) {
-        m_runDialog->setCanceling();
+    if (run->dialog) {
+        run->dialog->setCanceling();
     }
     emit statusMessageRequested(tr("Canceling automation script..."), 0);
 }
@@ -97,7 +115,7 @@ void AutomationController::rebuildMenu()
     m_menu->clear();
     m_cancelAction = m_menu->addAction(tr("Cancel Running Script"));
     m_cancelAction->setObjectName(QStringLiteral("automationCancelAction"));
-    m_cancelAction->setEnabled(m_running);
+    m_cancelAction->setEnabled(isRunning());
     connect(m_cancelAction, &QAction::triggered, this, &AutomationController::cancelRunningScript);
     m_menu->addSeparator();
 
@@ -123,7 +141,7 @@ void AutomationController::rebuildMenu()
             scriptAction->setObjectName(QStringLiteral("automationScriptAction"));
             scriptAction->setData(script.id);
             scriptAction->setToolTip(script.description);
-            scriptAction->setEnabled(!m_running);
+            scriptAction->setEnabled(!isRunning());
             connect(scriptAction, &QAction::triggered, this, [this, scriptId = script.id]() {
                 QTimer::singleShot(0, this, [this, scriptId]() { runScriptById(scriptId); });
             });
@@ -139,7 +157,7 @@ void AutomationController::rebuildMenu()
             const labelqt::services::AutomationScript& firstScript = m_scripts.at(scriptIndexes.first());
             QMenu* scriptMenu = m_menu->addMenu(firstScript.directoryName);
             scriptMenu->menuAction()->setObjectName(QStringLiteral("automationScriptMenuAction"));
-            scriptMenu->setEnabled(!m_running);
+            scriptMenu->setEnabled(!isRunning());
             for (int scriptIndex : scriptIndexes) {
                 addScriptAction(scriptMenu, scriptIndex);
             }
@@ -153,19 +171,19 @@ void AutomationController::rebuildMenu()
 
     QAction* refreshAction = m_menu->addAction(tr("Refresh Scripts"));
     refreshAction->setObjectName(QStringLiteral("automationRefreshAction"));
-    refreshAction->setEnabled(!m_running);
+    refreshAction->setEnabled(!isRunning());
     connect(refreshAction, &QAction::triggered, this,
             [this]() { QTimer::singleShot(0, this, &AutomationController::refreshScripts); });
 }
 
 AutomationController::~AutomationController()
 {
-    if (m_runner)
-        QObject::disconnect(m_runner, nullptr, this, nullptr);
-    if (m_runDialog)
-        QObject::disconnect(m_runDialog, nullptr, this, nullptr);
-    if (m_taskService)
-        (void)m_taskService->cancel(m_taskId);
+    if (m_run) {
+        if (m_run->runner)
+            QObject::disconnect(m_run->runner, nullptr, this, nullptr);
+        if (m_taskService)
+            (void)m_taskService->cancel(m_run->taskId);
+    }
 }
 
 void AutomationController::updateMenuEnabledState()
@@ -181,7 +199,7 @@ void AutomationController::updateMenuEnabledState()
             }
 
             if (action == m_cancelAction || action->objectName() == QStringLiteral("automationCancelAction")) {
-                action->setEnabled(m_running);
+                action->setEnabled(isRunning());
             }
             else if (action->objectName() == QStringLiteral("automationEmptyAction")) {
                 action->setEnabled(false);
@@ -190,7 +208,7 @@ void AutomationController::updateMenuEnabledState()
                 action->setEnabled(true);
             }
             else {
-                action->setEnabled(!m_running);
+                action->setEnabled(!isRunning());
             }
 
             if (QMenu* menu = action->menu()) {
@@ -201,14 +219,14 @@ void AutomationController::updateMenuEnabledState()
     updateActions(m_menu->actions(), updateActions);
 }
 
-void AutomationController::runScript(const labelqt::services::AutomationScript& script)
+void AutomationController::runScript(labelqt::services::AutomationScript script)
 {
     if (!QFileInfo::exists(script.entryPath)) {
         showMissingScriptMessage(script.id);
         QTimer::singleShot(0, this, &AutomationController::refreshScripts);
         return;
     }
-    if (m_running) {
+    if (isRunning()) {
         return;
     }
     if (m_callbacks.isProjectEmpty == nullptr || m_callbacks.project == nullptr || m_callbacks.isProjectEmpty()) {
@@ -217,15 +235,27 @@ void AutomationController::runScript(const labelqt::services::AutomationScript& 
         return;
     }
 
+    const auto run = std::make_shared<Run>();
+    run->script = script;
+    m_run = run;
+    const auto preparation = qScopeGuard([this, run] {
+        if (!run->started)
+            finishRun(run);
+    });
+    emit runningChanged(true);
+    updateMenuEnabledState();
+
     if (m_callbacks.commitActiveTextInput != nullptr) {
         m_callbacks.commitActiveTextInput();
     }
+    if (run->canceled)
+        return;
     const QStringList groups = m_callbacks.groups == nullptr ? QStringList{} : m_callbacks.groups();
     const QVector<labelqt::core::LabelGroupStyle> groupStyles =
         m_callbacks.groupStyles == nullptr ? QVector<labelqt::core::LabelGroupStyle>{} : m_callbacks.groupStyles();
     const std::optional<AutomationParameterDialog::Values> values =
         AutomationParameterDialog::getValues(m_window.data(), script, groups, groupStyles);
-    if (!values.has_value()) {
+    if (!values.has_value() || run->canceled) {
         return;
     }
 
@@ -234,6 +264,8 @@ void AutomationController::runScript(const labelqt::services::AutomationScript& 
         QMessageBox::warning(m_window.data(), tr("Automation"), automationError);
         return;
     }
+    if (run->canceled)
+        return;
 
     QMap<QString, QString> secretEnvironment;
     if (!labelqt::services::AutomationService::secretEnvironment(script, &secretEnvironment, &automationError)) {
@@ -241,7 +273,7 @@ void AutomationController::runScript(const labelqt::services::AutomationScript& 
         return;
     }
 
-    if (!m_taskService)
+    if (!m_taskService || run->canceled)
         return;
     if (m_callbacks.commitActiveTextInput)
         m_callbacks.commitActiveTextInput();
@@ -273,8 +305,10 @@ void AutomationController::runScript(const labelqt::services::AutomationScript& 
                              {"height", rect.height()}};
         }
     }
-    m_taskId = task->taskId;
+    run->taskId = task->taskId;
     emit statusMessageRequested(tr("Running automation script: %1").arg(script.name), 0);
+    if (run->canceled)
+        return;
 
     auto* runner = new labelqt::services::AutomationRunner(this);
     const bool willInstallRequirements =
@@ -285,27 +319,28 @@ void AutomationController::runScript(const labelqt::services::AutomationScript& 
         dialog = new AutomationRunDialog(script.name, m_window.data());
         dialog->setAttribute(Qt::WA_DeleteOnClose);
     }
-    m_runner = runner;
-    m_runDialog = dialog;
+    run->runner = runner;
+    run->dialog = dialog;
 
     if (dialog != nullptr) {
-        connect(dialog, &AutomationRunDialog::cancelRequested, this, &AutomationController::cancelRunningScript);
-        connect(dialog, &QObject::destroyed, this, [this]() { m_runDialog.clear(); });
+        connect(dialog, &AutomationRunDialog::cancelRequested, this, [this, run] {
+            if (m_run == run)
+                cancelRunningScript();
+        });
         connect(runner, &labelqt::services::AutomationRunner::standardOutputReceived, dialog,
                 &AutomationRunDialog::appendStandardOutput);
         connect(runner, &labelqt::services::AutomationRunner::standardErrorReceived, dialog,
                 &AutomationRunDialog::appendStandardError);
     }
     connect(runner, &labelqt::services::AutomationRunner::finished, this,
-            [this, runner, dialog = QPointer<AutomationRunDialog>(dialog),
-             script](const labelqt::services::AutomationRunResult& result) {
-                finishScript(runner, dialog, script, result);
-            });
+            [this, run](const labelqt::services::AutomationRunResult& result) { finishScript(run, result); });
 
-    setRunning(true);
     if (dialog != nullptr) {
         dialog->show();
     }
+    if (run->canceled)
+        return;
+    run->started = true;
 
     runner->start(script, *task, values->parameters, selection, secretEnvironment,
                   {
@@ -335,22 +370,27 @@ void AutomationController::openUserScriptFolder()
     }
 }
 
-void AutomationController::finishScript(labelqt::services::AutomationRunner* runner,
-                                        QPointer<AutomationRunDialog> dialog,
-                                        labelqt::services::AutomationScript script,
+void AutomationController::finishScript(const std::shared_ptr<Run>& run,
                                         const labelqt::services::AutomationRunResult& result)
 {
-    if (m_runner == runner) {
-        m_runner.clear();
-    }
-    const QPointer<AutomationRunDialog> dialogPointer = dialog;
-    runner->deleteLater();
+    if (m_run != run || !run->runner)
+        return;
+    run->runner->deleteLater();
+    run->runner.clear();
     QTimer::singleShot(
-        0, this, [this, dialogPointer, script, result = labelqt::services::AutomationRunResult(result)]() mutable {
+        0, this, [this, run, result = labelqt::services::AutomationRunResult(result)]() mutable {
+            if (m_run != run)
+                return;
+            const auto dialogPointer = run->dialog;
+            const auto& script = run->script;
+            if (run->canceled) {
+                result.success = false;
+                result.error = tr("Automation script was canceled.");
+            }
             if (result.success) {
                 const auto committed =
-                    m_taskService && result.output.taskId == m_taskId
-                        ? m_taskService->submit(m_taskId, result.output.changes,
+                    m_taskService && !run->canceled && result.output.taskId == run->taskId
+                        ? m_taskService->submit(run->taskId, result.output.changes,
                                                 tr("Running automation script: %1").arg(script.name))
                         : std::expected<labelqt::services::ProjectTaskCommitReceipt, labelqt::services::TaskError>(
                               std::unexpected(labelqt::services::TaskError::InvalidChange));
@@ -367,14 +407,13 @@ void AutomationController::finishScript(labelqt::services::AutomationRunner* run
                 }
             }
             if (m_taskService)
-                (void)m_taskService->cancel(m_taskId);
-            m_taskId = {};
+                (void)m_taskService->cancel(run->taskId);
             if (!dialogPointer.isNull()) {
                 dialogPointer->setFinished(result.success);
             }
 
             if (!result.success) {
-                setRunning(false);
+                finishRun(run);
                 const QString errorMessage = result.error == QStringLiteral("Automation script was canceled.")
                                                  ? tr("Automation script was canceled.")
                                                  : result.error;
@@ -393,7 +432,7 @@ void AutomationController::finishScript(labelqt::services::AutomationRunner* run
                 return;
             }
 
-            setRunning(false);
+            finishRun(run);
 
             if (!result.output.quiet) {
                 const QString title = result.output.title.isEmpty() ? script.name : result.output.title;
@@ -410,9 +449,19 @@ void AutomationController::finishScript(labelqt::services::AutomationRunner* run
         });
 }
 
-void AutomationController::setRunning(bool running)
+void AutomationController::finishRun(const std::shared_ptr<Run>& run)
 {
-    m_running = running;
-    emit runningChanged(running);
+    if (m_run != run)
+        return;
+    if (m_taskService)
+        (void)m_taskService->cancel(run->taskId);
+    if (!run->started) {
+        if (run->runner)
+            run->runner->deleteLater();
+        if (run->dialog)
+            run->dialog->deleteLater();
+    }
+    m_run.reset();
+    emit runningChanged(false);
     updateMenuEnabledState();
 }

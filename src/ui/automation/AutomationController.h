@@ -14,6 +14,7 @@
 #include <QVector>
 
 #include <functional>
+#include <memory>
 #include <optional>
 
 class AutomationRunDialog;
@@ -62,13 +63,13 @@ signals:
     void statusMessageRequested(const QString& message, int timeoutMs);
 
 private:
+    struct Run;
     void rebuildMenu();
     void updateMenuEnabledState();
-    void runScript(const labelqt::services::AutomationScript& script);
+    void runScript(labelqt::services::AutomationScript script);
     void openUserScriptFolder();
-    void finishScript(labelqt::services::AutomationRunner* runner, QPointer<AutomationRunDialog> dialog,
-                      labelqt::services::AutomationScript script, const labelqt::services::AutomationRunResult& result);
-    void setRunning(bool running);
+    void finishScript(const std::shared_ptr<Run>& run, const labelqt::services::AutomationRunResult& result);
+    void finishRun(const std::shared_ptr<Run>& run);
 
     QPointer<QWidget> m_window;
     QMenu* m_menu{nullptr};
@@ -76,9 +77,6 @@ private:
     Callbacks m_callbacks;
     labelqt::core::AppPreferences m_preferences;
     QVector<labelqt::services::AutomationScript> m_scripts;
-    QPointer<labelqt::services::AutomationRunner> m_runner;
-    QPointer<AutomationRunDialog> m_runDialog;
-    bool m_running{false};
+    std::shared_ptr<Run> m_run;
     QPointer<labelqt::services::ProjectTaskService> m_taskService;
-    QUuid m_taskId;
 };

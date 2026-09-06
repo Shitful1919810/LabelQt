@@ -3,6 +3,7 @@
 #include "core/AppPreferences.h"
 #include "core/Project.h"
 #include "services/io/FileRevision.h"
+#include "services/io/ProjectFileTransaction.h"
 #include "services/project/ProjectImageRenameService.h"
 #include "services/project/ProjectRevisionTracker.h"
 
@@ -16,12 +17,6 @@
 
 namespace labelqt::services {
 struct ProjectRecoveryEntry;
-
-class ProjectFileConflict final : public std::runtime_error {
-public:
-    explicit ProjectFileConflict(FileRevision diskRevision);
-    const FileRevision revision;
-};
 
 struct AutoBackupResult {
     enum class Status {
@@ -98,6 +93,7 @@ public:
     AutoBackupResult performAutoBackup(const labelqt::core::AppPreferences& preferences);
 
 private:
+    void save(ProjectFileTransaction& transaction, std::optional<FileRevision> confirmedRevision = {});
     labelqt::core::Project m_project;
     QThread* const m_ownerThread{QThread::currentThread()};
     ProjectRevisionTracker m_revisions;

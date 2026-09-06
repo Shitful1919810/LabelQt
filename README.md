@@ -77,6 +77,7 @@ Qt GRPC、Qt HTTP Server、Qt MQTT、Qt Virtual Keyboard、Qt Wayland Compositor
 - 支持 C++23 的编译器。
 - Qt 6.5 或更高版本，至少需要 Qt Core、Gui、Widgets、Concurrent；建议安装 Qt Svg 以完整显示内置 Breeze 主题图标；开发翻译资源时还需要 Qt Linguist Tools。
 - QtKeychain，用于通过系统密钥环保存自动化脚本所需的 API key 等敏感信息。
+- zlib 开发包，用于对工程元数据进行有大小限制的流式解压；兼容 zlib ABI 的 zlib-ng 也可使用。
 - Python 3 为自动化脚本运行时依赖；只使用主程序基础编辑功能时不是必需项。
 
 ## 构建

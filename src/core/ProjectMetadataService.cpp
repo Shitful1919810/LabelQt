@@ -3,6 +3,10 @@
 #include <QByteArray>
 #include <QCoreApplication>
 #include <QJsonDocument>
+#include <QScopeGuard>
+#include <QtEndian>
+#include <stdexcept>
+#include <zlib.h>
 
 #include <algorithm>
 #include <array>
@@ -82,7 +86,17 @@ QStringList withoutMetadataBlocks(const QStringList& commentLines)
 QStringList encodedPayloadLines(const QJsonObject& metadata)
 {
     const QByteArray jsonBytes = QJsonDocument(metadata).toJson(QJsonDocument::Compact);
-    const QString encoded = QString::fromLatin1(qCompress(jsonBytes, 9).toBase64());
+    const auto tooLarge = [] {
+        throw std::runtime_error(
+            QCoreApplication::translate("ProjectMetadataService", "Project metadata exceeds the size limit.")
+                .toStdString());
+    };
+    if (jsonBytes.size() > ProjectMetadataService::maxDecodedBytes)
+        tooLarge();
+    const auto compressed = qCompress(jsonBytes, 9);
+    if (compressed.size() > ProjectMetadataService::maxCompressedBytes)
+        tooLarge();
+    const QString encoded = QString::fromLatin1(compressed.toBase64());
 
     QStringList lines;
     for (qsizetype offset = 0; offset < encoded.size(); offset += encodedPayloadLineLength) {
@@ -101,13 +115,40 @@ std::expected<QJsonObject, QString> invalidMetadata()
 
 std::expected<QJsonObject, QString> metadataFromPayload(const QString& encodedPayload)
 {
+    if (encodedPayload.size() > ProjectMetadataService::maxEncodedCharacters)
+        return invalidMetadata();
     const QByteArray compressedBytes =
         QByteArray::fromBase64(encodedPayload.toLatin1(), QByteArray::AbortOnBase64DecodingErrors);
-    if (compressedBytes.isEmpty()) {
+    if (compressedBytes.size() <= 4 || compressedBytes.size() > ProjectMetadataService::maxCompressedBytes) {
         return invalidMetadata();
     }
 
-    const QByteArray jsonBytes = qUncompress(compressedBytes);
+    const auto declaredSize = qFromBigEndian<quint32>(compressedBytes.constData());
+    if (declaredSize > ProjectMetadataService::maxDecodedBytes)
+        return invalidMetadata();
+    // qCompress's length prefix is untrusted. Bound actual output as well as the declared size.
+    z_stream stream{};
+    if (inflateInit(&stream) != Z_OK)
+        return invalidMetadata();
+    const auto cleanup = qScopeGuard([&] { inflateEnd(&stream); });
+    stream.next_in = reinterpret_cast<Bytef*>(const_cast<char*>(compressedBytes.constData() + 4));
+    stream.avail_in = static_cast<uInt>(compressedBytes.size() - 4);
+    QByteArray jsonBytes;
+    std::array<char, 65536> buffer;
+    int status;
+    do {
+        stream.next_out = reinterpret_cast<Bytef*>(buffer.data());
+        stream.avail_out = static_cast<uInt>(buffer.size());
+        status = inflate(&stream, Z_NO_FLUSH);
+        if (status != Z_OK && status != Z_STREAM_END)
+            return invalidMetadata();
+        const auto produced = static_cast<qsizetype>(buffer.size() - stream.avail_out);
+        if (produced > static_cast<qsizetype>(declaredSize) - jsonBytes.size())
+            return invalidMetadata();
+        jsonBytes.append(buffer.data(), produced);
+    } while (status != Z_STREAM_END);
+    if (stream.avail_in != 0 || jsonBytes.size() != declaredSize)
+        return invalidMetadata();
     if (jsonBytes.isEmpty()) {
         return invalidMetadata();
     }
@@ -151,7 +192,10 @@ std::expected<QJsonObject, QString> ProjectMetadataService::tryMetadataObject(co
 
         const QString content = uncommentLine(line);
         if (content.startsWith(QStringLiteral("payload="))) {
-            encodedPayload.append(content.sliced(QStringLiteral("payload=").size()).trimmed());
+            const auto part = content.sliced(QStringLiteral("payload=").size()).trimmed();
+            if (part.size() > ProjectMetadataService::maxEncodedCharacters - encodedPayload.size())
+                return invalidMetadata();
+            encodedPayload.append(part);
         }
         else if ((content.startsWith(QStringLiteral("compression=")) &&
                   content != QStringLiteral("compression=qCompress")) ||

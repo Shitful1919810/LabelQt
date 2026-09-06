@@ -5,10 +5,12 @@
 #include <QSet>
 #include <QStringList>
 #include <QVector>
+#include <functional>
 
 class CurrentPageLabelContext final {
 public:
-    void setLabels(QVector<labelqt::core::Label>* labels);
+    using LabelsProvider = std::function<const QVector<labelqt::core::Label>*()>;
+    void setLabelsProvider(LabelsProvider provider);
     void setGroupFilter(QStringList groupFilter);
     void refresh();
 
@@ -23,7 +25,7 @@ public:
 private:
     void rebuildVisibleRows();
 
-    QVector<labelqt::core::Label>* m_labels{nullptr};
+    LabelsProvider m_labelsProvider;
     QVector<int> m_visibleRows;
     QSet<QString> m_groupFilter;
 };

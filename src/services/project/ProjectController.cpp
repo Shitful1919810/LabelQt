@@ -24,14 +24,11 @@
 namespace labelqt::services {
 
 namespace {
-FileRevision writeProject(const labelqt::core::Project& project)
+FileRevision writeProject(const labelqt::core::Project& project, ProjectFileTransaction& transaction,
+                          const FileRevision& expected)
 {
     const QByteArray bytes = labelqt::core::LabelPlusDocument::serialize(project).toUtf8();
-    const QByteArray digest = QCryptographicHash::hash(bytes, QCryptographicHash::Sha256);
-    const auto saved = labelqt::core::AtomicFileWriter::write(project.filePath(), bytes);
-    if (!saved)
-        throw std::runtime_error(saved.error().toStdString());
-    return {true, digest, QFileInfo(project.filePath()).lastModified()};
+    return transaction.write(bytes, expected);
 }
 
 QStringList supportedImageNameFilters()
@@ -65,13 +62,6 @@ QString availableProjectPath(const QDir& directory, const QString& baseName)
     }
 }
 } // namespace
-
-ProjectFileConflict::ProjectFileConflict(FileRevision diskRevision)
-    : std::runtime_error(
-          QCoreApplication::translate("ProjectController", "The project was changed on disk.").toStdString()),
-      revision(std::move(diskRevision))
-{
-}
 
 labelqt::core::Project& ProjectController::project() noexcept
 {
@@ -119,6 +109,12 @@ void ProjectController::loadFromFile(const QString& path)
 
 void ProjectController::save(std::optional<FileRevision> confirmedRevision)
 {
+    ProjectFileTransaction transaction(m_project.filePath());
+    save(transaction, confirmedRevision);
+}
+
+void ProjectController::save(ProjectFileTransaction& transaction, std::optional<FileRevision> confirmedRevision)
+{
     const auto recovered =
         FileRenameTransaction::checkRecoveryDirectory(QFileInfo(m_project.filePath()).absolutePath());
     if (!recovered)
@@ -128,7 +124,7 @@ void ProjectController::save(std::optional<FileRevision> confirmedRevision)
         throw std::runtime_error(revision.error().toStdString());
     if (!revision->sameContent(confirmedRevision.value_or(m_savedRevision)))
         throw ProjectFileConflict(*revision);
-    m_savedRevision = writeProject(m_project);
+    m_savedRevision = writeProject(m_project, transaction, confirmedRevision.value_or(m_savedRevision));
     setDirty(false);
 }
 
@@ -138,11 +134,15 @@ void ProjectController::saveAs(const QString& path)
         save();
         return;
     }
+    ProjectFileTransaction transaction(path);
     const auto recovered = FileRenameTransaction::checkRecoveryDirectory(QFileInfo(path).absolutePath());
     if (!recovered)
         throw std::runtime_error(recovered.error().toStdString());
     const auto output = ProjectLocationService::forOutput(m_project, path);
-    const auto revision = writeProject(output);
+    const auto expected = FileRevision::read(path);
+    if (!expected)
+        throw std::runtime_error(expected.error().toStdString());
+    const auto revision = writeProject(output, transaction, *expected);
     m_project.setFilePath(path);
     m_project.setCommentLines(output.commentLines());
     m_revisions.reset(m_project);
@@ -165,8 +165,9 @@ std::expected<void, QString> ProjectController::restoreBackup(const ProjectRecov
     if (!snapshot)
         return std::unexpected(snapshot.error());
     try {
+        ProjectFileTransaction transaction(m_project.filePath());
         auto output = ProjectLocationService::forOutput(*snapshot, m_project.filePath());
-        save();
+        save(transaction);
         const QDir directory(ProjectRecoveryService::backupDirectory(m_project.filePath(), preferences));
         if (!QDir().mkpath(directory.absolutePath()))
             return std::unexpected(directory.absolutePath());
@@ -180,7 +181,7 @@ std::expected<void, QString> ProjectController::restoreBackup(const ProjectRecov
         if (!disk || !disk->sameContent(m_savedRevision))
             return std::unexpected(
                 QCoreApplication::translate("ProjectController", "The project was changed on disk."));
-        m_savedRevision = writeProject(output);
+        m_savedRevision = writeProject(output, transaction, m_savedRevision);
         m_project = std::move(output);
         m_revisions.reset(m_project);
         setDirty(false);
@@ -194,15 +195,17 @@ std::expected<void, QString> ProjectController::restoreBackup(const ProjectRecov
 std::expected<void, QString> ProjectController::renameImages(const ProjectImageRenamePlan& plan)
 {
     try {
-        save();
+        ProjectFileTransaction transaction(m_project.filePath());
+        save(transaction);
         const auto result = ProjectImageRenameService::applyPlan(
-            m_project, plan, [this](const labelqt::core::Project& updated) -> std::expected<void, QString> {
+            m_project, plan,
+            [this, &transaction](const labelqt::core::Project& updated) -> std::expected<void, QString> {
                 const auto disk = FileRevision::read(updated.filePath());
                 if (!disk)
                     return std::unexpected(disk.error());
                 if (!disk->sameContent(m_savedRevision))
                     throw ProjectFileConflict(*disk);
-                m_savedRevision = writeProject(updated);
+                m_savedRevision = writeProject(updated, transaction, m_savedRevision);
                 return {};
             });
         if (result) {
@@ -248,7 +251,8 @@ std::expected<QString, NewProjectError> ProjectController::tryCreateProjectFromI
     newProject.setFilePath(projectPath);
 
     try {
-        labelqt::core::LabelPlusDocument::saveToFile(newProject, projectPath);
+        ProjectFileTransaction transaction(projectPath);
+        (void)writeProject(newProject, transaction, {});
         return projectPath;
     }
     catch (const std::exception& error) {

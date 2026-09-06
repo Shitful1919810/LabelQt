@@ -27,6 +27,8 @@ set(LABELQT_SERVICE_SOURCES
     services/io/ImagePageCache.cpp
     services/io/FileRenameTransaction.cpp
     services/io/FileRevision.cpp
+    services/io/ProjectFileTransaction.cpp
+    services/io/ProjectFileTransaction.h
     services/io/ImagePageCache.h
     services/label/LabelClipboardService.cpp
     services/label/LabelClipboardService.h
@@ -110,6 +112,7 @@ set(LABELQT_UI_SOURCES
     ui/proofread/ProofreadingController.cpp
     ui/widgets/CheckableFilterButton.cpp
     ui/widgets/BusyTaskDialog.cpp
+    ui/widgets/BackgroundTask.h
     ui/widgets/BusyTaskDialog.h
     ui/widgets/DialogWindowUtils.cpp
     ui/widgets/DialogWindowUtils.h
@@ -137,7 +140,7 @@ qt_add_executable(LabelQt
 target_include_directories(LabelQt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(LabelQt PRIVATE LABELQT_INSTALL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/labelqt")
 
-target_link_libraries(LabelQt PRIVATE DiffMatchPatch Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6Keychain::Qt6Keychain)
+target_link_libraries(LabelQt PRIVATE DiffMatchPatch Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6Keychain::Qt6Keychain ZLIB::ZLIB)
 
 if(TARGET Qt6::Svg)
     target_link_libraries(LabelQt PRIVATE Qt6::Svg)

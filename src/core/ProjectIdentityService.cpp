@@ -37,6 +37,7 @@ QString signature(const ImageEntry& page)
 bool ProjectIdentityService::valid(const Project& project)
 {
     QSet<QUuid> ids;
+    QSet<QString> pageNames;
     const auto add = [&ids](const QUuid& id) {
         if (id.isNull() || ids.contains(id))
             return false;
@@ -49,6 +50,10 @@ bool ProjectIdentityService::valid(const Project& project)
         if (!add(project.groupId(group)))
             return false;
     for (const auto& page : project.images()) {
+        const auto pageName = name(page);
+        if (pageName.trimmed().isEmpty() || pageNames.contains(pageName))
+            return false;
+        pageNames.insert(pageName);
         if (!add(page.id))
             return false;
         for (const auto& label : page.labels)
@@ -77,12 +82,12 @@ QJsonObject ProjectIdentityService::encode(const Project& project)
 
 std::expected<void, QString> ProjectIdentityService::restore(Project& project, const QJsonObject& section)
 {
-    if (section.isEmpty())
-        return {};
     const auto invalid = [] {
         return std::unexpected(
             QCoreApplication::translate("LabelPlusDocument", "Invalid LabelPlus document structure."));
     };
+    if (section.isEmpty())
+        return valid(project) ? std::expected<void, QString>{} : invalid();
     if (section.value("version").toInt() != 1 || !section.value("groups").isObject() ||
         !section.value("pages").isObject())
         return invalid();

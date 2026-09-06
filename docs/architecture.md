@@ -75,6 +75,8 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 
 - `ProjectController`：持有当前打开的 `Project`，负责打开、保存、新建工程、未保存修改状态和自动备份写入。
 - `FileRevision`：流式内容摘要；`ProjectController` 在加载、保存、覆盖确认和改名提交之间维护磁盘版本。
+- `ProjectFileTransaction`：工程级写入锁、最终磁盘版本复核、原子提交与上一磁盘版本保护。
+  改名及恢复工作流须在文件移动、工程写入和失败回滚全程持锁；格式层仍只负责序列化。
 - `ProjectLocationService`：另存、备份、恢复以及旧撤销快照的来源路径重定位。窗口不能自行拼接相对引用。
 - `ProjectRecoveryService`：版本化备份索引、保留策略、恢复副本与文件事务回放。`ProjectRecoveryController/Dialog` 只编排入口、确认和只读预览。
 - `PageManagementDraft`：独立工程快照上的页面顺序与 pending 计划；移除页同步剪裁 pending。表格只派生候选效果，局部撤销不改真实工程。
@@ -96,6 +98,8 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `LabelEditController`：新增、删除、移动、改文本、改类别、批量切换、重排标签和分组编辑，并注册撤销/重做。
 - `LabelNavigator`：在当前分组筛选下查找上一条/下一条可见标签，跨页导航逻辑放这里而不是写在 UI 事件处理里。
 - `ImagePageCache`：异步加载图片、维护 LRU 缓存、预加载相邻页。UI 只请求“显示当前页”，不直接管理加载线程和缓存命中。
+  GUI 线程拥有 `QFutureWatcher`；工作线程只捕获 loader 和路径等值，不接触 QObject。
+  加载前后、结果交付和缓存命中均验证文件内容摘要；变化时最多重试一次。清空缓存递增代次，旧任务不能回填新请求。
 - `AutomationService` / `AutomationRunner`：脚本发现与密钥，以及进程、日志、取消和临时文件生命周期；不接收活动 Project。
 - `AutomationManifestParser`：解析参数、密钥和非敏感环境声明；任务协议不混入表单解析。
 - `AutomationPythonResolver`：根据偏好设置、内置候选和系统命令解析 Python 解释器，生成“Python 不可用”的用户提示。
@@ -130,7 +134,9 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 新增类似缓存时必须同时定义失效 key 和容量策略，不能使用无界静态 `QHash`。
 - `AutomationShortcutController`：自动化脚本快捷键匹配和失效脚本处理。
 - `AutomationRunDialog` / `AutomationParameterDialog`：自动化日志与运行前参数输入。
-- `LabelTableModel`：右侧标签表格模型。它持有当前页标签指针，维护可见行映射，发出编辑/重排请求，但不直接修改标签。
+- `LabelTableModel` / `CurrentPageLabelContext`：右侧表格通过只读 provider 获取当前页标签，维护可见行映射，
+  发出编辑/重排请求，但不直接修改标签。不缓存 `ImageEntry` 内部容器地址；工程快照的写时复制不会留下悬空绑定。
+  provider 的宿主必须比模型活得久，宿主析构和工程切换时清空绑定。数据结构变化仍须按模型协议刷新可见行。
 - `LabelEditDelegates`：表格文本列和类别列的原地编辑控件。
 - `PageOrderDialog` / `PageOrderListModel`：页面管理界面与对应模型，负责页面排序、移除页面，以及展示按当前顺序生成的图片文件重命名或缺失页引用修复预览；真正的文件系统重命名和项目引用更新仍交给 `ProjectImageRenameService`。
 - `ProjectMergeDialog`：合并工程冲突解决窗口，复用只读 `ImageCanvas` 预览候选页。

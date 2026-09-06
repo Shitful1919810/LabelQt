@@ -24,7 +24,7 @@ public:
 
     explicit LabelTableModel(QObject* parent = nullptr);
 
-    void setLabels(QVector<labelqt::core::Label>* labels);
+    void setLabelsProvider(CurrentPageLabelContext::LabelsProvider provider);
     void setGroupFilter(QStringList groupFilter);
     void setGroups(QStringList groups, QVector<labelqt::core::LabelGroupStyle> groupStyles);
     void refresh();

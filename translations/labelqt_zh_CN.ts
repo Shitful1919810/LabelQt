@@ -2850,6 +2850,10 @@ Last error: %1</source>
 <context>
     <name>ProjectMetadataService</name>
     <message>
+        <source>Project metadata exceeds the size limit.</source>
+        <translation>工程元数据超过大小限制。</translation>
+    </message>
+    <message>
         <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
         <translation>工程元数据已损坏或使用了不受支持的格式。原文件未被修改。</translation>
     </message>
@@ -3293,6 +3297,13 @@ Missing images: %2</source>
     <message>
         <source>Unsupported or damaged review session.</source>
         <translation>审阅记录已损坏或版本不受支持。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectFileTransaction</name>
+    <message>
+        <source>Could not lock the project for writing: %1</source>
+        <translation>无法锁定工程以写入，请检查是否有其他实例正在保存以及目录权限：%1</translation>
     </message>
 </context>
 </TS>

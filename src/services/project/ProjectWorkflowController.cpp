@@ -45,7 +45,12 @@ ProjectWorkflowController::mergedProjectPreview(const ProjectMergePlan& mergePla
 
 void ProjectWorkflowController::saveProject(const labelqt::core::Project& project, const QString& path) const
 {
-    labelqt::core::LabelPlusDocument::saveToFile(ProjectLocationService::forOutput(project, path), path);
+    ProjectFileTransaction transaction(path);
+    const auto expected = FileRevision::read(path);
+    if (!expected)
+        throw std::runtime_error(expected.error().toStdString());
+    const auto output = ProjectLocationService::forOutput(project, path);
+    (void)transaction.write(labelqt::core::LabelPlusDocument::serialize(output).toUtf8(), *expected);
 }
 
 bool ProjectWorkflowController::applyPageOrder(const QVector<int>& order, const ProjectViewState& viewState)

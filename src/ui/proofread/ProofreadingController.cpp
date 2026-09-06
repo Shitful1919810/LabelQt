@@ -5,13 +5,13 @@
 #include "services/proofread/ProjectComparisonService.h"
 #include "services/proofread/ReviewMetadataService.h"
 #include "ui/proofread/ProofreadChangesDialog.h"
+#include "ui/widgets/BackgroundTask.h"
 #include "ui/widgets/BusyTaskDialog.h"
 
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QFileDialog>
-#include <QFutureWatcher>
 #include <QLabel>
 #include <QMessageBox>
 #include <QtConcurrent/QtConcurrent>
@@ -83,18 +83,7 @@ std::optional<ComparisonTaskResult> runComparison(QWidget* parent, const labelqt
                                                   labelqt::services::ProjectPageMatchMode mode)
 {
     labelqt::ui::BusyTaskDialog dialog(text("Comparing projects..."), text("Abort"), parent);
-    auto* watcher = new QFutureWatcher<ComparisonTaskResult>(QApplication::instance());
-    QObject::connect(watcher, &QFutureWatcher<ComparisonTaskResult>::finished, &dialog, &QDialog::accept);
-    watcher->setFuture(QtConcurrent::run(buildComparison, baseline, current, mode));
-    dialog.exec();
-    if (!watcher->isFinished()) {
-        QObject::disconnect(watcher, nullptr, &dialog, nullptr);
-        QObject::connect(watcher, &QFutureWatcher<ComparisonTaskResult>::finished, watcher, &QObject::deleteLater);
-        return std::nullopt;
-    }
-    ComparisonTaskResult result = watcher->result();
-    watcher->deleteLater();
-    return result;
+    return labelqt::ui::waitForBackgroundTask(QtConcurrent::run(buildComparison, baseline, current, mode), dialog);
 }
 
 QMessageBox::StandardButton messageBox(QWidget* parent, QMessageBox::Icon icon, const QString& title,

@@ -14,6 +14,10 @@
   - `Widgets`
   - `Concurrent`
 - QtKeychain。
+- zlib 开发包（`ZLIB::ZLIB`）：工程元数据使用其流式解压 API 限制实际输出大小，而不是直接使用
+  无输出上限的 `qUncompress()`。兼容 zlib ABI 的 zlib-ng 也可使用。
+  Fedora 安装 `zlib-ng-compat-devel`，Debian/Ubuntu 安装 `zlib1g-dev`；Windows 使用与 Qt 相同
+  vcpkg triplet 的 `zlib`。静态发行必须使用静态 zlib，并在依赖合规材料中包含其版本和许可证。
 
 常见平台工具链：
 

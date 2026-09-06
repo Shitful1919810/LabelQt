@@ -2863,6 +2863,10 @@ Last error: %1</translation>
 <context>
     <name>ProjectMetadataService</name>
     <message>
+        <source>Project metadata exceeds the size limit.</source>
+        <translation>Project metadata exceeds the size limit.</translation>
+    </message>
+    <message>
         <source>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</source>
         <translation>Project metadata is damaged or uses an unsupported format. The original file has not been changed.</translation>
     </message>
@@ -3306,6 +3310,13 @@ Missing images: %2</translation>
     <message>
         <source>Unsupported or damaged review session.</source>
         <translation>Unsupported or damaged review session.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectFileTransaction</name>
+    <message>
+        <source>Could not lock the project for writing: %1</source>
+        <translation>Could not lock the project for writing: %1</translation>
     </message>
 </context>
 </TS>

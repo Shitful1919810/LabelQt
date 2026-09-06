@@ -1,6 +1,10 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Concurrent OPTIONAL_COMPONENTS Svg)
 find_package(Qt6 6.5 QUIET OPTIONAL_COMPONENTS LinguistTools)
 find_package(Qt6Keychain REQUIRED)
+if(LABELQT_ENABLE_WINDOWS_STATIC_RELEASE)
+    set(ZLIB_USE_STATIC_LIBS ON)
+endif()
+find_package(ZLIB REQUIRED)
 
 if(LABELQT_REQUIRE_QT_SVG AND NOT TARGET Qt6::Svg)
     message(FATAL_ERROR "Qt Svg is required for this release build but was not found.")

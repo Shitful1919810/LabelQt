@@ -25,6 +25,14 @@ release artifacts.
 - Usage: linked as an external library to store automation script secrets in the operating system keychain.
 - License: BSD-style license. Use the exact license text shipped with the QtKeychain package used for a binary release.
 
+## zlib
+
+- Source: <https://zlib.net/>; compatible system implementations may use <https://github.com/zlib-ng/zlib-ng>.
+- Usage: bounded streaming inflation of qCompress-compatible project metadata. No zlib source is vendored.
+- License: zlib license, a permissive license compatible with the application's MIT license.
+- Windows binary packages must include the exact linked triplet's zlib license and version among native notices.
+  Static builds must link the static library. Linux packages use their system library dependency.
+
 ## BreezeStyleSheets
 
 - Source: <https://github.com/Alexhuszagh/BreezeStyleSheets>

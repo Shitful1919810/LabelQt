@@ -636,7 +636,7 @@ private slots:
         LabelTableModel model;
         const QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::Fatal);
         model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
-        model.setLabels(&labels);
+        model.setLabelsProvider([&labels] { return &labels; });
         model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
 
         QCOMPARE(model.rowCount(), 2);
@@ -663,7 +663,7 @@ private slots:
 
         LabelTableModel model;
         model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
-        model.setLabels(&image.labels);
+        model.setLabelsProvider([&image] { return &image.labels; });
         model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
 
         QTableView tableView;
@@ -707,7 +707,7 @@ private slots:
 
         LabelTableModel model;
         model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
-        model.setLabels(&labels);
+        model.setLabelsProvider([&labels] { return &labels; });
         model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
 
         QSignalSpy editSpy(&model, &LabelTableModel::labelEditRequested);
@@ -732,7 +732,7 @@ private slots:
         LabelTableModel model;
         const QAbstractItemModelTester tester(&model, QAbstractItemModelTester::FailureReportingMode::Fatal);
         model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
-        model.setLabels(&labels);
+        model.setLabelsProvider([&labels] { return &labels; });
         model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
         QCOMPARE(model.rowCount(), 2);
 
@@ -753,7 +753,7 @@ private slots:
 
         LabelTableModel model;
         model.setGroups({QStringLiteral("框内"), QStringLiteral("框外")}, {});
-        model.setLabels(&labels);
+        model.setLabelsProvider([&labels] { return &labels; });
         model.setGroupFilter({QStringLiteral("框内"), QStringLiteral("框外")});
 
         const QModelIndexList draggedIndexes{

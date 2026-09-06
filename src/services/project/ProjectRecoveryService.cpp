@@ -1,4 +1,5 @@
 #include "services/project/ProjectRecoveryService.h"
+#include "services/io/ProjectFileTransaction.h"
 
 #include "core/AtomicFileWriter.h"
 #include "core/LabelPlusDocument.h"
@@ -58,6 +59,11 @@ QVector<ProjectRecoveryEntry> ProjectRecoveryService::entries(const QString& pro
     if (projectPath.isEmpty())
         return result;
     const auto project = QFileInfo(projectPath).absoluteFilePath();
+    const auto previousPath = ProjectFileTransaction::previousVersionPath(projectPath);
+    const auto previous = FileRevision::read(previousPath);
+    if (previous && previous->exists)
+        result.append({ProjectRecoveryEntry::Kind::Backup, previousPath, project, previousPath, previous->modified,
+                       previous->sha256, false});
     const auto append = [&](const QFileInfo& info, ProjectRecoveryEntry::Kind kind) {
         QFile file(info.absoluteFilePath());
         if (!file.open(QIODevice::ReadOnly))
@@ -178,108 +184,113 @@ void ProjectRecoveryService::pruneAutomaticBackups(const QString& projectPath,
 
 std::expected<void, QString> ProjectRecoveryService::recoverFiles(const QString& recordPath, bool complete)
 {
-    const auto unsafe = []() -> std::expected<void, QString> {
-        return std::unexpected(QCoreApplication::translate(
-            "ProjectRecoveryService",
-            "Recovery is ambiguous or files have changed. No automatic recovery is possible."));
-    };
-    QFile file(recordPath);
-    if (!file.open(QIODevice::ReadOnly))
-        return std::unexpected(file.errorString());
-    const auto document = QJsonDocument::fromJson(file.readAll());
-    file.close();
-    const auto record = document.object();
-    if (record.value("version").toInt() != 2 || !record.value("moves").isArray())
-        return unsafe();
-    const QString project = record.value("project").toString();
-    const auto before =
-        QByteArray::fromBase64(record.value("before").toString().toLatin1(), QByteArray::AbortOnBase64DecodingErrors);
-    const auto after =
-        QByteArray::fromBase64(record.value("after").toString().toLatin1(), QByteArray::AbortOnBase64DecodingErrors);
-    if (project.isEmpty() || before.isEmpty() || after.isEmpty() ||
-        QFileInfo(project).absolutePath() != QFileInfo(recordPath).absolutePath())
-        return unsafe();
-    const auto revision = FileRevision::read(project);
-    if (!revision || !revision->exists ||
-        (revision->sha256 != QCryptographicHash::hash(before, QCryptographicHash::Sha256) &&
-         revision->sha256 != QCryptographicHash::hash(after, QCryptographicHash::Sha256)))
-        return unsafe();
     try {
-        labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(before), project);
-        labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(after), project);
-    }
-    catch (const std::exception&) {
-        return unsafe();
-    }
-
-    struct RecoveryMove {
-        QString current, temporary, destination;
-        QByteArray digest;
-    };
-    QVector<RecoveryMove> moves;
-    QSet<QString> allPaths, occupied, destinations, temporaryPaths;
-    QSet<QByteArray> hashes;
-    for (const auto& value : record.value("moves").toArray()) {
-        const auto item = value.toObject();
-        const QString source = item.value("source").toString();
-        const QString target = item.value("target").toString();
-        const QString temporary = item.value("temporary").toString();
-        const QByteArray hash = QByteArray::fromHex(item.value("sha256").toString().toLatin1());
-        if (hash.size() != 32 || hashes.contains(hash) || temporaryPaths.contains(temporary))
+        const auto unsafe = []() -> std::expected<void, QString> {
+            return std::unexpected(QCoreApplication::translate(
+                "ProjectRecoveryService",
+                "Recovery is ambiguous or files have changed. No automatic recovery is possible."));
+        };
+        QFile file(recordPath);
+        if (!file.open(QIODevice::ReadOnly))
+            return std::unexpected(file.errorString());
+        const auto document = QJsonDocument::fromJson(file.readAll());
+        file.close();
+        const auto record = document.object();
+        if (record.value("version").toInt() != 2 || !record.value("moves").isArray())
             return unsafe();
-        hashes.insert(hash);
-        temporaryPaths.insert(temporary);
-        const QString destination = complete ? target : source;
-        if (destinations.contains(destination))
+        const QString project = record.value("project").toString();
+        const auto before = QByteArray::fromBase64(record.value("before").toString().toLatin1(),
+                                                   QByteArray::AbortOnBase64DecodingErrors);
+        const auto after = QByteArray::fromBase64(record.value("after").toString().toLatin1(),
+                                                  QByteArray::AbortOnBase64DecodingErrors);
+        if (project.isEmpty() || before.isEmpty() || after.isEmpty() ||
+            QFileInfo(project).absolutePath() != QFileInfo(recordPath).absolutePath())
             return unsafe();
-        destinations.insert(destination);
-        for (const auto& path : {source, target, temporary}) {
-            if (!QFileInfo(path).isAbsolute() || QFileInfo(path).isSymLink() || path == project || path == recordPath)
-                return unsafe();
-            allPaths.insert(path);
+        ProjectFileTransaction transaction(project);
+        const auto revision = FileRevision::read(project);
+        if (!revision || !revision->exists ||
+            (revision->sha256 != QCryptographicHash::hash(before, QCryptographicHash::Sha256) &&
+             revision->sha256 != QCryptographicHash::hash(after, QCryptographicHash::Sha256)))
+            return unsafe();
+        try {
+            labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(before), project);
+            labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(after), project);
         }
-        moves.append({{}, temporary, destination, hash});
-    }
-    if (moves.isEmpty())
-        return unsafe();
-    // Identify each file across all journal paths before performing any write.
-    for (const auto& path : std::as_const(allPaths)) {
-        const auto state = FileRevision::read(path);
-        if (!state)
+        catch (const std::exception&) {
             return unsafe();
-        if (!state->exists)
-            continue;
-        auto found =
-            std::find_if(moves.begin(), moves.end(), [&](const auto& move) { return move.digest == state->sha256; });
-        if (found == moves.end() || !found->current.isEmpty())
+        }
+
+        struct RecoveryMove {
+            QString current, temporary, destination;
+            QByteArray digest;
+        };
+        QVector<RecoveryMove> moves;
+        QSet<QString> allPaths, occupied, destinations, temporaryPaths;
+        QSet<QByteArray> hashes;
+        for (const auto& value : record.value("moves").toArray()) {
+            const auto item = value.toObject();
+            const QString source = item.value("source").toString();
+            const QString target = item.value("target").toString();
+            const QString temporary = item.value("temporary").toString();
+            const QByteArray hash = QByteArray::fromHex(item.value("sha256").toString().toLatin1());
+            if (hash.size() != 32 || hashes.contains(hash) || temporaryPaths.contains(temporary))
+                return unsafe();
+            hashes.insert(hash);
+            temporaryPaths.insert(temporary);
+            const QString destination = complete ? target : source;
+            if (destinations.contains(destination))
+                return unsafe();
+            destinations.insert(destination);
+            for (const auto& path : {source, target, temporary}) {
+                if (!QFileInfo(path).isAbsolute() || QFileInfo(path).isSymLink() || path == project ||
+                    path == recordPath)
+                    return unsafe();
+                allPaths.insert(path);
+            }
+            moves.append({{}, temporary, destination, hash});
+        }
+        if (moves.isEmpty())
             return unsafe();
-        found->current = path;
-        occupied.insert(path);
-    }
-    for (const auto& move : std::as_const(moves)) {
-        if (move.current.isEmpty() || (occupied.contains(move.temporary) && move.current != move.temporary))
-            return unsafe();
-    }
-    for (auto& move : moves) {
-        if (move.current != move.temporary) {
-            if (!QFile::rename(move.current, move.temporary))
+        // Identify each file across all journal paths before performing any write.
+        for (const auto& path : std::as_const(allPaths)) {
+            const auto state = FileRevision::read(path);
+            if (!state)
+                return unsafe();
+            if (!state->exists)
+                continue;
+            auto found = std::find_if(moves.begin(), moves.end(),
+                                      [&](const auto& move) { return move.digest == state->sha256; });
+            if (found == moves.end() || !found->current.isEmpty())
+                return unsafe();
+            found->current = path;
+            occupied.insert(path);
+        }
+        for (const auto& move : std::as_const(moves)) {
+            if (move.current.isEmpty() || (occupied.contains(move.temporary) && move.current != move.temporary))
+                return unsafe();
+        }
+        for (auto& move : moves) {
+            if (move.current != move.temporary) {
+                if (!QFile::rename(move.current, move.temporary))
+                    return std::unexpected(QCoreApplication::translate(
+                        "ProjectRecoveryService", "Recovery stopped. Keep the recovery record and temporary files."));
+                move.current = move.temporary;
+            }
+        }
+        for (const auto& move : std::as_const(moves)) {
+            if (!QFile::rename(move.temporary, move.destination))
                 return std::unexpected(QCoreApplication::translate(
                     "ProjectRecoveryService", "Recovery stopped. Keep the recovery record and temporary files."));
-            move.current = move.temporary;
         }
-    }
-    for (const auto& move : std::as_const(moves)) {
-        if (!QFile::rename(move.temporary, move.destination))
+        (void)transaction.write(complete ? after : before, *revision);
+        if (!QFile::remove(recordPath))
             return std::unexpected(QCoreApplication::translate(
-                "ProjectRecoveryService", "Recovery stopped. Keep the recovery record and temporary files."));
+                "ProjectRecoveryService", "Files recovered, but the recovery record could not be removed."));
+        return {};
     }
-    const auto written = labelqt::core::AtomicFileWriter::write(project, complete ? after : before);
-    if (!written)
-        return written;
-    if (!QFile::remove(recordPath))
-        return std::unexpected(QCoreApplication::translate(
-            "ProjectRecoveryService", "Files recovered, but the recovery record could not be removed."));
-    return {};
+    catch (const std::exception& error) {
+        return std::unexpected(QString::fromUtf8(error.what()));
+    }
 }
 
 } // namespace labelqt::services

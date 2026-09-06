@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <utility>
 
-void CurrentPageLabelContext::setLabels(QVector<labelqt::core::Label>* labels)
+void CurrentPageLabelContext::setLabelsProvider(LabelsProvider provider)
 {
-    m_labels = labels;
+    m_labelsProvider = std::move(provider);
     rebuildVisibleRows();
 }
 
@@ -31,7 +31,8 @@ int CurrentPageLabelContext::sourceIndexForRow(int row) const
         return -1;
     }
     const int sourceIndex = m_visibleRows.at(row);
-    if (m_labels == nullptr || sourceIndex < 0 || sourceIndex >= static_cast<int>(m_labels->size())) {
+    const auto* labels = m_labelsProvider ? m_labelsProvider() : nullptr;
+    if (labels == nullptr || sourceIndex < 0 || sourceIndex >= static_cast<int>(labels->size())) {
         return -1;
     }
     return sourceIndex;
@@ -39,7 +40,8 @@ int CurrentPageLabelContext::sourceIndexForRow(int row) const
 
 int CurrentPageLabelContext::rowForSourceIndex(int sourceIndex) const
 {
-    if (m_labels == nullptr || sourceIndex < 0 || sourceIndex >= static_cast<int>(m_labels->size())) {
+    const auto* labels = m_labelsProvider ? m_labelsProvider() : nullptr;
+    if (labels == nullptr || sourceIndex < 0 || sourceIndex >= static_cast<int>(labels->size())) {
         return -1;
     }
     for (int row = 0; row < static_cast<int>(m_visibleRows.size()); ++row) {
@@ -53,10 +55,11 @@ int CurrentPageLabelContext::rowForSourceIndex(int sourceIndex) const
 const labelqt::core::Label* CurrentPageLabelContext::labelForVisibleRow(int row) const
 {
     const int sourceIndex = sourceIndexForRow(row);
-    if (sourceIndex < 0 || m_labels == nullptr) {
+    const auto* labels = m_labelsProvider ? m_labelsProvider() : nullptr;
+    if (sourceIndex < 0 || labels == nullptr || sourceIndex >= labels->size()) {
         return nullptr;
     }
-    return &m_labels->at(sourceIndex);
+    return &labels->at(sourceIndex);
 }
 
 bool CurrentPageLabelContext::isSourceIndexVisible(int sourceIndex) const
@@ -104,12 +107,13 @@ QVector<int> CurrentPageLabelContext::sourceIndexesInVisibleRowRange(int firstRo
 void CurrentPageLabelContext::rebuildVisibleRows()
 {
     m_visibleRows.clear();
-    if (m_labels == nullptr) {
+    const auto* labels = m_labelsProvider ? m_labelsProvider() : nullptr;
+    if (labels == nullptr) {
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(m_labels->size()); ++i) {
-        const labelqt::core::Label& label = m_labels->at(i);
+    for (int i = 0; i < static_cast<int>(labels->size()); ++i) {
+        const labelqt::core::Label& label = labels->at(i);
         if (!label.isDeleted() && m_groupFilter.contains(label.group())) {
             m_visibleRows.append(i);
         }
