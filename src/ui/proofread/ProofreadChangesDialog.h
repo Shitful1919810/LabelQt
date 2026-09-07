@@ -32,6 +32,7 @@ struct ProofreadChangesDialogLabels {
     bool jumpToLeftProject{false};
     bool reviewEnabled{false};
     bool projectReviewSession{false};
+    bool roundReview{false};
 };
 
 class ProofreadChangesDialog final : public QDialog {
@@ -48,6 +49,7 @@ public:
     int selectedImageIndex() const noexcept;
     int selectedLabelIndex() const noexcept;
     QJsonObject reviewSession() const;
+    const labelqt::services::ReviewChange* selectedChange() const;
 
 public slots:
     void done(int result) override;
@@ -69,7 +71,6 @@ private:
     QString facetText(labelqt::services::ReviewChangeFacet facet) const;
     QVector<labelqt::services::ReviewChange> filteredChanges() const;
     QString reportFilterDescription() const;
-    QString diffHtml(const QString& beforeText, const QString& afterText) const;
     labelqt::services::ProofreadReportTexts reportTexts() const;
     void syncPreviewCanvases(ImageCanvas* sourceCanvas, int zoomPercent, QPointF normalizedCenter);
     void updateReviewAnnotations();

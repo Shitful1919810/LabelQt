@@ -1,5 +1,6 @@
 #include "services/project/ProjectLocationService.h"
 #include "core/ProjectMetadataService.h"
+#include "services/proofread/ReviewRoundService.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -21,8 +22,10 @@ QStringList ProjectLocationService::rebaseComments(const QStringList& comments, 
         QFileInfo(fromPath).absolutePath() == QFileInfo(toPath).absolutePath())
         return comments;
     auto metadata = labelqt::core::ProjectMetadataService::metadataObject(comments);
+    if (metadata.contains("proofreading"))
+        metadata.insert("proofreading", ReviewRoundService::rebase(metadata.value("proofreading").toObject(), fromPath, toPath));
     if (!metadata.contains("mergeSources"))
-        return comments;
+        return labelqt::core::ProjectMetadataService::rewriteCommentLines(comments, metadata);
     auto sources = metadata.value("mergeSources").toArray();
     const QDir before(QFileInfo(fromPath).absolutePath()), after(QFileInfo(toPath).absolutePath());
     for (qsizetype index = 0; index < sources.size(); ++index) {

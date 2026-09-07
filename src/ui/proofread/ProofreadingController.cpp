@@ -1,9 +1,9 @@
 #include "ui/proofread/ProofreadingController.h"
 
 #include "core/LabelPlusDocument.h"
-#include "services/project/ProjectLocationService.h"
 #include "services/proofread/ProjectComparisonService.h"
 #include "services/proofread/ReviewMetadataService.h"
+#include "ui/labeltable/LabelTableModel.h"
 #include "ui/proofread/ProofreadChangesDialog.h"
 #include "ui/widgets/BackgroundTask.h"
 #include "ui/widgets/BusyTaskDialog.h"
@@ -12,10 +12,13 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QLabel>
+#include <QMenu>
 #include <QMessageBox>
 #include <QtConcurrent/QtConcurrent>
 
+#include <algorithm>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -30,15 +33,6 @@ QString text(const char* source)
     QT_TRANSLATE_NOOP("MainWindow", "Unknown error"),
     QT_TRANSLATE_NOOP("MainWindow", "Comparing projects..."),
     QT_TRANSLATE_NOOP("MainWindow", "Abort"),
-    QT_TRANSLATE_NOOP("MainWindow", "Proofreading"),
-    QT_TRANSLATE_NOOP("MainWindow", "Open a project before starting proofreading."),
-    QT_TRANSLATE_NOOP("MainWindow", "Start proofreading baseline"),
-    QT_TRANSLATE_NOOP("MainWindow", "Proofreading baseline updated."),
-    QT_TRANSLATE_NOOP("MainWindow", "End proofreading"),
-    QT_TRANSLATE_NOOP("MainWindow", "Proofreading ended."),
-    QT_TRANSLATE_NOOP("MainWindow", "Open a project before viewing proofreading changes."),
-    QT_TRANSLATE_NOOP("MainWindow", "Start a proofreading baseline before viewing changes."),
-    QT_TRANSLATE_NOOP("MainWindow", "No proofreading changes since the baseline."),
     QT_TRANSLATE_NOOP("MainWindow", "Compare Projects"),
     QT_TRANSLATE_NOOP("MainWindow", "Open a project before comparing."),
     QT_TRANSLATE_NOOP("MainWindow", "Select project to compare"),
@@ -51,8 +45,6 @@ QString text(const char* source)
     QT_TRANSLATE_NOOP("MainWindow", "No differences from the selected project."),
     QT_TRANSLATE_NOOP("MainWindow", "Current Project"),
     QT_TRANSLATE_NOOP("MainWindow", "Target Project"),
-    QT_TRANSLATE_NOOP("MainWindow", "End Proofreading"),
-    QT_TRANSLATE_NOOP("MainWindow", "Start Proofreading Baseline"),
 };
 
 struct ComparisonTaskResult {
@@ -112,156 +104,238 @@ void warning(QWidget* parent, const QString& title, const QString& message)
 }
 } // namespace
 
-ProofreadingController::ProofreadingController(QWidget* parentWidget, labelqt::core::UndoStack& undoStack,
-                                               Callbacks callbacks, QObject* parent)
-    : QObject(parent), m_parentWidget(parentWidget), m_undoStack(undoStack), m_callbacks(std::move(callbacks))
+ProofreadingController::ProofreadingController(QWidget* parentWidget,
+                                               labelqt::services::ProjectController& projectController,
+                                               labelqt::core::UndoStack& undoStack, Callbacks callbacks,
+                                               QObject* parent)
+    : QObject(parent), m_parentWidget(parentWidget), m_projectController(projectController), m_undoStack(undoStack),
+      m_callbacks(std::move(callbacks))
 {
 }
 
 void ProofreadingController::setUi(QAction* toggleAction, QAction* showChangesAction, QAction* compareAction,
-                                   QLabel* statusLabel)
+                                   QLabel* statusLabel, QMenu* menu, ProofreadNotesWidget* notes,
+                                   LabelTableModel* labelModel)
 {
     m_toggleAction = toggleAction;
     m_showChangesAction = showChangesAction;
     m_compareAction = compareAction;
     m_statusLabel = statusLabel;
+    m_notes = notes;
+    m_labelModel = labelModel;
+    m_modeAction = menu->addAction(tr("Revision interactions"));
+    m_modeAction->setCheckable(true);
+    m_modeAction->setChecked(true);
+    connect(m_modeAction, &QAction::toggled, this, [this] { updateUi(m_automationRunning); });
+    m_clearAction = menu->addAction(tr("Clear proofreading record..."), this, &ProofreadingController::clearRound);
+    connect(notes, &ProofreadNotesWidget::requested, this, &ProofreadingController::editNote);
+}
+
+bool ProofreadingController::loadRound()
+{
+    const auto& project = m_callbacks.project();
+    if (m_cacheValid && project.commentLines() == m_cachedComments && project.filePath() == m_cachedPath)
+        return m_recordError.isEmpty();
+    m_cacheValid = true;
+    m_cachedComments = project.commentLines();
+    m_cachedPath = project.filePath();
+    const auto round = labelqt::services::ReviewRoundService::read(project);
+    m_recordError = round ? QString() : round.error();
+    m_round = round ? *round : std::nullopt;
+    return round.has_value();
 }
 
 bool ProofreadingController::isActive() const
 {
-    return m_callbacks.project && labelqt::services::ReviewMetadataService::projectHasBaseline(m_callbacks.project());
+    return m_round && !m_round->after && m_modeAction && m_modeAction->isChecked();
+}
+
+bool ProofreadingController::commitRound(const std::optional<labelqt::services::ReviewRound>& round,
+                                         labelqt::services::ReviewEditToken token, const QString& description)
+{
+    const auto result =
+        labelqt::services::ReviewRoundEditService::commit(m_projectController, m_undoStack, token, round, description);
+    if (!result) {
+        warning(m_parentWidget, tr("Proofreading"), result.error());
+        return false;
+    }
+    m_callbacks.markDirty();
+    updateUi(m_automationRunning);
+    return true;
 }
 
 void ProofreadingController::toggleBaseline()
 {
-    if (!m_callbacks.project || (m_callbacks.isEditingBlocked && m_callbacks.isEditingBlocked()))
+    using namespace labelqt::services;
+    if (m_callbacks.isEditingBlocked && m_callbacks.isEditingBlocked())
         return;
-    if (m_callbacks.commitActiveTextInput)
-        m_callbacks.commitActiveTextInput();
-    auto& project = m_callbacks.project();
-    if (project.images().isEmpty()) {
-        information(m_parentWidget, text("Proofreading"), text("Open a project before starting proofreading."));
-        return;
-    }
-    if (isActive()) {
-        endBaseline();
+    m_callbacks.commitActiveTextInput();
+    if (!loadRound()) {
+        warning(m_parentWidget, tr("Proofreading"), m_recordError);
         return;
     }
-
-    const QStringList oldLines = project.commentLines();
-    const QString metadataPath = project.filePath();
-    const QStringList newLines = labelqt::services::ReviewSessionService::withProjectSession(
-        labelqt::services::ReviewMetadataService::rewriteCommentLines(
-            oldLines, labelqt::services::ReviewMetadataService::captureBaseline(project)),
-        {});
-    if (oldLines == newLines)
+    const auto& project = m_callbacks.project();
+    if (project.isEmpty())
         return;
-    project.setCommentLines(newLines);
-    const QString message = text("Start proofreading baseline");
-    m_undoStack.push(
-        message, message, message,
-        [this, oldLines, metadataPath]() {
-            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
-                oldLines, metadataPath, m_callbacks.project().filePath()));
-            updateUi(m_automationRunning);
-            m_callbacks.markDirty();
-        },
-        [this, newLines, metadataPath]() {
-            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
-                newLines, metadataPath, m_callbacks.project().filePath()));
-            updateUi(m_automationRunning);
-            m_callbacks.markDirty();
-        });
-    if (m_callbacks.markDirty)
-        m_callbacks.markDirty();
-    updateUi(m_automationRunning);
-    if (m_callbacks.showStatus)
-        m_callbacks.showStatus(text("Proofreading baseline updated."), 4000);
+    const auto token = ReviewRoundEditService::token(m_projectController);
+    const auto previous = m_round;
+    if (m_round && !m_round->after) {
+        if (messageBox(m_parentWidget, QMessageBox::Question, tr("Complete proofreading"),
+                       tr("Freeze this round's original draft, final draft and comments? Later edits will not change "
+                          "its text differences."),
+                       QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Ok)
+            return;
+        auto completed = ReviewRoundService::complete(*previous, project);
+        commitRound(completed, token, tr("Complete proofreading"));
+        return;
+    }
+    if (m_round && messageBox(m_parentWidget, QMessageBox::Warning, tr("Start next proofreading round"),
+                              tr("This replaces the previous round. Export its report first if you need to keep it."),
+                              QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Ok)
+        return;
+    ReviewRound round;
+    round.before = ReviewRoundService::snapshot(project);
+    if (commitRound(round, token, tr("Start proofreading")))
+        m_modeAction->setChecked(true);
 }
 
-void ProofreadingController::endBaseline()
+void ProofreadingController::clearRound()
 {
-    auto& project = m_callbacks.project();
-    const QStringList oldLines = project.commentLines();
-    const QString metadataPath = project.filePath();
-    const QStringList newLines = labelqt::services::ReviewSessionService::withProjectSession(
-        labelqt::services::ReviewMetadataService::rewriteCommentLines(oldLines, {}), {});
-    if (oldLines == newLines) {
-        updateUi(m_automationRunning);
+    using namespace labelqt::services;
+    if (m_callbacks.isEditingBlocked && m_callbacks.isEditingBlocked())
         return;
-    }
-    project.setCommentLines(newLines);
-    const QString message = text("End proofreading");
-    m_undoStack.push(
-        message, message, message,
-        [this, oldLines, metadataPath]() {
-            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
-                oldLines, metadataPath, m_callbacks.project().filePath()));
-            updateUi(m_automationRunning);
-            m_callbacks.markDirty();
-        },
-        [this, newLines, metadataPath]() {
-            m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
-                newLines, metadataPath, m_callbacks.project().filePath()));
-            updateUi(m_automationRunning);
-            m_callbacks.markDirty();
-        });
-    if (m_callbacks.markDirty)
-        m_callbacks.markDirty();
-    updateUi(m_automationRunning);
-    if (m_callbacks.showStatus)
-        m_callbacks.showStatus(text("Proofreading ended."), 4000);
+    m_callbacks.commitActiveTextInput();
+    if (!loadRound() || !m_round)
+        return;
+    const auto token = ReviewRoundEditService::token(m_projectController);
+    if (messageBox(
+            m_parentWidget, QMessageBox::Warning, tr("Clear proofreading record"),
+            tr("Remove this round's snapshots, comments and review states? The current translation will be kept."),
+            QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel) == QMessageBox::Ok)
+        commitRound(std::nullopt, token, tr("Clear proofreading record"));
 }
 
 void ProofreadingController::showChanges()
 {
-    if (m_callbacks.commitActiveTextInput)
-        m_callbacks.commitActiveTextInput();
-    auto& project = m_callbacks.project();
-    if (project.images().isEmpty()) {
-        information(m_parentWidget, text("Proofreading"), text("Open a project before viewing proofreading changes."));
+    using namespace labelqt::services;
+    m_callbacks.commitActiveTextInput();
+    if (!loadRound()) {
+        warning(m_parentWidget, tr("Proofreading"), m_recordError);
         return;
     }
-    auto metadata = labelqt::services::ReviewMetadataService::metadataForProject(project);
-    if (!metadata.hasBaseline()) {
-        information(m_parentWidget, text("Proofreading"),
-                    text("Start a proofreading baseline before viewing changes."));
+    if (!m_round)
         return;
-    }
-    auto changes = labelqt::services::ReviewMetadataService::changesForProject(project, metadata);
-    if (changes.isEmpty()) {
-        information(m_parentWidget, text("Proofreading"), text("No proofreading changes since the baseline."));
-        return;
-    }
-    ProofreadChangesDialog dialog(
-        project, project, m_callbacks.preferences(), std::move(metadata), std::move(changes),
-        {.leftProjectTitle = {}, .rightProjectTitle = {}, .reviewEnabled = true, .projectReviewSession = true},
-        m_parentWidget);
+    const auto token = ReviewRoundEditService::token(m_projectController);
+    auto round = *m_round;
+    auto presentation = ReviewRoundService::present(round, m_callbacks.project());
+    if (presentation.uncertainIdentity)
+        information(m_parentWidget, tr("Proofreading"),
+                    tr("Some label identities changed outside LabelQt. Differences use estimated matching; comments "
+                       "are never reassigned automatically."));
+    presentation.after.setCommentLines(ReviewSessionService::withProjectSession({}, round.session));
+    ProofreadChangesDialog dialog(presentation.before, presentation.after, m_callbacks.preferences(),
+                                  ReviewMetadataService::captureBaseline(presentation.before),
+                                  std::move(presentation.changes),
+                                  {.leftProjectTitle = tr("Original translation"),
+                                   .rightProjectTitle = tr("Reviewed translation"),
+                                   .reviewEnabled = true,
+                                   .projectReviewSession = true,
+                                   .roundReview = true},
+                                  m_parentWidget);
     const int result = dialog.exec();
-    const auto originalSession = labelqt::services::ReviewSessionService::decode(
-        labelqt::services::ReviewSessionService::projectSession(project));
-    if (originalSession &&
-        dialog.reviewSession() != labelqt::services::ReviewSessionService::encode(*originalSession)) {
-        const auto before = project.commentLines();
-        const QString metadataPath = project.filePath();
-        const auto after = labelqt::services::ReviewSessionService::withProjectSession(before, dialog.reviewSession());
-        project.setCommentLines(after);
-        m_undoStack.push(
-            tr("Edit review session"),
-            [this, before, metadataPath] {
-                m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
-                    before, metadataPath, m_callbacks.project().filePath()));
-                m_callbacks.markDirty();
-            },
-            [this, after, metadataPath] {
-                m_callbacks.project().setCommentLines(labelqt::services::ProjectLocationService::rebaseComments(
-                    after, metadataPath, m_callbacks.project().filePath()));
-                m_callbacks.markDirty();
-            });
-        m_callbacks.markDirty();
+    const auto original = ReviewSessionService::decode(round.session);
+    if (original && dialog.reviewSession() != ReviewSessionService::encode(*original)) {
+        round.session = dialog.reviewSession();
+        if (!commitRound(round, token, tr("Edit review session")))
+            return;
     }
-    if (result == QDialog::Accepted)
-        selectDialogResult(dialog.selectedImageIndex(), dialog.selectedLabelIndex());
+    if (ReviewRoundEditService::token(m_projectController).session != token.session)
+        return;
+    if (result == QDialog::Accepted) {
+        const auto* change = dialog.selectedChange();
+        if (!change)
+            return;
+        const QUuid label = !change->current.id.isNull() ? change->current.id : change->baseline.id;
+        const auto target = ReviewRoundService::locate(m_callbacks.project(), change->pageId, label);
+        selectDialogResult(target.first, target.second);
+    }
+}
+
+void ProofreadingController::editNote(ProofreadNotesWidget::Operation operation, QUuid id)
+{
+    using namespace labelqt::services;
+    using Operation = ProofreadNotesWidget::Operation;
+    if (m_callbacks.isEditingBlocked && m_callbacks.isEditingBlocked())
+        return;
+    m_callbacks.commitActiveTextInput();
+    if (!loadRound() || !m_round)
+        return;
+    auto round = *m_round;
+    const auto token = ReviewRoundEditService::token(m_projectController);
+    const auto selected = m_callbacks.currentSelection();
+    const auto& project = m_callbacks.project();
+    auto it = std::find_if(round.notes.begin(), round.notes.end(), [&](const auto& note) { return note.id == id; });
+    if (operation == Operation::Jump) {
+        if (it != round.notes.end()) {
+            const auto target = ReviewRoundService::locateNote(project, *it);
+            selectDialogResult(target.first, target.second);
+        }
+        return;
+    }
+    if (round.after && operation != Operation::Resolve && operation != Operation::Relink)
+        return;
+    if (operation == Operation::AddLabel || operation == Operation::AddPage) {
+        if (selected.first < 0 || selected.first >= project.images().size())
+            return;
+        const auto& page = project.images().at(selected.first);
+        ProofreadNote note;
+        note.pageId = page.id;
+        note.pageName = page.name;
+        if (operation == Operation::AddLabel) {
+            if (selected.second < 0 || selected.second >= page.labels.size() ||
+                page.labels.at(selected.second).isDeleted())
+                return;
+            note.labelId = page.labels.at(selected.second).id();
+            note.quote = page.labels.at(selected.second).text();
+        }
+        round.notes.append(note);
+        it = round.notes.end() - 1;
+    }
+    if (it == round.notes.end())
+        return;
+    if (operation == Operation::Resolve) {
+        it->resolved = !it->resolved;
+    }
+    else if (operation == Operation::Remove) {
+        if (messageBox(m_parentWidget, QMessageBox::Question, tr("Delete comment"), tr("Delete this comment?"),
+                       QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Ok)
+            return;
+        round.notes.erase(it);
+    }
+    else if (operation == Operation::Relink) {
+        if (selected.first < 0 || selected.first >= project.images().size())
+            return;
+        const auto& page = project.images().at(selected.first);
+        if (selected.second < 0 || selected.second >= page.labels.size() || page.labels.at(selected.second).isDeleted())
+            return;
+        const QUuid pageId = page.id;
+        const QUuid labelId = page.labels.at(selected.second).id();
+        if (messageBox(m_parentWidget, QMessageBox::Question, tr("Attach comment"),
+                       tr("Attach this comment to the currently selected label? Its original quote will be preserved."),
+                       QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Ok)
+            return;
+        it->associatedPageId = pageId;
+        it->associatedLabelId = labelId;
+    }
+    else {
+        bool ok = false;
+        const QString value =
+            QInputDialog::getMultiLineText(m_parentWidget, tr("Proofreading comment"), tr("Comment"), it->text, &ok);
+        if (!ok || value.trimmed().isEmpty())
+            return;
+        it->text = value;
+    }
+    commitRound(round, token, tr("Edit proofreading comments"));
 }
 
 void ProofreadingController::compareWithProject()
@@ -343,16 +417,44 @@ void ProofreadingController::selectDialogResult(int imageIndex, int labelIndex)
 void ProofreadingController::updateUi(bool automationRunning)
 {
     m_automationRunning = automationRunning;
-    const bool active = isActive();
-    const bool hasProject = m_callbacks.project && !m_callbacks.project().isEmpty();
-    if (m_statusLabel)
-        m_statusLabel->setVisible(active);
+    loadRound();
+    const bool hasProject = !m_callbacks.project().isEmpty();
+    const bool enabled = !automationRunning && hasProject && m_recordError.isEmpty();
+    if (m_statusLabel) {
+        m_statusLabel->setVisible(m_round.has_value() || !m_recordError.isEmpty());
+        m_statusLabel->setText(!m_recordError.isEmpty()    ? tr("Proofreading record unavailable")
+                               : m_round && m_round->after ? tr("Proofreading complete")
+                               : isActive()                ? tr("Revision mode")
+                                                           : tr("Proofreading in progress"));
+        m_statusLabel->setToolTip(m_recordError.isEmpty() ? tr("Proofreading records are saved with the project.")
+                                                          : m_recordError);
+    }
     if (m_toggleAction) {
-        m_toggleAction->setText(active ? text("End Proofreading") : text("Start Proofreading Baseline"));
-        m_toggleAction->setEnabled(!automationRunning && hasProject);
+        m_toggleAction->setText(m_round && !m_round->after ? tr("Complete proofreading...")
+                                : m_round                  ? tr("Start next proofreading round...")
+                                                           : tr("Start proofreading"));
+        m_toggleAction->setEnabled(enabled);
     }
     if (m_showChangesAction)
-        m_showChangesAction->setEnabled(!automationRunning && hasProject && active);
+        m_showChangesAction->setEnabled(!automationRunning && (m_round || !m_recordError.isEmpty()));
     if (m_compareAction)
         m_compareAction->setEnabled(!automationRunning && hasProject);
+    if (m_clearAction)
+        m_clearAction->setEnabled(enabled && m_round.has_value());
+    if (m_modeAction)
+        m_modeAction->setEnabled(enabled && m_round && !m_round->after);
+    if (m_notes) {
+        const auto selection = m_callbacks.currentSelection();
+        m_notes->refresh(m_round, m_callbacks.project(), selection.first, selection.second, enabled);
+    }
+    if (m_labelModel) {
+        QHash<QUuid, bool> states;
+        if (m_round)
+            for (const auto& note : m_round->notes) {
+                const auto id = note.associatedPageId.isNull() ? note.labelId : note.associatedLabelId;
+                if (!id.isNull())
+                    states[id] = states.value(id, true) && note.resolved;
+            }
+        m_labelModel->setCommentStates(std::move(states));
+    }
 }

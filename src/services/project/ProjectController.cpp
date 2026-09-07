@@ -82,6 +82,7 @@ void ProjectController::setProject(labelqt::core::Project project)
     if (!revision)
         throw std::runtime_error(revision.error().toStdString());
     m_project = std::move(project);
+    m_documentSession = QUuid::createUuid();
     m_revisions.reset(m_project);
     m_savedRevision = *revision;
     setDirty(false);
@@ -105,6 +106,7 @@ void ProjectController::loadFromFile(const QString& path, std::optional<FileRevi
     if (!before->sameContent(*after) || loaded.sha256 != after->sha256)
         throw ProjectFileConflict(*after);
     m_project = std::move(loaded.project);
+    m_documentSession = QUuid::createUuid();
     m_revisions.reset(m_project);
     m_savedRevision = *after;
     setDirty(false);

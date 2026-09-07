@@ -15,7 +15,7 @@ public:
         std::function<QVector<labelqt::services::ReviewChange>()> allChanges;
         std::function<std::expected<void, QString>(const QVector<labelqt::services::ManualLabelPair>&)> validatePairs;
     };
-    ProofreadReviewPanel(Callbacks callbacks, QWidget* parent = nullptr);
+    ProofreadReviewPanel(Callbacks callbacks, QWidget* parent = nullptr, bool allowManualPairs = true);
     ~ProofreadReviewPanel() override;
     void setSession(labelqt::services::ReviewSession session);
     const labelqt::services::ReviewSession& session() const;

@@ -65,6 +65,8 @@ set(LABELQT_SERVICE_SOURCES
     services/proofread/ReviewChangeClassifier.h
     services/proofread/ReviewMetadataService.cpp
     services/proofread/ReviewSessionService.cpp
+    services/proofread/ReviewRoundService.cpp
+    services/proofread/ReviewRoundEditService.cpp
     services/proofread/ReviewMetadataService.h
     services/proofread/TextDiffHtmlRenderer.cpp
     services/proofread/TextDiffHtmlRenderer.h
@@ -113,6 +115,7 @@ set(LABELQT_UI_SOURCES
     ui/search/ProjectTextSearchModel.cpp
     ui/proofread/ProofreadChangesDialog.cpp
     ui/proofread/ProofreadReviewPanel.cpp
+    ui/proofread/ProofreadNotesWidget.cpp
     ui/proofread/ReviewStatusDelegate.cpp
     ui/proofread/ProofreadChangeTableModel.cpp
     ui/proofread/ProofreadingController.cpp

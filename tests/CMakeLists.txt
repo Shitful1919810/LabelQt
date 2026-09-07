@@ -49,6 +49,8 @@ add_library(LabelQtTestSupport STATIC
     ../src/services/proofread/ReviewChangeClassifier.cpp
     ../src/services/proofread/ReviewMetadataService.cpp
     ../src/services/proofread/ReviewSessionService.cpp
+    ../src/services/proofread/ReviewRoundService.cpp
+    ../src/services/proofread/ReviewRoundEditService.cpp
     ../src/services/proofread/TextDiffHtmlRenderer.cpp
     ../src/services/proofread/TextDiffService.cpp
     ../src/ui/canvas/CanvasLabelItems.cpp
@@ -70,6 +72,8 @@ add_library(LabelQtTestSupport STATIC
     ../src/ui/search/ProjectSearchPanel.cpp
     ../src/ui/proofread/ProofreadChangesDialog.cpp
     ../src/ui/proofread/ProofreadReviewPanel.cpp
+    ../src/ui/proofread/ProofreadNotesWidget.cpp
+    ../src/ui/proofread/ProofreadingController.cpp
     ../src/ui/proofread/ReviewStatusDelegate.cpp
     ../src/ui/MainWindowShortcutController.cpp
     ../src/services/preferences/PreferenceStore.cpp
@@ -147,7 +151,7 @@ labelqt_enable_warnings(ProductWorkflowTests)
 add_test(NAME ProductWorkflowTests COMMAND $<TARGET_FILE:ProductWorkflowTests>)
 set_tests_properties(ProductWorkflowTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
-foreach(test_name IN ITEMS PreferenceStoreTests RecordStorageTests ResourceUiTests UiInteractionTests)
+foreach(test_name IN ITEMS PreferenceStoreTests RecordStorageTests ResourceUiTests UiInteractionTests ReviewRoundTests)
     qt_add_executable(${test_name} ${test_name}.cpp)
     target_link_libraries(${test_name} PRIVATE LabelQtTestSupport)
     target_compile_definitions(${test_name} PRIVATE LABELQT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

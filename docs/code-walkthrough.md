@@ -179,7 +179,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 `MainWindow` 在这里的职责是弹出 `ProjectMergeDialog` / `PageOrderDialog`，然后把用户选择交给控制器。
 
-校对相关入口由 `ProofreadingController` 承接：它负责启停基线、后台比较外部工程并打开结果窗口。
+校对相关入口由 `ProofreadingController` 承接：它编排轮次确认、批注输入、后台比较与结果窗口；轮次持久化及提交属于 `ReviewRoundService` / `ReviewRoundEditService`。
 结果表使用 `ProofreadChangeTableModel` 和 `ProofreadChangeFilterModel`，筛选与排序始终映射回同一份
 `ReviewChange` 数据，不再由对话框维护平行的行号数组。
 
@@ -197,7 +197,7 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 - `{index:03}` 这类补零序号
 - `{stem}`
 
-已有图片重命名时扩展名和原图片所在目录始终保留，不允许通过格式串修改；缺失页引用修复时允许采用匹配到的已有图片扩展名。操作成功后会清空普通撤销栈，并迁移合并来源和校对基线元数据。
+已有图片重命名时扩展名和原图片所在目录始终保留，不允许通过格式串修改；缺失页引用修复时允许采用匹配到的已有图片扩展名。操作成功后会清空普通撤销栈，并迁移合并来源与旧版基线。新轮次保留历史页名，预览通过页面身份找到当前有效图片。
 
 重命名/引用修复预览被合并进 `PageOrderDialog` 的页面表格，列名为当前图片、目标图片、处理动作和原顺序。目标图片显示已排队的目标，处理动作展示当前输入方案的效果。任何非空选择都只按所选页在表格中的顺序生成计划；零选中时当前实现使用全部保留页面。点击“加入待重命名”只记录计划，不立即修改磁盘；点击窗口“确定”并确认后才提交。`ProjectController` 负责前保存和后保存，`FileRenameTransaction` 负责文件移动及失败回滚，成功后才发布新工程并清空撤销历史，然后应用普通可撤销的页序调整。异常与恢复边界见 [持久化安全说明](persistence-safety.md)。
 
@@ -231,10 +231,10 @@ UI 上显示的序号是可见标签序号，也就是跳过已删除标签后�
 
 校对功能有两种入口：
 
-- 内部校对：在当前工程的统一 `LabelQtMetadata` 块里保存“开始校对”时的基线快照。
-- 外部对比：临时把用户选择的另一个工程捕获为基线快照，不要求对方工程含有 metadata。
+- 内部校对：在统一 metadata 的 `proofreading` section 中保存原译稿、可选完成稿及独立批注。见 [校对轮次](proofreading-rounds.md)。
+- 外部对比：以当前工程为左侧基准，用户选择的工程作为右侧目标，不要求对方工程含有 metadata。
 
-两种入口最终都走 `ProjectComparisonService` 和 `LabelSequenceDiffService`。外部工程对比会先生成 `ProjectComparisonPlan`，按规范化文件名匹配页面，再对剩余页面尝试轻量图片指纹匹配；如果自动匹配不足且页数相同，可以由用户选择按页序匹配。图片指纹只解码小缩略图，并按路径、大小和修改时间做内存缓存，避免大图工程在比较时重复完整读图。算法把每页 label
+两种入口最终都走 `ProjectComparisonService` 和 `LabelSequenceDiffService`。同一可信工程优先用页面/Label 身份比较；其他情况先生成 `ProjectComparisonPlan`，按规范化文件名匹配页面，再对剩余页面尝试轻量图片指纹匹配；如果自动匹配不足且页数相同，可以由用户选择按页序匹配。图片指纹只解码小缩略图，并按路径、大小和修改时间做内存缓存，避免大图工程在比较时重复完整读图。回退算法把每页 label
 列表看成类似文本 diff 的行序列，先用保序精确文本对齐建立骨架，再对剩余项按文本相似度、类别、坐标和原序号进行启发式配对。单个 label 文本内部的高亮由 `TextDiffService` 和 `diff-match-patch` 完成，HTML 片段由
 `TextDiffHtmlRenderer` 生成。
 

@@ -3,6 +3,7 @@
 #include "core/Project.h"
 
 #include <QHash>
+#include <QByteArray>
 #include <QPointF>
 #include <QString>
 #include <QStringList>
@@ -16,6 +17,7 @@ struct ReviewLabelSnapshot {
     QString group;
     QPointF position;
     int labelIndex{-1};
+    QUuid id{};
 };
 
 class ReviewMetadata {
@@ -38,6 +40,7 @@ enum class ReviewChangeKind {
     Added,
     Deleted,
     Modified,
+    Comment,
 };
 
 struct ReviewChange {
@@ -55,6 +58,10 @@ struct ReviewChange {
     bool groupChanged{false};
     bool positionChanged{false};
     bool manuallyMatched{false};
+    QString noteText{};
+    QByteArray noteRevision{};
+    QUuid pageId{};
+    bool jumpAvailable{true};
 };
 
 class ReviewMetadataService final {

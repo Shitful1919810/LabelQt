@@ -15,6 +15,7 @@ struct ProofreadChangeTableTexts {
     QString deleted;
     QString modified;
     QHash<labelqt::services::ReviewChangeFacet, QString> facets;
+    QString comment{};
 };
 
 class ProofreadChangeTableModel final : public QAbstractTableModel {

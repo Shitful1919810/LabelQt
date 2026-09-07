@@ -38,6 +38,7 @@ struct ProofreadReportTexts {
     QString review;
     QString manualPair;
     QStringList reviewStates;
+    QString comment{};
 };
 
 struct ProofreadReportOptions {

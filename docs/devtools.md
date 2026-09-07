@@ -12,6 +12,7 @@ python scripts/devtool.py check --mode fast
 
 这会复用 `scripts/check_fast.py`，检查翻译、官方脚本 Python 语法、Windows shared/static 发行树筛选与
 许可证收集逻辑，以及 `git diff --check`。
+翻译提取支持格式化后相邻的 C++ 字符串字面量，`test_translations.py` 覆盖连接、上下文和 Unicode 保真。
 
 完整检查：
 

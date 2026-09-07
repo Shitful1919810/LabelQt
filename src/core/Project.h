@@ -15,6 +15,7 @@ public:
     QString path;
     QVector<Label> labels;
     QUuid id{QUuid::createUuid()};
+    QUuid labelIdentityGeneration{QUuid::createUuid()};
 };
 
 class Project {

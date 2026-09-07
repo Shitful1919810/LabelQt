@@ -29,6 +29,7 @@ public:
     void setGroups(QStringList groups, QVector<labelqt::core::LabelGroupStyle> groupStyles);
     void refresh();
     void labelChanged(int row);
+    void setCommentStates(QHash<QUuid, bool> resolvedByLabel);
     int sourceIndexForRow(int row) const;
     int rowForSourceIndex(int sourceIndex) const;
     const CurrentPageLabelContext& labelContext() const noexcept;
@@ -58,4 +59,5 @@ private:
     CurrentPageLabelContext m_labelContext;
     QStringList m_groups;
     QVector<labelqt::core::LabelGroupStyle> m_groupStyles;
+    QHash<QUuid, bool> m_commentStates;
 };

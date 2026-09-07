@@ -11,13 +11,14 @@
 - 哪些 label 只是页内顺序移动。
 - 内部“开始校对基线”和外部“与另一个工程对比”应使用同一套判断逻辑。
 
-LabelQt 已为自动化任务引入压缩元数据中的稳定 ID，见 [自动化基础契约](automation-foundation.md)。
-校对匹配本次没有改为依赖 ID：经典 LabelPlus 正文及外部工程未必保留身份信息，当前仍把页内 label
-看作类似文本 diff 中的“行序列”，通过启发式序列对齐推断对应关系。
+LabelQt 在可信的同一工程身份谱系内优先按页面与 Label UUID 比较，并用页面的 Label 身份代次判断
+能否信任对象对应关系。外部改写使身份失效时保留原序列算法回退，不能凭序号恢复批注。
+轮次、完成稿及批注生命周期见 [校对轮次](proofreading-rounds.md)，身份基础见 [自动化基础契约](automation-foundation.md)。
 
 ## 模块职责
 
-- `ReviewMetadataService`：只负责保存和读取“开始校对”时的基线快照。快照包含页名、当时的 label 序号、文本、类别和 marker 坐标。
+- `ReviewRoundService` / `ReviewRoundEditService`：轮次快照、批注、结果组合，以及版本约束的提交与撤销。
+- `ReviewMetadataService`：旧基线的读取和比较服务使用的轻量 label 快照。新轮次快照另由 `ReviewRoundService` 保存。
 - `ProjectComparisonService`：负责按页组织比较，把当前工程和基线快照转换为每页的 label 快照列表，然后把页内匹配交给 `LabelSequenceDiffService`。
 - `LabelSequenceDiffService`：只负责一页内的 label 序列对齐，输出旧 label 和新 label 的对应关系，以及新增、删除和移动信息。
 - `TextDiffService`：只负责单个已匹配 label 的文本内部差异切分。它使用 `diff-match-patch`，失败时退化为整段删除/插入，不能把异常抛到 UI 层。
@@ -32,17 +33,17 @@ LabelQt 已为自动化任务引入压缩元数据中的稳定 ID，见 [自动�
 无论是内部修订对比还是外部工程对比，最终都走同一条路径：
 
 1. 构造基线快照。
-   - 内部校对：从当前工程的 `review` metadata 读取基线。
+   - 内部校对：读取 `proofreading.before`；进行中与当前正文比较，完成后与冻结的 `after` 比较。旧 `review` 可迁入。
    - 外部工程对比：临时把当前打开的工程捕获成基线快照，把用户选择的工程视为目标工程。
 2. `ProjectComparisonService` 建立页面匹配。
-   - 内部校对直接按当前工程页名匹配。
+   - 同一工程的页面优先按 UUID 匹配，不因重命名丢失对应关系。
    - 外部工程对比优先按规范化文件名匹配，例如不同目录下的 `001.png` 视为同一页。
    - 文件名无法匹配的剩余页面，会尝试读取两边图片路径并用低分辨率灰度指纹匹配。指纹只用于建立页对应关系，不参与 label 文本 diff。
    - 如果文件名和图片指纹都无法匹配足够多页面，但两个工程页数相同，UI 会询问是否改为按当前页序一一匹配。
 3. 对每一页分别生成：
    - baseline labels：基线中的非删除 label 快照。
    - current labels：当前工程中的非删除 label 快照。
-4. 调用 `LabelSequenceDiffService::diff()` 推断页内对应关系。
+4. 身份代次相同的可信页面调用 `diffByIdentity()`；否则调用原启发式序列比较。插入/删除导致的序号平移不视为 ID 匹配中的顺序变化。
 5. 把对应关系转换为 `ReviewChange`：
    - 旧无新有：`Added`
    - 旧有新无：`Deleted`
@@ -53,7 +54,7 @@ LabelQt 已为自动化任务引入压缩元数据中的稳定 ID，见 [自动�
    - marker 坐标不同：`positionChanged`
    - 被序列算法判定为移动：`orderChanged`
 
-如果一个匹配项没有任何变化，就不会出现在差异列表中。
+没有变化的匹配项不进入纯差异列表；轮次展示再合入批注，允许 `Comment` 项表示没有正文变化的意见。
 
 页面匹配只决定“哪两页参与 diff”。预览图片路径仍分别来自两个工程各自的 `ImageEntry::path`；也就是说原稿和校对稿放在不同目录时，左右预览会各自读取各自目录下的图源。只有某一侧图片缺失时，预览才会退回使用另一侧可用图片。
 
@@ -131,7 +132,7 @@ LabelQt 已为自动化任务引入压缩元数据中的稳定 ID，见 [自动�
 
 二次配对后仍未匹配的旧 label 视为删除，仍未匹配的新 label 视为新增。
 
-## 为什么匹配仍不依赖 ID
+## 身份匹配与回退
 
 稳定 ID 的生命周期已由核心层统一维护，但不能直接替代跨工程校对的匹配算法：
 
@@ -139,8 +140,9 @@ LabelQt 已为自动化任务引入压缩元数据中的稳定 ID，见 [自动�
 - 新增、粘贴和合并生成新身份，内容仍可能需要与已有稿件配对。
 - 外部工具可能丢弃身份元数据，或改写正文使旧身份映射失效。
 
-因此本次只落实自动化与编辑所需的身份底座，不改变校对基线格式和页内序列匹配结果。
-若以后增加基于 ID 的匹配优化，必须先证明两份工程属于可信的身份谱系，并保留启发式回退。
+因此只有同一工程、页面身份对应且 `labelIdentityGeneration` 相同，才采用 Label UUID 精确配对。
+内部正常编辑不会更换代次；外部正文与保存签名不符时生成新代次，比较转为推测，批注仍保留原始身份。
+`diffByIdentity()` 用相对顺序的反转判定移动，避免因增删导致整页后续 Label 都被标成移动。
 
 ## 已知边界
 
@@ -161,7 +163,7 @@ LabelQt 已为自动化任务引入压缩元数据中的稳定 ID，见 [自动�
 - 单个 label 的文本内部切分仍由 `TextDiffService` 处理，HTML 展示由 `TextDiffHtmlRenderer` 处理，不要把文本 diff、HTML 生成和 label 序列 diff 混在一起。
 - `TextDiffHtmlRenderer` 会把换行符渲染成可见的 `↵` 标记再换行，使新增或删除换行在校对窗口和 HTML 报告里都能被看见。
 - 校对报告导出逻辑应继续放在 `ProofreadReportService`，对话框只负责收集保存路径和本地化文案。报告图像压缩和内嵌策略属于服务层，不应散落到 UI。
-- 若利用稳定 ID 优化配对，应复用 `ProjectIdentityService`，不要在校对服务另建身份系统。
+- 身份与代次由 `ProjectIdentityService` 管理，校对服务不另建身份系统。
 
 ## 变更筛选与摘要分类
 

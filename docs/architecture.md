@@ -130,7 +130,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `EditorStateController`：检测、提交和恢复当前活动文本编辑器。快捷键切换标签时保持编辑状态的逻辑放这里。
 - `MainWindowShortcutController`：显式注册标签工作区后处理标签 / 翻页快捷键，只匹配按键并调用回调，不直接改工程数据；查找与其他表单保持原生键盘行为。翻页不再另设窗口级 QAction 重复截获。
 - `AutomationController`：自动化菜单构建、脚本发现、脚本运行、日志窗口、取消运行和结果派发。不要再把自动化菜单和进程生命周期散落回 `MainWindow`。
-- `ProofreadingController`：校对基线启停、外部工程选择与异步比较、校对结果对话框启动和校对状态动作更新。`MainWindow` 只提供当前工程、偏好、选择跳转等回调。
+- `ProofreadingController`：校对轮次与批注的交互编排、外部工程选择与异步比较、结果对话框启动和状态更新。`MainWindow` 只提供当前工程、偏好、选择跳转等回调，持久化提交委托 `ReviewRoundEditService`。
 - `ProofreadChangeTableModel` / `ProofreadChangeFilterModel`：校对变更表唯一的数据与筛选/排序入口。对话框不得另存一份“过滤后行号”或用 `QTableWidgetItem` 复制业务状态。
 
 跨目录工程比较使用图片指纹补充页面匹配。指纹缓存是进程内、线程安全且有容量上限的 LRU 缓存；
@@ -218,27 +218,15 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 
 ## 自动化脚本边界
 
-自动化脚本采用外部 Python 进程，不嵌入 Python 解释器。仓库里的脚本目录：
+自动化采用外部 Python 进程及 v2 SDK，不嵌入解释器，不兼容旧输出文件 API。
+协议、字段范围和运行时并发规则以 [自动化基础契约](automation-foundation.md) 为准，避免在此重复维护 API 示例。
 
-```text
-scripts/official    官方脚本和示例
-scripts/custom      用户自定义脚本
-```
+脚本只读取受范围约束的快照，结果由 `ProjectTaskService` 校验依赖并交给统一编辑入口提交。
+禁止工作线程直接修改活动工程；密钥走 QtKeychain，不写进快照、输出或日志。
+GUI 运行期间保持现有编辑限制；服务层按实际字段依赖拒绝过期结果，不把读取权限等同于写权限。
+校对轮次/批注更新发布 Metadata 版本，仅依赖此资源的任务因此失效；无依赖的合法正文任务仍可提交。
 
-运行时脚本分成 official 和 custom 两个来源，各自最多选择一个目录，避免重复加载。official 优先从可执行文件目录旁边的 `scripts/official` 读取，否则从安装数据目录（例如 `/usr/share/labelqt/scripts/official`）读取；custom 优先从可执行文件目录旁边的 `scripts/custom` 读取，否则从用户脚本目录读取。仓库里的 `scripts/official` 主要作为官方脚本模板和示例，开发构建与 Windows 便携包可以直接携带它；用户自定义脚本建议放在用户脚本目录中。每个脚本目录包含 `script.json` 和 Python 入口文件。`script.json` 可以定义单个脚本，也可以用顶层 `scripts` 数组定义多个子脚本。菜单显示顺序必须与脚本清单顺序一致，方便配置脚本始终排在第一项。
-
-脚本输入/输出规则：
-
-- 主程序导出 `input.json`，包含工程快照、当前页、当前选中标签、当前图像选区和用户参数。
-- 默认只导出未删除标签。
-- `labelIndex` 是内部 label 下标，用于修改操作；`visibleIndex` 是 UI 展示序号，只能用于显示。
-- 脚本写回 `output.json`，成功时可包含 `summary`、`result`、`quiet` 和 `operations`。
-- `quiet: true` 只跳过成功结果弹窗，失败仍必须提示。
-- 密钥参数存入系统密钥环，运行时由主程序注入环境变量。不要把 API key 写入脚本清单、配置、输入/输出 JSON 或日志。
-
-运行自动化脚本时，编辑入口应禁用，避免脚本基于旧快照产生操作。但只读操作可以保留，例如翻页、缩放、拖动画面和悬停查看气泡。
-
-不要在自动化 action 的触发栈内销毁或重建整个自动化菜单。脚本运行状态变化时只更新 action enabled 状态；需要重新发现脚本时，使用显式刷新或在当前调用栈结束后延迟执行。
+菜单触发栈中不销毁或重建 action 树。运行状态只原位更新 enabled/visible，重新发现脚本延后执行。
 
 ## 项目元数据
 
@@ -256,7 +244,9 @@ LabelQt 会把自身需要随工程流转的内部元数据写入 LabelPlus comm
 压缩前的 JSON object 当前包含这些 section：
 
 - `mergeSources`：合并工程后每段页面来源，由 `PageSourceInfoService` 读写。
-- `review`：校对基线快照，由 `ReviewMetadataService` 读写。
+- `review`：旧版校对基线，由 `ReviewMetadataService` 读取并可迁入新轮次。
+- `proofreading`：当前轮次的原译稿、完成稿、独立批注和审阅状态，由 `ReviewRoundService` 管理。
+- `identities`：工程、页面、Label、分组 UUID 及页面 Label 身份代次，由 `ProjectIdentityService` 管理。
 - `labelText`：经典文本格式中结尾空行、CR/LF 等歧义的原文保真信息，由 `LabelPlusDocument` 按正文校验值恢复。
 
 这个块只是 `qCompress` 压缩和 base64 编码，不是加密。不要在其中保存 API key、访问令牌或其他秘密。
@@ -265,21 +255,24 @@ LabelQt 会把自身需要随工程流转的内部元数据写入 LabelPlus comm
 
 ## 校对元数据
 
-校对流程应贴合校对人员直接编辑工程的习惯：校对人员打开工程后仍在主界面修改文本、增删
-label、移动 marker 和调整顺序。校对功能只提供一层透明记录和汇总，不引入 Word 式接受/拒绝修订流程。
+当前校对采用一轮原译稿/完成稿快照和独立批注，不记录每次按键，不引入逐条接受/拒绝修订。
+`ReviewRoundService` 管理 `proofreading` v1、旧基线读取及展示结果组合；
+`ReviewRoundEditService` 负责主线程、版本检查和只更新所属 section 的普通撤销。
+快照不包含嵌套轮次，批注按对象 UUID 关联，审阅状态按差异版本关联。
 
-`ReviewMetadataService` 维护 `review` section，用于保存“开始校对”时的 label 基线快照。之后的校对变更由
-`ProjectComparisonService` 按页组织，并交给 `LabelSequenceDiffService` 把每页 label 列表看作类似 diff
-里的行序列进行启发式对齐。匹配主要关注文本，页内顺序用于保序对齐，类别和坐标只作为弱消歧信号。这样可以在
-不向经典 LabelPlus 文本主体引入稳定 ID 的前提下，识别常见的文本修改、增删、marker 变化和页内顺序移动。
-如果工程经过外部工具编辑导致文本变化过大或重复短句过多，校对系统可能退化为新增/删除或粗粒度修改；这种情况
-下功能可以降级，但不能崩溃。
+`ProjectComparisonService` 在同一身份谱系内优先匹配页面 UUID；Label 身份代次相同则由
+`LabelSequenceDiffService::diffByIdentity` 精确配对。外部改写使身份失效时保留原启发式回退并提示，
+不能把旧批注按行号自动挂回。单个 Label 的文本差异继续由 `TextDiffService` 统一产生。
 
-详细算法、判定逻辑和已知边界见 [校对差异算法说明](proofreading-diff.md)。
+`ProofreadingController` 只编排菜单、确认与输入，不承担正文编辑或文件写入；
+`ProofreadNotesWidget` 不缓存活动工程，只缓存批注展示行。`ProofreadChangesDialog` 与
+`ProofreadReportService` 共用差异及批注结果。完成轮次固定文本结果，页面改名后预览可按身份读取当前图片；
+另存/恢复的快照路径重定位由 `ProjectLocationService` 负责，不改写历史页名。
 
-开始或替换校对基线本质上只修改 `commentLines`，必须走 `UndoStack`。变更汇总窗口只读展示差异并提供跳转，
-不承担 label 编辑职责；具体编辑仍应继续通过 `LabelEditController` 等现有路径完成。HTML 报告导出属于
-`ProofreadReportService`，对话框只负责让用户选择保存路径并传入本地化文案。
+`ProjectController::documentSession` 隔离不同次打开的文档，允许同一文档另存后继续普通撤销；
+自动化的任务会话仍在另存后失效，二者生命周期不可混用。
+详细操作、兼容边界及交互测试见 [校对轮次](proofreading-rounds.md)，算法见
+[校对差异](proofreading-diff.md)。
 
 ## 偏好设置
 

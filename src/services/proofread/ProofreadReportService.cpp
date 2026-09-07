@@ -29,6 +29,8 @@ QString labelNumber(int labelIndex)
 QString changeKindText(const ReviewChange& change, const ProofreadReportTexts& texts)
 {
     switch (change.kind) {
+    case ReviewChangeKind::Comment:
+        return texts.comment;
     case ReviewChangeKind::Added:
         return texts.added;
     case ReviewChangeKind::Deleted:
@@ -48,6 +50,9 @@ QString changeSummary(const ReviewChange& change, const ProofreadReportTexts& te
     QStringList parts;
     for (const ReviewChangeFacet facet : ReviewChangeClassifier::facets(change)) {
         switch (facet) {
+        case ReviewChangeFacet::Comment:
+            parts.append(texts.comment);
+            break;
         case ReviewChangeFacet::Text:
             parts.append(texts.text);
             break;
@@ -73,7 +78,8 @@ QString textDiffHtml(const ReviewChange& change, const ProofreadReportTexts& tex
     if (change.textChanged || change.kind != ReviewChangeKind::Modified) {
         const QString beforeText = change.kind == ReviewChangeKind::Added ? QString() : change.baseline.text;
         const QString afterText = change.kind == ReviewChangeKind::Deleted ? QString() : change.current.text;
-        return TextDiffHtmlRenderer::renderInlineDiff(beforeText, afterText, texts.noTextChange);
+        return TextDiffHtmlRenderer::renderInlineDiff(beforeText, afterText, texts.noTextChange,
+                                                     change.kind == ReviewChangeKind::Comment);
     }
 
     return escaped(texts.noTextChange);
@@ -145,6 +151,8 @@ QString imageAspectRatio(const ReportImage& image)
 QString markerClass(ReviewChangeKind kind)
 {
     switch (kind) {
+    case ReviewChangeKind::Comment:
+        return QStringLiteral("modified");
     case ReviewChangeKind::Added:
         return QStringLiteral("marker-added");
     case ReviewChangeKind::Deleted:
@@ -329,6 +337,9 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
             if (!annotation.note.isEmpty())
                 details += QStringLiteral("<div style=\"white-space:pre-wrap\">%1</div>").arg(escaped(annotation.note));
         }
+        if (!change.noteText.isEmpty())
+            details += QStringLiteral("<div style=\"white-space:pre-wrap\"><strong>%1</strong><br>%2</div>")
+                           .arg(escaped(texts.comment), escaped(change.noteText));
         html += QStringLiteral("<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td></tr>")
                     .arg(escaped(labelNumber(change.labelIndex)), escaped(changeKindText(change, texts)),
                          escaped(changeSummary(change, texts)), details);

@@ -66,6 +66,7 @@ public:
     labelqt::core::Project& project() noexcept;
     const labelqt::core::Project& project() const noexcept;
     const ProjectRevisionTracker& revisions();
+    QUuid documentSession() const noexcept { return m_documentSession; }
     bool isOwnerThread() const noexcept
     {
         return QThread::currentThread() == m_ownerThread;
@@ -105,6 +106,7 @@ private:
     bool m_isDirty{false};
     bool m_hasPendingBackup{false};
     FileRevision m_savedRevision;
+    QUuid m_documentSession{QUuid::createUuid()};
 };
 
 } // namespace labelqt::services

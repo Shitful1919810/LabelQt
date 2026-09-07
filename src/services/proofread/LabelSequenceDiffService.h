@@ -17,6 +17,8 @@ struct LabelSequenceDiffEntry {
 
 class LabelSequenceDiffService final {
 public:
+    static QVector<LabelSequenceDiffEntry> diffByIdentity(const QVector<ReviewLabelSnapshot>& baselineLabels,
+                                                         const QVector<ReviewLabelSnapshot>& currentLabels);
     static QVector<LabelSequenceDiffEntry> diff(QVector<ReviewLabelSnapshot> baselineLabels,
                                                 QVector<ReviewLabelSnapshot> currentLabels);
     static QVector<LabelSequenceDiffEntry> diffWithPairs(QVector<ReviewLabelSnapshot> baselineLabels,

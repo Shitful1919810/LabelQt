@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import html
+import ast
 import pathlib
 import re
 import sys
@@ -12,16 +13,21 @@ def repo_root() -> pathlib.Path:
 
 def unescape_cpp_string(value: str) -> str:
     try:
-        return bytes(value, "utf-8").decode("unicode_escape")
-    except UnicodeDecodeError:
+        return ast.literal_eval('"' + value + '"')
+    except (SyntaxError, ValueError):
         return value
 
 
+def joined_cpp_strings(expression: str) -> str:
+    return "".join(unescape_cpp_string(value) for value in re.findall(r'"((?:\\.|[^"\\])*)"', expression))
+
+
 def collect_source_strings(src_dir: pathlib.Path) -> tuple[set[str], set[tuple[str, str]]]:
-    tr_pattern = re.compile(r'(?<!::)\btr\s*\(\s*"((?:\\.|[^"\\])*)"')
-    qualified_tr_pattern = re.compile(r'\b([A-Za-z_][A-Za-z0-9_]*)::tr\s*\(\s*"((?:\\.|[^"\\])*)"')
+    string_expression = r'((?:"(?:\\.|[^"\\])*"\s*)+)'
+    tr_pattern = re.compile(r'(?<!::)\btr\s*\(\s*' + string_expression)
+    qualified_tr_pattern = re.compile(r'\b([A-Za-z_][A-Za-z0-9_]*)::tr\s*\(\s*' + string_expression)
     translate_pattern = re.compile(
-        r'\b(?:QCoreApplication::)?translate\s*\(\s*"((?:\\.|[^"\\])*)"\s*,\s*"((?:\\.|[^"\\])*)"'
+        r'\b(?:QCoreApplication::)?translate\s*\(\s*"((?:\\.|[^"\\])*)"\s*,\s*' + string_expression
     )
 
     sources: set[str] = set()
@@ -32,16 +38,16 @@ def collect_source_strings(src_dir: pathlib.Path) -> tuple[set[str], set[tuple[s
         text = path.read_text(encoding="utf-8")
         default_context = path.stem
         for match in qualified_tr_pattern.finditer(text):
-            source = unescape_cpp_string(match.group(2))
+            source = joined_cpp_strings(match.group(2))
             sources.add(source)
             context_sources.add((unescape_cpp_string(match.group(1)), source))
         for match in tr_pattern.finditer(text):
-            source = unescape_cpp_string(match.group(1))
+            source = joined_cpp_strings(match.group(1))
             sources.add(source)
             context_sources.add((default_context, source))
         for match in translate_pattern.finditer(text):
             context = unescape_cpp_string(match.group(1))
-            source = unescape_cpp_string(match.group(2))
+            source = joined_cpp_strings(match.group(2))
             sources.add(source)
             context_sources.add((context, source))
     return sources, context_sources

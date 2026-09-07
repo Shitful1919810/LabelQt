@@ -501,6 +501,14 @@ Last error: %2</source>
 <context>
     <name>LabelTableModel</name>
     <message>
+        <source>All comments resolved</source>
+        <translation>所有批注已解决</translation>
+    </message>
+    <message>
+        <source>Unresolved proofreading comments</source>
+        <translation>有未解决的校对批注</translation>
+    </message>
+    <message>
         <location filename="../src/ui/labeltable/LabelTableModel.cpp" line="284"/>
         <source>Text</source>
         <translation>文本</translation>
@@ -2525,6 +2533,14 @@ Last error: %1</source>
 <context>
     <name>ProofreadChangesDialog</name>
     <message>
+        <source>Comment</source>
+        <translation>批注</translation>
+    </message>
+    <message>
+        <source>Comment only</source>
+        <translation>仅批注</translation>
+    </message>
+    <message>
         <source>Reset filters</source>
         <translation>重置筛选</translation>
     </message>
@@ -3380,6 +3396,114 @@ Missing images: %2</source>
 <context>
     <name>ProofreadingController</name>
     <message>
+        <source>Attach comment</source>
+        <translation>关联批注</translation>
+    </message>
+    <message>
+        <source>Attach this comment to the currently selected label? Its original quote will be preserved.</source>
+        <translation>将此批注关联到当前选中的标签？原文字摘录会保留。</translation>
+    </message>
+    <message>
+        <source>Clear proofreading record</source>
+        <translation>清除校对记录</translation>
+    </message>
+    <message>
+        <source>Clear proofreading record...</source>
+        <translation>清除校对记录...</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>批注</translation>
+    </message>
+    <message>
+        <source>Complete proofreading</source>
+        <translation>完成本轮校对</translation>
+    </message>
+    <message>
+        <source>Complete proofreading...</source>
+        <translation>完成本轮校对...</translation>
+    </message>
+    <message>
+        <source>Delete comment</source>
+        <translation>删除批注</translation>
+    </message>
+    <message>
+        <source>Delete this comment?</source>
+        <translation>删除此批注？</translation>
+    </message>
+    <message>
+        <source>Edit proofreading comments</source>
+        <translation>修改校对批注</translation>
+    </message>
+    <message>
+        <source>Freeze this round's original draft, final draft and comments? Later edits will not change its text differences.</source>
+        <translation>保存本轮原译稿、完成稿和批注？后续编辑不会改变本轮的文字差异。</translation>
+    </message>
+    <message>
+        <source>Original translation</source>
+        <translation>原译稿</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校对</translation>
+    </message>
+    <message>
+        <source>Proofreading comment</source>
+        <translation>校对批注</translation>
+    </message>
+    <message>
+        <source>Proofreading complete</source>
+        <translation>校对已完成</translation>
+    </message>
+    <message>
+        <source>Proofreading in progress</source>
+        <translation>校对进行中</translation>
+    </message>
+    <message>
+        <source>Proofreading record unavailable</source>
+        <translation>校对记录不可用</translation>
+    </message>
+    <message>
+        <source>Proofreading records are saved with the project.</source>
+        <translation>校对记录随工程一起保存。</translation>
+    </message>
+    <message>
+        <source>Remove this round's snapshots, comments and review states? The current translation will be kept.</source>
+        <translation>清除本轮快照、批注和审阅状态？当前译文会保留。</translation>
+    </message>
+    <message>
+        <source>Reviewed translation</source>
+        <translation>校对稿</translation>
+    </message>
+    <message>
+        <source>Revision interactions</source>
+        <translation>修订交互</translation>
+    </message>
+    <message>
+        <source>Revision mode</source>
+        <translation>修订模式</translation>
+    </message>
+    <message>
+        <source>Some label identities changed outside LabelQt. Differences use estimated matching; comments are never reassigned automatically.</source>
+        <translation>部分标签的身份因外部编辑发生变化。差异使用推测匹配，批注不会自动重新关联。</translation>
+    </message>
+    <message>
+        <source>Start next proofreading round</source>
+        <translation>开始下一轮校对</translation>
+    </message>
+    <message>
+        <source>Start next proofreading round...</source>
+        <translation>开始下一轮校对...</translation>
+    </message>
+    <message>
+        <source>Start proofreading</source>
+        <translation>开始校对</translation>
+    </message>
+    <message>
+        <source>This replaces the previous round. Export its report first if you need to keep it.</source>
+        <translation>此操作将替换上一轮记录。如需保留，请先导出上一轮报告。</translation>
+    </message>
+    <message>
         <source>Edit review session</source>
         <translation>编辑审阅记录</translation>
     </message>
@@ -3403,6 +3527,99 @@ Missing images: %2</source>
     <message>
         <source>Project changed on disk...</source>
         <translation>磁盘工程发生变化…</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadNotesWidget</name>
+    <message>
+        <source>Add label comment</source>
+        <translation>添加标签批注</translation>
+    </message>
+    <message>
+        <source>Add page comment</source>
+        <translation>添加页面批注</translation>
+    </message>
+    <message>
+        <source>All comments</source>
+        <translation>全部批注</translation>
+    </message>
+    <message>
+        <source>Attach to selected label...</source>
+        <translation>关联到选中的标签...</translation>
+    </message>
+    <message>
+        <source>Comment actions</source>
+        <translation>批注操作</translation>
+    </message>
+    <message>
+        <source>Delete comment...</source>
+        <translation>删除批注...</translation>
+    </message>
+    <message>
+        <source>Edit comment</source>
+        <translation>编辑批注</translation>
+    </message>
+    <message>
+        <source>Jump to label</source>
+        <translation>跳转到标签</translation>
+    </message>
+    <message>
+        <source>Needs association</source>
+        <translation>待重新关联</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>未解决</translation>
+    </message>
+    <message>
+        <source>Proofreading comments (%1)</source>
+        <translation>校对批注（%1）</translation>
+    </message>
+    <message>
+        <source>Resolve / reopen</source>
+        <translation>解决 / 重新打开</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>已解决</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewRoundEditService</name>
+    <message>
+        <source>Completed drafts and authored comments cannot be rewritten. Start a new round instead.</source>
+        <translation>不能改写原始快照、完成稿及已完成的批注正文，请开始新一轮校对。</translation>
+    </message>
+    <message>
+        <source>Proofreading edits must run on the project thread.</source>
+        <translation>校对修改必须在工程所属线程执行。</translation>
+    </message>
+    <message>
+        <source>The project changed while this dialog was open. Please try again.</source>
+        <translation>此窗口打开期间工程发生了变化，请重试。</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewRoundService</name>
+    <message>
+        <source>%1: %2</source>
+        <translation>%1：%2</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>未解决</translation>
+    </message>
+    <message>
+        <source>Original label unavailable; association needs confirmation.</source>
+        <translation>原标签已不可用，需要确认关联。</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>已解决</translation>
+    </message>
+    <message>
+        <source>The proofreading record is invalid or unsupported. It has not been changed.</source>
+        <translation>校对记录无效或版本不受支持，未改动原记录。</translation>
     </message>
 </context>
 </TS>

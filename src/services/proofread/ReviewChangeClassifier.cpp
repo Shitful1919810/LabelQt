@@ -54,7 +54,7 @@ void appendIfPresent(QVector<ReviewChangeFacet>& orderedFacets, const QSet<Revie
 QVector<ReviewChangeFacet> ReviewChangeClassifier::facets(const ReviewChange& change)
 {
     if (change.kind != ReviewChangeKind::Modified) {
-        return {};
+        return change.noteText.isEmpty() ? QVector<ReviewChangeFacet>{} : QVector{ReviewChangeFacet::Comment};
     }
 
     QSet<ReviewChangeFacet> facetSet;
@@ -78,6 +78,7 @@ QVector<ReviewChangeFacet> ReviewChangeClassifier::facets(const ReviewChange& ch
     appendIfPresent(orderedFacets, facetSet, ReviewChangeFacet::Group);
     appendIfPresent(orderedFacets, facetSet, ReviewChangeFacet::Marker);
     appendIfPresent(orderedFacets, facetSet, ReviewChangeFacet::Order);
+    if (!change.noteText.isEmpty()) orderedFacets.append(ReviewChangeFacet::Comment);
     return orderedFacets;
 }
 
@@ -94,6 +95,8 @@ QString ReviewChangeClassifier::facetKey(ReviewChangeFacet facet)
         return QStringLiteral("marker");
     case ReviewChangeFacet::Order:
         return QStringLiteral("order");
+    case ReviewChangeFacet::Comment:
+        return QStringLiteral("comment");
     }
     return {};
 }
@@ -107,6 +110,8 @@ QString ReviewChangeClassifier::kindKey(ReviewChangeKind kind)
         return QStringLiteral("deleted");
     case ReviewChangeKind::Modified:
         return QStringLiteral("modified");
+    case ReviewChangeKind::Comment:
+        return QStringLiteral("comment");
     }
     return {};
 }

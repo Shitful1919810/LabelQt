@@ -14,7 +14,7 @@
 
 using namespace labelqt::services;
 
-ProofreadReviewPanel::ProofreadReviewPanel(Callbacks callbacks, QWidget* parent)
+ProofreadReviewPanel::ProofreadReviewPanel(Callbacks callbacks, QWidget* parent, bool allowManualPairs)
     : QWidget(parent), m_callbacks(std::move(callbacks))
 {
     auto* bar = new QHBoxLayout(this);
@@ -37,6 +37,7 @@ ProofreadReviewPanel::ProofreadReviewPanel(Callbacks callbacks, QWidget* parent)
     m_pairAction = menu->addAction(tr("Pair with..."), this, &ProofreadReviewPanel::pairSelected);
     m_unpairAction = menu->addAction(tr("Remove manual pair"), this, &ProofreadReviewPanel::unpairSelected);
     tools->setMenu(menu);
+    tools->setVisible(allowManualPairs);
     auto* undo = new QToolButton(this);
     auto* redo = new QToolButton(this);
     undo->setObjectName(QStringLiteral("undoReview"));

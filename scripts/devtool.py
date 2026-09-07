@@ -122,6 +122,9 @@ MODULE_TOPICS = (
             "src/services/proofread/TextDiffHtmlRenderer.*",
             "src/services/proofread/ProofreadReportService.*",
             "src/services/proofread/ReviewSessionService.*",
+            "src/services/proofread/ReviewRoundService.*",
+            "src/services/proofread/ReviewRoundEditService.*",
+            "src/ui/proofread/ProofreadNotesWidget.*",
             "src/ui/proofread/ProofreadReviewPanel.*",
             "src/ui/proofread/ReviewStatusDelegate.*",
             "src/ui/proofread/ProofreadingController.*",
@@ -133,7 +136,7 @@ MODULE_TOPICS = (
             "校对入口流程属于 ProofreadingController，表格状态只通过 model/proxy 维护。",
             "HTML 报告导出属于 ProofreadReportService。",
         ),
-        docs=("docs/proofreading-diff.md",),
+        docs=("docs/proofreading-diff.md", "docs/proofreading-rounds.md"),
     ),
     ModuleTopic(
         name="automation",

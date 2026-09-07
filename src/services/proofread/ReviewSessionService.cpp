@@ -104,13 +104,15 @@ QString ReviewSessionService::snapshotFingerprint(const ReviewLabelSnapshot& sna
 }
 QString ReviewSessionService::fingerprint(const ReviewChange& change)
 {
-    return digest({{"page", change.imageName},
+    QJsonObject object{{"page", change.imageName},
                    {"baselinePage", change.baselineImageName},
                    {"before", snapshotObject(change.baseline)},
                    {"after", snapshotObject(change.current)},
                    {"kind", static_cast<int>(change.kind)},
                    {"order", change.orderChanged},
-                   {"manual", change.manuallyMatched}});
+                   {"manual", change.manuallyMatched}};
+    if (!change.noteRevision.isEmpty()) object.insert("notes", QString::fromLatin1(change.noteRevision.toHex()));
+    return digest(object);
 }
 QString ReviewSessionService::contextKey(const labelqt::core::Project& before, const labelqt::core::Project& current)
 {

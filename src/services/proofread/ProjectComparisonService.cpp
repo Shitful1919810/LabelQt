@@ -36,7 +36,7 @@ struct PageFingerprint {
 
 ReviewLabelSnapshot snapshotFromLabel(const QString& imageName, int labelIndex, const labelqt::core::Label& label)
 {
-    return {imageName, label.text(), label.group(), label.position(), labelIndex};
+    return {imageName, label.text(), label.group(), label.position(), labelIndex, label.id()};
 }
 
 labelqt::core::Label labelFromSnapshot(const ReviewLabelSnapshot& snapshot)
@@ -268,6 +268,27 @@ QVector<ProjectComparisonPagePair> normalizedNamePagePairs(const labelqt::core::
     QSet<QString> pairedCurrentNames;
     const QHash<QString, QString> baselineByName = uniqueBaselineNamesByNormalizedName(metadata);
 
+    if (baselineProject.id() == currentProject.id()) {
+        QHash<QUuid, const labelqt::core::ImageEntry*> pagesById;
+        for (const auto& page : baselineProject.images()) pagesById.insert(page.id, &page);
+        for (const auto& page : currentProject.images()) {
+            if (const auto* before = pagesById.value(page.id)) {
+                pairs.append({before->name, page.name, ProjectPageMatchKind::Name,
+                              before->labelIdentityGeneration == page.labelIdentityGeneration});
+                pairedBaselineNames.insert(before->name);
+                pairedCurrentNames.insert(page.name);
+            }
+        }
+        // In a known lineage, a missing page ID denotes an actual insertion/deletion, not a filename match.
+        for (const auto& page : currentProject.images())
+            if (!pairedCurrentNames.contains(page.name))
+                pairs.append({{}, page.name, ProjectPageMatchKind::Unmatched});
+        for (const auto& page : baselineProject.images())
+            if (!pairedBaselineNames.contains(page.name))
+                pairs.append({page.name, {}, ProjectPageMatchKind::Unmatched});
+        return pairs;
+    }
+
     for (const labelqt::core::ImageEntry& currentImage : currentProject.images()) {
         const QString currentName = currentImage.name;
         const QString key = normalizedPageName(currentName);
@@ -421,8 +442,9 @@ QVector<ReviewChange> changesForPagePairs(const labelqt::core::Project& currentP
             if (forced.baseline.imageName == pagePair.baselineImageName &&
                 forced.current.imageName == pagePair.currentImageName)
                 pairs.append({forced.baseline.labelIndex, forced.current.labelIndex});
-        const QVector<LabelSequenceDiffEntry> entries =
-            LabelSequenceDiffService::diffWithPairs(baselineLabels, currentLabels, pairs);
+        const QVector<LabelSequenceDiffEntry> entries = pagePair.trustedLabelIdentities && pairs.isEmpty()
+            ? LabelSequenceDiffService::diffByIdentity(baselineLabels, currentLabels)
+            : LabelSequenceDiffService::diffWithPairs(baselineLabels, currentLabels, pairs);
         for (const LabelSequenceDiffEntry& entry : entries) {
             ReviewChange change =
                 changeFromEntry(currentProject, pagePair.currentImageName, pagePair.baselineImageName, entry);

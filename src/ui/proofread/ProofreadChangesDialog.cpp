@@ -201,7 +201,9 @@ ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& bef
                     {labelqt::services::ReviewChangeFacet::Group, tr("group")},
                     {labelqt::services::ReviewChangeFacet::Marker, tr("marker")},
                     {labelqt::services::ReviewChangeFacet::Order, tr("order")},
+                    {labelqt::services::ReviewChangeFacet::Comment, tr("Comment")},
                 },
+            .comment = tr("Comment only"),
         },
         this);
     QSet<QPair<QString, QString>> pageKeys;
@@ -225,12 +227,12 @@ ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& bef
             auto restored = *session;
             const auto valid = labelqt::services::ProjectComparisonService::changesWithPairs(
                 m_currentProject, m_metadata, m_pagePairs, restored.pairs);
-            if (!valid) {
+            if (!valid && !m_labels.roundReview) {
                 restored.pairs.clear();
                 QMessageBox::warning(this, tr("Manual pair"), valid.error());
             }
             m_reviewPanel->setSession(std::move(restored));
-            updateManualPairs();
+            if (!m_labels.roundReview) updateManualPairs();
             updateReviewAnnotations();
         }
         else {
@@ -257,6 +259,11 @@ ProofreadChangesDialog::~ProofreadChangesDialog()
     if (m_afterCanvas != nullptr) {
         disconnect(m_afterCanvas, nullptr, this, nullptr);
     }
+}
+
+const labelqt::services::ReviewChange* ProofreadChangesDialog::selectedChange() const
+{
+    return m_tableModel->changeAt(changeIndexForRow(m_table->currentIndex().row()));
 }
 
 int ProofreadChangesDialog::selectedImageIndex() const noexcept
@@ -400,7 +407,7 @@ void ProofreadChangesDialog::buildUi()
                      return std::unexpected(result.error());
                  return {};
              }},
-            this);
+            this, !m_labels.roundReview);
         connect(m_reviewPanel, &ProofreadReviewPanel::annotationsChanged, this,
                 &ProofreadChangesDialog::updateReviewAnnotations);
         connect(m_reviewPanel, &ProofreadReviewPanel::pairsChanged, this, &ProofreadChangesDialog::updateManualPairs);
@@ -542,6 +549,7 @@ void ProofreadChangesDialog::rebuildFilters()
                       {QString(addedKindKey), tr("Added")},
                       {QString(deletedKindKey), tr("Deleted")},
                       {QString(modifiedKindKey), tr("Modified")},
+                      {QStringLiteral("comment"), tr("Comment only")},
                   });
     installFilter(
         m_summaryFilterButton, tr("All summaries"), tr("No summaries"), tr("%1 summary item(s)"),
@@ -556,6 +564,8 @@ void ProofreadChangesDialog::rebuildFilters()
              facetText(labelqt::services::ReviewChangeFacet::Marker)},
             {labelqt::services::ReviewChangeClassifier::facetKey(labelqt::services::ReviewChangeFacet::Order),
              facetText(labelqt::services::ReviewChangeFacet::Order)},
+            {labelqt::services::ReviewChangeClassifier::facetKey(labelqt::services::ReviewChangeFacet::Comment),
+             facetText(labelqt::services::ReviewChangeFacet::Comment)},
         });
 }
 
@@ -712,7 +722,10 @@ void ProofreadChangesDialog::updateDetails(int row)
         change.kind == labelqt::services::ReviewChangeKind::Added ? QString() : change.baseline.text;
     const QString afterText =
         change.kind == labelqt::services::ReviewChangeKind::Deleted ? QString() : change.current.text;
-    m_diffBrowser->setHtml(diffHtml(beforeText, afterText));
+    m_diffBrowser->setHtml(labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(
+        beforeText, afterText, tr("No text change."), change.kind == labelqt::services::ReviewChangeKind::Comment) +
+        (change.noteText.isEmpty() ? QString() : QStringLiteral("<hr><div style=\"white-space:pre-wrap\">%1</div>")
+                                                    .arg(change.noteText.toHtmlEscaped())));
     updatePreviewCanvases(change);
 }
 
@@ -791,6 +804,10 @@ void ProofreadChangesDialog::updateJumpButton()
     if (m_jumpButton == nullptr) {
         return;
     }
+    if (m_labels.roundReview && selectedChange() && !selectedChange()->jumpAvailable) {
+        m_jumpButton->setEnabled(false);
+        return;
+    }
 
     const int imageIndex = selectedImageIndex();
     const int labelIndex = selectedLabelIndex();
@@ -805,6 +822,8 @@ void ProofreadChangesDialog::updateJumpButton()
 QString ProofreadChangesDialog::facetText(labelqt::services::ReviewChangeFacet facet) const
 {
     switch (facet) {
+    case labelqt::services::ReviewChangeFacet::Comment:
+        return tr("Comment");
     case labelqt::services::ReviewChangeFacet::Text:
         return tr("text");
     case labelqt::services::ReviewChangeFacet::Format:
@@ -901,11 +920,6 @@ void ProofreadChangesDialog::updateManualPairs()
     applyFilters();
 }
 
-QString ProofreadChangesDialog::diffHtml(const QString& beforeText, const QString& afterText) const
-{
-    return labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(beforeText, afterText, tr("No text change."));
-}
-
 labelqt::services::ProofreadReportTexts ProofreadChangesDialog::reportTexts() const
 {
     return {
@@ -935,6 +949,7 @@ labelqt::services::ProofreadReportTexts ProofreadChangesDialog::reportTexts() co
         .review = tr("Review"),
         .manualPair = tr("Manual pair"),
         .reviewStates = {tr("Unseen"), tr("Reviewed"), tr("Needs confirmation")},
+        .comment = tr("Comment"),
     };
 }
 

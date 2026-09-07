@@ -17,6 +17,7 @@ def main() -> int:
     repo = repo_root()
 
     run([sys.executable, str(repo / "scripts" / "check_translations.py")], repo)
+    run([sys.executable, str(repo / "scripts" / "test_translations.py")], repo)
     run([sys.executable, str(repo / "scripts" / "test_release_packaging.py")], repo)
     run([sys.executable, str(repo / "scripts" / "test_automation_sdk.py")], repo)
     run([sys.executable, str(repo / "scripts" / "devtool.py"), "automation-validate"], repo)

@@ -13,6 +13,7 @@ enum class ReviewChangeFacet {
     Group,
     Marker,
     Order,
+    Comment,
 };
 
 class ReviewChangeClassifier final {

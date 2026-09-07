@@ -503,6 +503,14 @@ Last error: %2</translation>
 <context>
     <name>LabelTableModel</name>
     <message>
+        <source>All comments resolved</source>
+        <translation>All comments resolved</translation>
+    </message>
+    <message>
+        <source>Unresolved proofreading comments</source>
+        <translation>Unresolved proofreading comments</translation>
+    </message>
+    <message>
         <location filename="../src/ui/labeltable/LabelTableModel.cpp" line="284"/>
         <source>Text</source>
         <translation>Text</translation>
@@ -2537,6 +2545,14 @@ Last error: %1</translation>
 <context>
     <name>ProofreadChangesDialog</name>
     <message>
+        <source>Comment</source>
+        <translation>Comment</translation>
+    </message>
+    <message>
+        <source>Comment only</source>
+        <translation>Comment only</translation>
+    </message>
+    <message>
         <source>Reset filters</source>
         <translation>Reset filters</translation>
     </message>
@@ -3393,6 +3409,114 @@ Missing images: %2</translation>
 <context>
     <name>ProofreadingController</name>
     <message>
+        <source>Attach comment</source>
+        <translation>Attach comment</translation>
+    </message>
+    <message>
+        <source>Attach this comment to the currently selected label? Its original quote will be preserved.</source>
+        <translation>Attach this comment to the currently selected label? Its original quote will be preserved.</translation>
+    </message>
+    <message>
+        <source>Clear proofreading record</source>
+        <translation>Clear proofreading record</translation>
+    </message>
+    <message>
+        <source>Clear proofreading record...</source>
+        <translation>Clear proofreading record...</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>Comment</translation>
+    </message>
+    <message>
+        <source>Complete proofreading</source>
+        <translation>Complete proofreading</translation>
+    </message>
+    <message>
+        <source>Complete proofreading...</source>
+        <translation>Complete proofreading...</translation>
+    </message>
+    <message>
+        <source>Delete comment</source>
+        <translation>Delete comment</translation>
+    </message>
+    <message>
+        <source>Delete this comment?</source>
+        <translation>Delete this comment?</translation>
+    </message>
+    <message>
+        <source>Edit proofreading comments</source>
+        <translation>Edit proofreading comments</translation>
+    </message>
+    <message>
+        <source>Freeze this round's original draft, final draft and comments? Later edits will not change its text differences.</source>
+        <translation>Freeze this round's original draft, final draft and comments? Later edits will not change its text differences.</translation>
+    </message>
+    <message>
+        <source>Original translation</source>
+        <translation>Original translation</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>Proofreading</translation>
+    </message>
+    <message>
+        <source>Proofreading comment</source>
+        <translation>Proofreading comment</translation>
+    </message>
+    <message>
+        <source>Proofreading complete</source>
+        <translation>Proofreading complete</translation>
+    </message>
+    <message>
+        <source>Proofreading in progress</source>
+        <translation>Proofreading in progress</translation>
+    </message>
+    <message>
+        <source>Proofreading record unavailable</source>
+        <translation>Proofreading record unavailable</translation>
+    </message>
+    <message>
+        <source>Proofreading records are saved with the project.</source>
+        <translation>Proofreading records are saved with the project.</translation>
+    </message>
+    <message>
+        <source>Remove this round's snapshots, comments and review states? The current translation will be kept.</source>
+        <translation>Remove this round's snapshots, comments and review states? The current translation will be kept.</translation>
+    </message>
+    <message>
+        <source>Reviewed translation</source>
+        <translation>Reviewed translation</translation>
+    </message>
+    <message>
+        <source>Revision interactions</source>
+        <translation>Revision interactions</translation>
+    </message>
+    <message>
+        <source>Revision mode</source>
+        <translation>Revision mode</translation>
+    </message>
+    <message>
+        <source>Some label identities changed outside LabelQt. Differences use estimated matching; comments are never reassigned automatically.</source>
+        <translation>Some label identities changed outside LabelQt. Differences use estimated matching; comments are never reassigned automatically.</translation>
+    </message>
+    <message>
+        <source>Start next proofreading round</source>
+        <translation>Start next proofreading round</translation>
+    </message>
+    <message>
+        <source>Start next proofreading round...</source>
+        <translation>Start next proofreading round...</translation>
+    </message>
+    <message>
+        <source>Start proofreading</source>
+        <translation>Start proofreading</translation>
+    </message>
+    <message>
+        <source>This replaces the previous round. Export its report first if you need to keep it.</source>
+        <translation>This replaces the previous round. Export its report first if you need to keep it.</translation>
+    </message>
+    <message>
         <source>Edit review session</source>
         <translation>Edit review session</translation>
     </message>
@@ -3416,6 +3540,99 @@ Missing images: %2</translation>
     <message>
         <source>Project changed on disk...</source>
         <translation>Project changed on disk...</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadNotesWidget</name>
+    <message>
+        <source>Add label comment</source>
+        <translation>Add label comment</translation>
+    </message>
+    <message>
+        <source>Add page comment</source>
+        <translation>Add page comment</translation>
+    </message>
+    <message>
+        <source>All comments</source>
+        <translation>All comments</translation>
+    </message>
+    <message>
+        <source>Attach to selected label...</source>
+        <translation>Attach to selected label...</translation>
+    </message>
+    <message>
+        <source>Comment actions</source>
+        <translation>Comment actions</translation>
+    </message>
+    <message>
+        <source>Delete comment...</source>
+        <translation>Delete comment...</translation>
+    </message>
+    <message>
+        <source>Edit comment</source>
+        <translation>Edit comment</translation>
+    </message>
+    <message>
+        <source>Jump to label</source>
+        <translation>Jump to label</translation>
+    </message>
+    <message>
+        <source>Needs association</source>
+        <translation>Needs association</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>Open</translation>
+    </message>
+    <message>
+        <source>Proofreading comments (%1)</source>
+        <translation>Proofreading comments (%1)</translation>
+    </message>
+    <message>
+        <source>Resolve / reopen</source>
+        <translation>Resolve / reopen</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>Resolved</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewRoundEditService</name>
+    <message>
+        <source>Completed drafts and authored comments cannot be rewritten. Start a new round instead.</source>
+        <translation>Completed drafts and authored comments cannot be rewritten. Start a new round instead.</translation>
+    </message>
+    <message>
+        <source>Proofreading edits must run on the project thread.</source>
+        <translation>Proofreading edits must run on the project thread.</translation>
+    </message>
+    <message>
+        <source>The project changed while this dialog was open. Please try again.</source>
+        <translation>The project changed while this dialog was open. Please try again.</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewRoundService</name>
+    <message>
+        <source>%1: %2</source>
+        <translation>%1: %2</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>Open</translation>
+    </message>
+    <message>
+        <source>Original label unavailable; association needs confirmation.</source>
+        <translation>Original label unavailable; association needs confirmation.</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>Resolved</translation>
+    </message>
+    <message>
+        <source>The proofreading record is invalid or unsupported. It has not been changed.</source>
+        <translation>The proofreading record is invalid or unsupported. It has not been changed.</translation>
     </message>
 </context>
 </TS>

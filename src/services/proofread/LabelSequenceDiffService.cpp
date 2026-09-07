@@ -215,6 +215,47 @@ void appendUnmatchedLabels(QVector<LabelSequenceDiffEntry>& entries, const QVect
 
 } // namespace
 
+QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diffByIdentity(
+    const QVector<ReviewLabelSnapshot>& baselineLabels, const QVector<ReviewLabelSnapshot>& currentLabels)
+{
+    QHash<QUuid, ReviewLabelSnapshot> before;
+    for (const auto& label : baselineLabels)
+        before.insert(label.id, label);
+    QVector<LabelSequenceDiffEntry> entries;
+    for (const auto& label : currentLabels) {
+        const auto it = before.find(label.id);
+        if (it == before.end())
+            entries.append({-1, label.labelIndex, {}, label});
+        else {
+            entries.append({it->labelIndex, label.labelIndex, *it, label});
+            before.erase(it);
+        }
+    }
+    for (const auto& label : before)
+        entries.append({label.labelIndex, -1, label, {}});
+    QVector<int> matched;
+    for (int i = 0; i < entries.size(); ++i)
+        if (entries.at(i).baselineLabelIndex >= 0 && entries.at(i).currentLabelIndex >= 0)
+            matched.append(i);
+    std::sort(matched.begin(), matched.end(), [&](int a, int b) {
+        return entries.at(a).baselineLabelIndex < entries.at(b).baselineLabelIndex;
+    });
+    // Only inversions are moves: insertions/deletions that shift row numbers are not reorder operations.
+    int maximum = -1;
+    for (int index : matched) {
+        auto& entry = entries[index];
+        entry.moved = entry.currentLabelIndex < maximum;
+        maximum = std::max(maximum, entry.currentLabelIndex);
+    }
+    int minimum = std::numeric_limits<int>::max();
+    for (auto it = matched.crbegin(); it != matched.crend(); ++it) {
+        auto& entry = entries[*it];
+        entry.moved = entry.moved || entry.currentLabelIndex > minimum;
+        minimum = std::min(minimum, entry.currentLabelIndex);
+    }
+    return entries;
+}
+
 QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diff(QVector<ReviewLabelSnapshot> baselineLabels,
                                                                QVector<ReviewLabelSnapshot> currentLabels)
 {

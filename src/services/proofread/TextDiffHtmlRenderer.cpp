@@ -49,9 +49,9 @@ QString TextDiffHtmlRenderer::escapedText(QString text)
 }
 
 QString TextDiffHtmlRenderer::renderInlineDiff(const QString& beforeText, const QString& afterText,
-                                               const QString& noTextChangeText)
+                                               const QString& noTextChangeText, bool showUnchangedText)
 {
-    if (beforeText == afterText) {
+    if (beforeText == afterText && !showUnchangedText) {
         return QStringLiteral("<p>%1</p>").arg(escapedText(noTextChangeText));
     }
 

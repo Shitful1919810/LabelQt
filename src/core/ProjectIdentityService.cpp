@@ -54,7 +54,7 @@ bool ProjectIdentityService::valid(const Project& project)
         if (pageName.trimmed().isEmpty() || pageNames.contains(pageName))
             return false;
         pageNames.insert(pageName);
-        if (!add(page.id))
+        if (page.labelIdentityGeneration.isNull() || !add(page.id))
             return false;
         for (const auto& label : page.labels)
             if (!add(label.id()))
@@ -75,7 +75,8 @@ QJsonObject ProjectIdentityService::encode(const Project& project)
             if (!label.isDeleted())
                 labels.append(uuid(label.id()));
         pages.insert(name(page),
-                     QJsonObject{{"id", uuid(page.id)}, {"labels", labels}, {"signature", signature(page)}});
+                     QJsonObject{{"id", uuid(page.id)}, {"labels", labels}, {"signature", signature(page)},
+                                 {"labelGeneration", uuid(page.labelIdentityGeneration)}});
     }
     return {{"version", 1}, {"project", uuid(project.id())}, {"groups", groups}, {"pages", pages}};
 }
@@ -106,6 +107,10 @@ std::expected<void, QString> ProjectIdentityService::restore(Project& project, c
         // Foreign editors can alter/reorder labels without updating metadata. Never attach stale row identities.
         if (entry.value("signature").toString() != signature(page))
             continue;
+        page.labelIdentityGeneration = entry.contains("labelGeneration")
+                                           ? QUuid(entry.value("labelGeneration").toString()) : page.id;
+        if (page.labelIdentityGeneration.isNull())
+            return invalid();
         const auto labels = entry.value("labels").toArray();
         if (labels.size() != page.labels.size())
             return invalid();
@@ -125,6 +130,7 @@ void ProjectIdentityService::regenerate(Project& project)
         id = QUuid::createUuid();
     for (auto& page : project.images()) {
         page.id = QUuid::createUuid();
+        page.labelIdentityGeneration = QUuid::createUuid();
         for (auto& label : page.labels)
             label = label.duplicate();
     }

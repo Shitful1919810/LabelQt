@@ -7,7 +7,7 @@ namespace labelqt::services {
 class TextDiffHtmlRenderer final {
 public:
     static QString renderInlineDiff(const QString& beforeText, const QString& afterText,
-                                    const QString& noTextChangeText);
+                                    const QString& noTextChangeText, bool showUnchangedText = false);
     static QString escapedText(QString text);
 };
 

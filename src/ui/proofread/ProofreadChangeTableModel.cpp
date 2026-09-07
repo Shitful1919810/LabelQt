@@ -113,6 +113,8 @@ void ProofreadChangeTableModel::setReviewAnnotations(QVector<labelqt::services::
 QString ProofreadChangeTableModel::kindText(labelqt::services::ReviewChangeKind kind) const
 {
     switch (kind) {
+    case labelqt::services::ReviewChangeKind::Comment:
+        return m_texts.comment;
     case labelqt::services::ReviewChangeKind::Added:
         return m_texts.added;
     case labelqt::services::ReviewChangeKind::Deleted:

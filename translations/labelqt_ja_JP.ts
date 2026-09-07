@@ -501,6 +501,14 @@ Last error: %2</source>
 <context>
     <name>LabelTableModel</name>
     <message>
+        <source>All comments resolved</source>
+        <translation>すべてのコメントが解決済み</translation>
+    </message>
+    <message>
+        <source>Unresolved proofreading comments</source>
+        <translation>未解決の校正コメントがあります</translation>
+    </message>
+    <message>
         <location filename="../src/ui/labeltable/LabelTableModel.cpp" line="284"/>
         <source>Text</source>
         <translation>テキスト</translation>
@@ -2525,6 +2533,14 @@ Last error: %1</source>
 <context>
     <name>ProofreadChangesDialog</name>
     <message>
+        <source>Comment</source>
+        <translation>コメント</translation>
+    </message>
+    <message>
+        <source>Comment only</source>
+        <translation>コメントのみ</translation>
+    </message>
+    <message>
         <source>Reset filters</source>
         <translation>絞り込みをリセット</translation>
     </message>
@@ -3380,6 +3396,114 @@ Missing images: %2</source>
 <context>
     <name>ProofreadingController</name>
     <message>
+        <source>Attach comment</source>
+        <translation>コメントを関連付け</translation>
+    </message>
+    <message>
+        <source>Attach this comment to the currently selected label? Its original quote will be preserved.</source>
+        <translation>このコメントを選択中のラベルに関連付けますか？元の引用文は保持されます。</translation>
+    </message>
+    <message>
+        <source>Clear proofreading record</source>
+        <translation>校正記録を消去</translation>
+    </message>
+    <message>
+        <source>Clear proofreading record...</source>
+        <translation>校正記録を消去...</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>コメント</translation>
+    </message>
+    <message>
+        <source>Complete proofreading</source>
+        <translation>今回の校正を完了</translation>
+    </message>
+    <message>
+        <source>Complete proofreading...</source>
+        <translation>今回の校正を完了...</translation>
+    </message>
+    <message>
+        <source>Delete comment</source>
+        <translation>コメントを削除</translation>
+    </message>
+    <message>
+        <source>Delete this comment?</source>
+        <translation>このコメントを削除しますか？</translation>
+    </message>
+    <message>
+        <source>Edit proofreading comments</source>
+        <translation>校正コメントを編集</translation>
+    </message>
+    <message>
+        <source>Freeze this round's original draft, final draft and comments? Later edits will not change its text differences.</source>
+        <translation>今回の元訳稿・校正済み訳稿・コメントを確定しますか？以降の編集で今回のテキスト差分は変わりません。</translation>
+    </message>
+    <message>
+        <source>Original translation</source>
+        <translation>元の訳稿</translation>
+    </message>
+    <message>
+        <source>Proofreading</source>
+        <translation>校正</translation>
+    </message>
+    <message>
+        <source>Proofreading comment</source>
+        <translation>校正コメント</translation>
+    </message>
+    <message>
+        <source>Proofreading complete</source>
+        <translation>校正完了</translation>
+    </message>
+    <message>
+        <source>Proofreading in progress</source>
+        <translation>校正中</translation>
+    </message>
+    <message>
+        <source>Proofreading record unavailable</source>
+        <translation>校正記録を読み込めません</translation>
+    </message>
+    <message>
+        <source>Proofreading records are saved with the project.</source>
+        <translation>校正記録はプロジェクトと一緒に保存されます。</translation>
+    </message>
+    <message>
+        <source>Remove this round's snapshots, comments and review states? The current translation will be kept.</source>
+        <translation>今回のスナップショット・コメント・確認状況を消去しますか？現在の訳文は保持されます。</translation>
+    </message>
+    <message>
+        <source>Reviewed translation</source>
+        <translation>校正済み訳稿</translation>
+    </message>
+    <message>
+        <source>Revision interactions</source>
+        <translation>校正用の連動操作</translation>
+    </message>
+    <message>
+        <source>Revision mode</source>
+        <translation>校正モード</translation>
+    </message>
+    <message>
+        <source>Some label identities changed outside LabelQt. Differences use estimated matching; comments are never reassigned automatically.</source>
+        <translation>外部編集により一部のラベルの識別情報が変わりました。差分は推定で対応付けますが、コメントを自動で付け替えることはありません。</translation>
+    </message>
+    <message>
+        <source>Start next proofreading round</source>
+        <translation>次の校正を開始</translation>
+    </message>
+    <message>
+        <source>Start next proofreading round...</source>
+        <translation>次の校正を開始...</translation>
+    </message>
+    <message>
+        <source>Start proofreading</source>
+        <translation>校正を開始</translation>
+    </message>
+    <message>
+        <source>This replaces the previous round. Export its report first if you need to keep it.</source>
+        <translation>前回の記録を置き換えます。残したい場合は先に前回のレポートをエクスポートしてください。</translation>
+    </message>
+    <message>
         <source>Edit review session</source>
         <translation>確認記録を編集</translation>
     </message>
@@ -3403,6 +3527,99 @@ Missing images: %2</source>
     <message>
         <source>Project changed on disk...</source>
         <translation>ディスク上のプロジェクトが変更されました…</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadNotesWidget</name>
+    <message>
+        <source>Add label comment</source>
+        <translation>ラベルにコメントを追加</translation>
+    </message>
+    <message>
+        <source>Add page comment</source>
+        <translation>ページにコメントを追加</translation>
+    </message>
+    <message>
+        <source>All comments</source>
+        <translation>すべてのコメント</translation>
+    </message>
+    <message>
+        <source>Attach to selected label...</source>
+        <translation>選択したラベルに関連付け...</translation>
+    </message>
+    <message>
+        <source>Comment actions</source>
+        <translation>コメントの操作</translation>
+    </message>
+    <message>
+        <source>Delete comment...</source>
+        <translation>コメントを削除...</translation>
+    </message>
+    <message>
+        <source>Edit comment</source>
+        <translation>コメントを編集</translation>
+    </message>
+    <message>
+        <source>Jump to label</source>
+        <translation>ラベルへ移動</translation>
+    </message>
+    <message>
+        <source>Needs association</source>
+        <translation>関連付けの確認が必要</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>未解決</translation>
+    </message>
+    <message>
+        <source>Proofreading comments (%1)</source>
+        <translation>校正コメント（%1）</translation>
+    </message>
+    <message>
+        <source>Resolve / reopen</source>
+        <translation>解決 / 再開</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>解決済み</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewRoundEditService</name>
+    <message>
+        <source>Completed drafts and authored comments cannot be rewritten. Start a new round instead.</source>
+        <translation>元のスナップショット、確定済み訳稿とコメント本文は書き換えられません。新しい校正を開始してください。</translation>
+    </message>
+    <message>
+        <source>Proofreading edits must run on the project thread.</source>
+        <translation>校正の編集はプロジェクトの所有スレッドで実行する必要があります。</translation>
+    </message>
+    <message>
+        <source>The project changed while this dialog was open. Please try again.</source>
+        <translation>ダイアログを開いている間にプロジェクトが変更されました。やり直してください。</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewRoundService</name>
+    <message>
+        <source>%1: %2</source>
+        <translation>%1：%2</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>未解決</translation>
+    </message>
+    <message>
+        <source>Original label unavailable; association needs confirmation.</source>
+        <translation>元のラベルが見つかりません。関連付けの確認が必要です。</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>解決済み</translation>
+    </message>
+    <message>
+        <source>The proofreading record is invalid or unsupported. It has not been changed.</source>
+        <translation>校正記録が無効か、未対応の形式です。元の記録は変更していません。</translation>
     </message>
 </context>
 </TS>

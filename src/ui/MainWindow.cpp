@@ -339,7 +339,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_proofreadingStatusLabel->setVisible(false);
     statusBar()->addPermanentWidget(m_proofreadingStatusLabel);
     m_proofreadingController = new ProofreadingController(
-        this, m_undoStack,
+        this, m_projectController, m_undoStack,
         {
             [this]() -> labelqt::core::Project& { return project(); },
             [this]() -> const labelqt::core::AppPreferences& { return m_preferences; },
@@ -351,10 +351,12 @@ MainWindow::MainWindow(QWidget* parent)
                 else selectImage(imageIndex);
             },
             [this](const QString& message, int timeoutMs) { statusBar()->showMessage(message, timeoutMs); },
+            [this] { return qMakePair(m_currentImageIndex, m_currentLabelIndex); },
         },
         this);
     m_proofreadingController->setUi(m_startProofreadingAction, m_showProofreadingChangesAction,
-                                    m_compareWithProjectAction, m_proofreadingStatusLabel);
+                                    m_compareWithProjectAction, m_proofreadingStatusLabel, m_proofreadingMenu,
+                                    m_proofreadNotes, m_labelModel);
     statusBar()->showMessage(tr("Ready"));
     statusBar()->addPermanentWidget(m_recoveryController->notice());
     m_externalChangeController = new ProjectExternalChangeController(
@@ -510,8 +512,9 @@ void MainWindow::createMenus()
     editMenu->addAction(m_redoAction);
     editMenu->addSeparator();
     editMenu->addAction(m_reorderPagesAction);
-    editMenu->addAction(m_startProofreadingAction);
-    editMenu->addAction(m_showProofreadingChangesAction);
+    m_proofreadingMenu = editMenu->addMenu(tr("Proofreading"));
+    m_proofreadingMenu->addAction(m_startProofreadingAction);
+    m_proofreadingMenu->addAction(m_showProofreadingChangesAction);
     editMenu->addAction(m_compareWithProjectAction);
 
     QMenu* automationMenu = menuBar()->addMenu(tr("&Automation"));
@@ -628,6 +631,9 @@ void MainWindow::createCentralWidget()
     m_textEdit->setTabChangesFocus(true);
     m_textEdit->installEventFilter(this);
     editorLayout->addWidget(m_textEdit, 1);
+    m_proofreadNotes = new ProofreadNotesWidget(editorPanel);
+    m_proofreadNotes->hide();
+    editorLayout->addWidget(m_proofreadNotes);
     m_rightSplitter->setStretchFactor(0, 3);
     m_rightSplitter->setStretchFactor(1, 1);
     rightLayout->addWidget(m_rightSplitter, 1);
@@ -1818,6 +1824,7 @@ bool MainWindow::updateCurrentLabelDetails(int index)
     m_labelGroupComboBox->setCurrentText(image->labels.at(index).group());
     setEditorEnabled(!m_isAutomationRunning);
     m_isUpdatingUi = wasUpdatingUi;
+    updateProofreadingStatusUi();
     return true;
 }
 
@@ -2132,6 +2139,7 @@ void MainWindow::updateEditShortcuts()
 
 void MainWindow::updateUndoRedoActions()
 {
+    updateProofreadingStatusUi();
     if (m_undoAction != nullptr) {
         m_undoAction->setEnabled(!m_isAutomationRunning && m_undoStack.canUndo());
     }

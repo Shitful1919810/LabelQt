@@ -1,6 +1,8 @@
 #include "ui/labeltable/LabelTableModel.h"
 
 #include <QBrush>
+#include <QApplication>
+#include <QStyle>
 #include <QDataStream>
 #include <QIODevice>
 #include <QMimeData>
@@ -42,6 +44,15 @@ void LabelTableModel::refresh()
     beginResetModel();
     m_labelContext.refresh();
     endResetModel();
+}
+
+void LabelTableModel::setCommentStates(QHash<QUuid, bool> resolvedByLabel)
+{
+    if (m_commentStates == resolvedByLabel) return;
+    m_commentStates = std::move(resolvedByLabel);
+    if (rowCount() > 0)
+        emit dataChanged(index(0, NumberColumn), index(rowCount() - 1, NumberColumn),
+                         {Qt::DecorationRole, Qt::ToolTipRole, Qt::ForegroundRole});
 }
 
 void LabelTableModel::labelChanged(int row)
@@ -91,6 +102,16 @@ QVariant LabelTableModel::data(const QModelIndex& index, int role) const
     const labelqt::core::Label* label = m_labelContext.labelForVisibleRow(index.row());
     if (label == nullptr) {
         return {};
+    }
+
+    if (index.column() == NumberColumn && m_commentStates.contains(label->id())) {
+        const bool resolved = m_commentStates.value(label->id());
+        if (role == Qt::DecorationRole)
+            return QApplication::style()->standardIcon(resolved ? QStyle::SP_DialogApplyButton : QStyle::SP_MessageBoxInformation);
+        if (role == Qt::ToolTipRole)
+            return resolved ? tr("All comments resolved") : tr("Unresolved proofreading comments");
+        if (role == Qt::ForegroundRole)
+            return QBrush(QColor(resolved ? "#299c68" : "#b88718"));
     }
 
     if (role == Qt::DisplayRole || role == Qt::EditRole) {

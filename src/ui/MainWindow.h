@@ -54,6 +54,7 @@ class ProjectRecoveryController;
 class ProjectExternalChangeController;
 class ProjectSearchPanel;
 class ProofreadingController;
+class ProofreadNotesWidget;
 class PreferenceDialog;
 class ViewportFittedTableColumns;
 
@@ -217,6 +218,8 @@ private:
     AutomationController* m_automationController{nullptr};
     AutomationShortcutController* m_automationShortcutController{nullptr};
     ProofreadingController* m_proofreadingController{nullptr};
+    ProofreadNotesWidget* m_proofreadNotes{nullptr};
+    QMenu* m_proofreadingMenu{nullptr};
     ImagePageViewController* m_imagePageViewController{nullptr};
     ProjectViewController* m_projectViewController{nullptr};
     PageSelectorComboBox* m_imageComboBox{nullptr};

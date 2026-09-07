@@ -24,6 +24,7 @@ struct ProjectComparisonPagePair {
     QString baselineImageName;
     QString currentImageName;
     ProjectPageMatchKind matchKind{ProjectPageMatchKind::Unmatched};
+    bool trustedLabelIdentities{false};
 };
 
 struct ProjectComparisonPlan {
