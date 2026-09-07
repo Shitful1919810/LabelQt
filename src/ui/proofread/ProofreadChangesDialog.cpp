@@ -140,20 +140,13 @@ runProofreadReportExportTask(QWidget* parent, const QString& title, const QStrin
 
 QPointF focusPositionForChange(const labelqt::services::ReviewChange& change)
 {
+    if (change.kind == labelqt::services::ReviewChangeKind::Comment && change.currentLabelIndex < 0 &&
+        change.baselineLabelIndex < 0)
+        return {0.5, 0.5};
     if (change.kind != labelqt::services::ReviewChangeKind::Deleted) {
         return change.current.position;
     }
     return change.baseline.position;
-}
-
-QString baselineImageNameForChange(const labelqt::services::ReviewChange& change)
-{
-    return change.baselineImageName.isEmpty() ? change.imageName : change.baselineImageName;
-}
-
-QString pageNameForReviewChange(const labelqt::services::ReviewChange& change)
-{
-    return change.imageName.isEmpty() ? change.baselineImageName : change.imageName;
 }
 
 int wrappedPlainTextHeight(const QString& text, const QFont& font, int width)
@@ -175,12 +168,14 @@ int wrappedPlainTextHeight(const QString& text, const QFont& font, int width)
 ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& beforeProject,
                                                const labelqt::core::Project& currentProject,
                                                labelqt::core::AppPreferences preferences,
-                                               labelqt::services::ReviewMetadata metadata,
+                                               labelqt::services::ProjectComparisonPlan comparison,
                                                QVector<labelqt::services::ReviewChange> changes,
                                                ProofreadChangesDialogLabels labels, QWidget* parent)
     : QDialog(parent), m_beforeProject(beforeProject), m_currentProject(currentProject),
-      m_preferences(std::move(preferences)), m_metadata(std::move(metadata)), m_labels(std::move(labels))
+      m_preferences(std::move(preferences)), m_metadata(std::move(comparison.baselineMetadata)),
+      m_labels(std::move(labels))
 {
+    m_pagePairs = std::move(comparison.pagePairs);
     if (m_labels.leftProjectTitle.isEmpty()) {
         m_labels.leftProjectTitle = tr("Before");
     }
@@ -206,15 +201,6 @@ ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& bef
             .comment = tr("Comment only"),
         },
         this);
-    QSet<QPair<QString, QString>> pageKeys;
-    for (const auto& change : m_tableModel->changes()) {
-        const auto key = qMakePair(change.baselineImageName, change.imageName);
-        if (!pageKeys.contains(key)) {
-            pageKeys.insert(key);
-            m_pagePairs.append(
-                {change.baselineImageName, change.imageName, labelqt::services::ProjectPageMatchKind::Name});
-        }
-    }
     buildUi();
     if (m_labels.reviewEnabled) {
         m_sessionKey = labelqt::services::ReviewSessionService::contextKey(m_beforeProject, m_currentProject);
@@ -225,14 +211,17 @@ ProofreadChangesDialog::ProofreadChangesDialog(const labelqt::core::Project& bef
         if (session) {
             m_initialReviewSession = labelqt::services::ReviewSessionService::encode(*session);
             auto restored = *session;
-            const auto valid = labelqt::services::ProjectComparisonService::changesWithPairs(
-                m_currentProject, m_metadata, m_pagePairs, restored.pairs);
-            if (!valid && !m_labels.roundReview) {
-                restored.pairs.clear();
-                QMessageBox::warning(this, tr("Manual pair"), valid.error());
+            if (!m_labels.roundReview) {
+                const auto valid = labelqt::services::ProjectComparisonService::changesWithPairs(
+                    m_currentProject, m_metadata, m_pagePairs, restored.pairs);
+                if (!valid) {
+                    restored.pairs.clear();
+                    QMessageBox::warning(this, tr("Manual pair"), valid.error());
+                }
             }
             m_reviewPanel->setSession(std::move(restored));
-            if (!m_labels.roundReview) updateManualPairs();
+            if (!m_labels.roundReview)
+                updateManualPairs();
             updateReviewAnnotations();
         }
         else {
@@ -274,7 +263,7 @@ int ProofreadChangesDialog::selectedImageIndex() const noexcept
     }
     const labelqt::services::ReviewChange& change = m_tableModel->changes().at(changeIndex);
     if (m_labels.jumpToLeftProject) {
-        return m_beforeProject.imageIndexByName(baselineImageNameForChange(change));
+        return m_beforeProject.imageIndexByName(change.baselineImageName);
     }
     return change.imageIndex;
 }
@@ -535,7 +524,7 @@ void ProofreadChangesDialog::rebuildFilters()
     QVector<CheckableFilterOption> pageOptions;
     QSet<QString> seenPages;
     for (const labelqt::services::ReviewChange& change : m_tableModel->changes()) {
-        const QString pageName = pageNameForReviewChange(change);
+        const QString pageName = change.pageName();
         if (pageName.isEmpty() || seenPages.contains(pageName)) {
             continue;
         }
@@ -722,10 +711,12 @@ void ProofreadChangesDialog::updateDetails(int row)
         change.kind == labelqt::services::ReviewChangeKind::Added ? QString() : change.baseline.text;
     const QString afterText =
         change.kind == labelqt::services::ReviewChangeKind::Deleted ? QString() : change.current.text;
-    m_diffBrowser->setHtml(labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(
-        beforeText, afterText, tr("No text change."), change.kind == labelqt::services::ReviewChangeKind::Comment) +
-        (change.noteText.isEmpty() ? QString() : QStringLiteral("<hr><div style=\"white-space:pre-wrap\">%1</div>")
-                                                    .arg(change.noteText.toHtmlEscaped())));
+    m_diffBrowser->setHtml(
+        labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(
+            beforeText, afterText, tr("No text change."), change.kind == labelqt::services::ReviewChangeKind::Comment) +
+        (change.noteText.isEmpty() ? QString()
+                                   : QStringLiteral("<hr><div style=\"white-space:pre-wrap\">%1</div>")
+                                         .arg(change.noteText.toHtmlEscaped())));
     updatePreviewCanvases(change);
 }
 
@@ -772,8 +763,7 @@ void ProofreadChangesDialog::updatePreviewCanvases(const labelqt::services::Revi
         return;
     }
 
-    const QString baselineImageName = baselineImageNameForChange(change);
-    const labelqt::core::ImageEntry* beforeImage = m_beforeProject.imageByName(baselineImageName);
+    const labelqt::core::ImageEntry* beforeImage = m_beforeProject.imageByName(change.baselineImageName);
     const labelqt::core::ImageEntry* currentImage = m_currentProject.imageByName(change.imageName);
     const labelqt::core::ImageEntry* displayImage = currentImage != nullptr ? currentImage : beforeImage;
     if (displayImage == nullptr) {
@@ -784,9 +774,7 @@ void ProofreadChangesDialog::updatePreviewCanvases(const labelqt::services::Revi
 
     const int zoomPercent = m_afterCanvas->zoomPercent();
     const QPointF normalizedCenter = focusPositionForChange(change);
-    const QVector<labelqt::core::Label> baselineLabels =
-        labelqt::services::ProjectComparisonService::baselineImageLabels(m_currentProject, m_metadata, change.imageName,
-                                                                         baselineImageName);
+    const auto baselineLabels = beforeImage ? beforeImage->labels : QVector<labelqt::core::Label>{};
 
     m_isSyncingCanvasViews = true;
     m_beforeCanvas->setImage(beforeImage == nullptr ? displayImage->path : beforeImage->path, baselineLabels);

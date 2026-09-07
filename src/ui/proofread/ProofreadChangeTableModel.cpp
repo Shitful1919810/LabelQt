@@ -4,13 +4,6 @@
 #include <ranges>
 #include <utility>
 
-namespace {
-QString pageName(const labelqt::services::ReviewChange& change)
-{
-    return change.imageName.isEmpty() ? change.baselineImageName : change.imageName;
-}
-} // namespace
-
 ProofreadChangeTableModel::ProofreadChangeTableModel(QVector<labelqt::services::ReviewChange> changes,
                                                      ProofreadChangeTableTexts texts, QObject* parent)
     : QAbstractTableModel(parent), m_changes(std::move(changes)), m_texts(std::move(texts))
@@ -48,7 +41,7 @@ QVariant ProofreadChangeTableModel::data(const QModelIndex& index, int role) con
     QString text;
     switch (index.column()) {
     case PageColumn:
-        text = pageName(change);
+        text = change.pageName();
         break;
     case NumberColumn:
         text = change.labelIndex < 0 ? QStringLiteral("-") : QString::number(change.labelIndex + 1);
@@ -170,7 +163,7 @@ bool ProofreadChangeFilterModel::filterAcceptsRow(int sourceRow, const QModelInd
         model->index(sourceRow, 0).data(ProofreadChangeTableModel::ReviewStatusRole).toInt() != m_reviewStatus)
         return false;
     const auto* change = model->changeAt(sourceRow);
-    if (change == nullptr || !m_pages.contains(pageName(*change)) ||
+    if (change == nullptr || !m_pages.contains(change->pageName()) ||
         !m_kinds.contains(labelqt::services::ReviewChangeClassifier::kindKey(change->kind))) {
         return false;
     }

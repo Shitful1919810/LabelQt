@@ -81,10 +81,15 @@ void ProjectController::setProject(labelqt::core::Project project)
     const auto revision = FileRevision::read(project.filePath());
     if (!revision)
         throw std::runtime_error(revision.error().toStdString());
+    adoptProject(std::move(project), *revision);
+}
+
+void ProjectController::adoptProject(labelqt::core::Project project, FileRevision revision)
+{
     m_project = std::move(project);
     m_documentSession = QUuid::createUuid();
     m_revisions.reset(m_project);
-    m_savedRevision = *revision;
+    m_savedRevision = std::move(revision);
     setDirty(false);
     emit storageChanged();
 }
@@ -105,12 +110,7 @@ void ProjectController::loadFromFile(const QString& path, std::optional<FileRevi
         throw std::runtime_error(after.error().toStdString());
     if (!before->sameContent(*after) || loaded.sha256 != after->sha256)
         throw ProjectFileConflict(*after);
-    m_project = std::move(loaded.project);
-    m_documentSession = QUuid::createUuid();
-    m_revisions.reset(m_project);
-    m_savedRevision = *after;
-    setDirty(false);
-    emit storageChanged();
+    adoptProject(std::move(loaded.project), *after);
 }
 
 void ProjectController::save(std::optional<FileRevision> confirmedRevision)
@@ -189,11 +189,8 @@ std::expected<void, QString> ProjectController::restoreBackup(const ProjectRecov
         if (!disk || !disk->sameContent(m_savedRevision))
             return std::unexpected(
                 QCoreApplication::translate("ProjectController", "The project was changed on disk."));
-        m_savedRevision = writeProject(output, transaction, m_savedRevision);
-        m_project = std::move(output);
-        m_revisions.reset(m_project);
-        setDirty(false);
-        emit storageChanged();
+        const auto revision = writeProject(output, transaction, m_savedRevision);
+        adoptProject(std::move(output), revision);
         return {};
     }
     catch (const std::exception& error) {
@@ -228,9 +225,9 @@ std::expected<void, QString> ProjectController::renameImages(const ProjectImageR
     }
 }
 
-std::expected<QString, NewProjectError> ProjectController::tryCreateProjectFromImageDirectory(
-    const QString& directoryPath, const QString& projectBaseName, const QStringList& defaultGroups,
-    bool useNextAvailableName)
+std::expected<QString, NewProjectError>
+ProjectController::tryCreateProjectFromImageDirectory(const QString& directoryPath, const QString& projectBaseName,
+                                                      const QStringList& defaultGroups, bool useNextAvailableName)
 {
     QDir directory(directoryPath);
     const QFileInfoList imageFiles =
@@ -253,8 +250,8 @@ std::expected<QString, NewProjectError> ProjectController::tryCreateProjectFromI
     QString projectPath = defaultProjectPath;
     if (QFileInfo::exists(defaultProjectPath)) {
         if (!useNextAvailableName) {
-            return std::unexpected(
-                NewProjectError{NewProjectError::Code::ProjectFileExists, QFileInfo(defaultProjectPath).fileName(), {}});
+            return std::unexpected(NewProjectError{
+                NewProjectError::Code::ProjectFileExists, QFileInfo(defaultProjectPath).fileName(), {}});
         }
         projectPath = availableProjectPath(directory, projectBaseName);
     }
@@ -318,8 +315,8 @@ void ProjectController::markDirty()
     setDirty(true);
 }
 
-std::expected<std::optional<QString>, QString> ProjectController::tryPerformAutoBackup(
-    const labelqt::core::AppPreferences& preferences)
+std::expected<std::optional<QString>, QString>
+ProjectController::tryPerformAutoBackup(const labelqt::core::AppPreferences& preferences)
 {
     if (!m_hasPendingBackup || !m_isDirty || m_project.isEmpty() || m_project.filePath().isEmpty()) {
         return std::optional<QString>{};

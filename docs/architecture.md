@@ -269,7 +269,11 @@ LabelQt 会把自身需要随工程流转的内部元数据写入 LabelPlus comm
 `ProofreadReportService` 共用差异及批注结果。完成轮次固定文本结果，页面改名后预览可按身份读取当前图片；
 另存/恢复的快照路径重定位由 `ProjectLocationService` 负责，不改写历史页名。
 
-`ProjectController::documentSession` 隔离不同次打开的文档，允许同一文档另存后继续普通撤销；
+外部对比将完整 `ProjectComparisonPlan` 传入结果窗口，UI 不从差异行反推匹配策略或重建基线标签。
+轮次和外部比较共用受异常隔离、可中止的后台入口，工作线程只使用快照。人工配对复用身份匹配与顺序判定。
+
+`ProjectController::adoptProject` 统一安装打开、重载和恢复的文档并更新 `documentSession`，
+隔离旧撤销及校对缓存，允许同一文档另存后继续普通撤销；
 自动化的任务会话仍在另存后失效，二者生命周期不可混用。
 详细操作、兼容边界及交互测试见 [校对轮次](proofreading-rounds.md)，算法见
 [校对差异](proofreading-diff.md)。

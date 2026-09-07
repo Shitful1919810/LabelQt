@@ -79,15 +79,10 @@ QString textDiffHtml(const ReviewChange& change, const ProofreadReportTexts& tex
         const QString beforeText = change.kind == ReviewChangeKind::Added ? QString() : change.baseline.text;
         const QString afterText = change.kind == ReviewChangeKind::Deleted ? QString() : change.current.text;
         return TextDiffHtmlRenderer::renderInlineDiff(beforeText, afterText, texts.noTextChange,
-                                                     change.kind == ReviewChangeKind::Comment);
+                                                      change.kind == ReviewChangeKind::Comment);
     }
 
     return escaped(texts.noTextChange);
-}
-
-QString pageNameForChange(const ReviewChange& change)
-{
-    return change.imageName.isEmpty() ? change.baselineImageName : change.imageName;
 }
 
 QString compressedImageDataUrl(const QString& imagePath, const ProofreadReportOptions& options)
@@ -212,20 +207,21 @@ p { margin: 0; }
 )");
 }
 
-QVector<QString> pageOrderForChanges(const QVector<ReviewChange>& changes)
+QVector<QVector<int>> groupedChanges(const QVector<ReviewChange>& changes)
 {
-    QVector<QString> pageNames;
-    QSet<QString> seen;
-    pageNames.reserve(changes.size());
-    for (const ReviewChange& change : changes) {
-        const QString pageName = pageNameForChange(change);
-        if (pageName.isEmpty() || seen.contains(pageName)) {
-            continue;
+    using PageKey = QPair<QString, QPair<QString, QString>>;
+    QHash<PageKey, qsizetype> groups;
+    QVector<QVector<int>> rows;
+    for (int i = 0; i < changes.size(); ++i) {
+        const auto& change = changes.at(i);
+        const PageKey key{change.pageName(), {change.baselineImageName, change.imageName}};
+        if (!groups.contains(key)) {
+            groups.insert(key, rows.size());
+            rows.append(QVector<int>{});
         }
-        seen.insert(pageName);
-        pageNames.append(pageName);
+        rows[groups.value(key)].append(i);
     }
-    return pageNames;
+    return rows;
 }
 
 QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndexes,
@@ -238,12 +234,10 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
     for (const int changeIndex : changeIndexes) {
         const ReviewChange& change = changes.at(changeIndex);
         if (beforeImage == nullptr) {
-            beforeImage = beforeProject.imageByName(change.baselineImageName.isEmpty() ? change.imageName
-                                                                                       : change.baselineImageName);
+            beforeImage = beforeProject.imageByName(change.baselineImageName);
         }
         if (afterImage == nullptr) {
-            afterImage =
-                currentProject.imageByName(change.imageName.isEmpty() ? change.baselineImageName : change.imageName);
+            afterImage = currentProject.imageByName(change.imageName);
         }
         if (beforeImage != nullptr && afterImage != nullptr) {
             break;
@@ -282,7 +276,8 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
                     .arg(escaped(texts.before));
         for (const int changeIndex : changeIndexes) {
             const ReviewChange& change = changes.at(changeIndex);
-            if (change.kind == ReviewChangeKind::Added) {
+            if (change.kind == ReviewChangeKind::Added ||
+                (change.kind == ReviewChangeKind::Comment && change.baselineLabelIndex < 0)) {
                 continue;
             }
             const QPointF position = clampedPosition(change.baseline.position);
@@ -298,7 +293,8 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
                     .arg(escaped(texts.after));
         for (const int changeIndex : changeIndexes) {
             const ReviewChange& change = changes.at(changeIndex);
-            if (change.kind == ReviewChangeKind::Deleted) {
+            if (change.kind == ReviewChangeKind::Deleted ||
+                (change.kind == ReviewChangeKind::Comment && change.currentLabelIndex < 0)) {
                 continue;
             }
             const QPointF position = clampedPosition(change.current.position);
@@ -369,15 +365,9 @@ QString ProofreadReportService::htmlReport(const QVector<ReviewChange>& changes,
             QStringLiteral("<div class=\"meta\">%1: %2</div>").arg(escaped(texts.filter), escaped(filterDescription));
     }
 
-    const QVector<QString> pageNames = pageOrderForChanges(changes);
-    for (const QString& pageName : pageNames) {
-        QVector<int> changeIndexes;
-        for (int index = 0; index < changes.size(); ++index) {
-            if (pageNameForChange(changes.at(index)) == pageName) {
-                changeIndexes.append(index);
-            }
-        }
-        html += pageSectionHtml(pageName, changeIndexes, changes, beforeProject, currentProject, texts, options);
+    for (const auto& changeIndexes : groupedChanges(changes)) {
+        html += pageSectionHtml(changes.at(changeIndexes.first()).pageName(), changeIndexes, changes, beforeProject,
+                                currentProject, texts, options);
     }
 
     html += QStringLiteral("</body></html>");

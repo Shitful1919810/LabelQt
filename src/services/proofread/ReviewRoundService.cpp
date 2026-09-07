@@ -2,6 +2,7 @@
 
 #include "core/ProjectIdentityService.h"
 #include "core/ProjectMetadataService.h"
+#include "services/io/BoundedJsonIo.h"
 #include "services/proofread/ProjectComparisonService.h"
 
 #include <QCoreApplication>
@@ -124,7 +125,7 @@ std::expected<std::optional<ReviewRound>, QString> ReviewRoundService::read(cons
         if (!root->contains("proofreading")) {
             if (root->contains("review")) {
                 const auto legacyObject = root->value("review").toObject();
-                require(legacyObject.value("version").toInt() == 1 &&
+                require(BoundedJsonIo::isInteger(legacyObject.value("version"), 1, 1) &&
                         legacyObject.value("mode").toString() == QStringLiteral("baseline") &&
                         legacyObject.value("labels").isArray());
                 QSet<QString> keys;
@@ -174,7 +175,7 @@ std::expected<std::optional<ReviewRound>, QString> ReviewRoundService::read(cons
             return std::optional<ReviewRound>{std::move(round)};
         }
         const auto object = root->value("proofreading").toObject();
-        require(object.value("version").toInt() == 1 && object.value("notes").isArray() &&
+        require(BoundedJsonIo::isInteger(object.value("version"), 1, 1) && object.value("notes").isArray() &&
                 object.value("session").isObject());
         ReviewRound round;
         round.id = QUuid(object.value("id").toString());
@@ -194,13 +195,14 @@ std::expected<std::optional<ReviewRound>, QString> ReviewRoundService::read(cons
             require(!note.id.isNull() && !note.pageId.isNull() && !ids.contains(note.id) &&
                     item.value("pageName").isString() && item.value("quote").isString() &&
                     item.value("text").isString() && item.value("resolved").isBool() &&
+                    item.value("labelId").isString() &&
                     (item.value("labelId").toString().isEmpty() || !note.labelId.isNull()));
             ids.insert(note.id);
             note.pageName = item.value("pageName").toString();
             note.quote = item.value("quote").toString();
             note.text = item.value("text").toString();
             note.resolved = item.value("resolved").toBool();
-            if (item.contains("associatedPageId")) {
+            if (item.contains("associatedPageId") || item.contains("associatedLabelId")) {
                 note.associatedPageId = QUuid(item.value("associatedPageId").toString());
                 note.associatedLabelId = QUuid(item.value("associatedLabelId").toString());
                 require(!note.associatedPageId.isNull() && !note.associatedLabelId.isNull());
@@ -288,8 +290,7 @@ QString ReviewRoundService::noteText(const ProofreadNote& note)
 
 QPair<int, int> ReviewRoundService::locateNote(const labelqt::core::Project& project, const ProofreadNote& note)
 {
-    return note.associatedPageId.isNull() ? locate(project, note.pageId, note.labelId)
-                                          : locate(project, note.associatedPageId, note.associatedLabelId);
+    return locate(project, note.targetPageId(), note.targetLabelId());
 }
 
 ReviewRoundPresentation ReviewRoundService::present(const ReviewRound& round, const labelqt::core::Project& live)
@@ -312,8 +313,8 @@ ReviewRoundPresentation ReviewRoundService::present(const ReviewRound& round, co
                 result.uncertainIdentity = true;
     for (const auto& note : round.notes) {
         const bool useAssociation = !round.after && !note.associatedPageId.isNull();
-        const QUuid pageId = useAssociation ? note.associatedPageId : note.pageId;
-        const QUuid labelId = useAssociation ? note.associatedLabelId : note.labelId;
+        const QUuid pageId = useAssociation ? note.targetPageId() : note.pageId;
+        const QUuid labelId = useAssociation ? note.targetLabelId() : note.labelId;
         QString renderedNote = noteText(note);
         const auto target = locate(result.after, pageId, labelId);
         if (target.first < 0 || (!labelId.isNull() && target.second < 0))
@@ -348,16 +349,22 @@ ReviewRoundPresentation ReviewRoundService::present(const ReviewRound& round, co
         appendNote(change);
         const auto [pageIndex, labelIndex] = target;
         change.imageIndex = pageIndex;
-        change.imageName = pageIndex >= 0 ? result.after.images().at(pageIndex).name : note.pageName;
-        change.baselineImageName = change.imageName;
+        change.imageName = pageIndex >= 0 ? result.after.images().at(pageIndex).name : QString();
+        const auto beforeTarget = locate(result.before, pageId, labelId);
+        change.baselineImageName =
+            beforeTarget.first >= 0 ? result.before.images().at(beforeTarget.first).name : QString();
         change.labelIndex = change.currentLabelIndex = labelIndex;
         if (labelIndex >= 0)
             change.current = labelSnapshot(result.after.images().at(pageIndex), labelIndex);
         else {
             change.current.text = note.quote;
             change.current.id = labelId;
+            change.current.imageName = note.pageName;
         }
         change.baseline = change.current;
+        change.baselineLabelIndex = beforeTarget.second;
+        if (beforeTarget.second >= 0)
+            change.baseline = labelSnapshot(result.before.images().at(beforeTarget.first), beforeTarget.second);
         result.changes.append(std::move(change));
     }
     for (auto& change : result.changes)

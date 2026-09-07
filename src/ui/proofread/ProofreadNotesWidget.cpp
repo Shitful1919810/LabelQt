@@ -93,11 +93,11 @@ void ProofreadNotesWidget::refresh(const std::optional<ReviewRound>& round, cons
     m_labelId = labelId;
     for (const auto& note : round->notes) {
         const auto [page, label] = ReviewRoundService::locateNote(project, note);
-        const bool detached = page < 0 || (!note.labelId.isNull() && label < 0);
+        const bool detached = page < 0 || (!note.targetLabelId().isNull() && label < 0);
         const QString title = (detached ? tr("Needs association") : note.resolved ? tr("Resolved") : tr("Open"));
-        m_rows.append({note.id, note.associatedPageId.isNull() ? note.pageId : note.associatedPageId,
-                       note.associatedPageId.isNull() ? note.labelId : note.associatedLabelId,
-                       QStringLiteral("%1 | %2\n%3").arg(note.pageName, title, note.text), note.quote, detached,
+        const QString pageName = page >= 0 ? project.images().at(page).name : note.pageName;
+        m_rows.append({note.id, note.targetPageId(), note.targetLabelId(),
+                       QStringLiteral("%1 | %2\n%3").arg(pageName, title, note.text), note.quote, detached,
                        note.resolved});
     }
     rebuildList();

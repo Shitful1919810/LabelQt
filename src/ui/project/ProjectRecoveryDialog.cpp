@@ -64,10 +64,10 @@ ProjectRecoveryDialog::ProjectRecoveryDialog(QString projectPath, labelqt::core:
         const auto* entry = selected();
         if (!entry || !m_replaceBackup)
             return;
-        if (QMessageBox::warning(
-                this, tr("Replace current project"),
-                tr("Replace the current project with this backup? The current project will be backed up first and undo history will be cleared."),
-                QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes)
+        if (QMessageBox::warning(this, tr("Replace current project"),
+                                 tr("Replace the current project with this backup? The current project will be backed "
+                                    "up first and undo history will be cleared."),
+                                 QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes)
             return;
         const auto result = m_replaceBackup(*entry);
         if (!result)
@@ -173,7 +173,7 @@ void ProjectRecoveryDialog::preview()
     catch (const std::exception&) {
     }
     const auto plan = ProjectComparisonService::planComparison(original, *snapshot);
-    ProofreadChangesDialog dialog(original, *snapshot, m_preferences, plan.baselineMetadata,
+    ProofreadChangesDialog dialog(original, *snapshot, m_preferences, plan,
                                   ProjectComparisonService::changesBetweenProjects(*snapshot, plan),
                                   {tr("Saved project"), tr("Backup"), false}, this);
     dialog.exec();

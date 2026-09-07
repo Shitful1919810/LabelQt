@@ -497,7 +497,7 @@ private slots:
         ProofreadChangesDialogLabels labels;
         labels.reviewEnabled = true;
         labels.projectReviewSession = true;
-        ProofreadChangesDialog dialog(before, after, AppPreferences{}, plan.baselineMetadata, changes, labels);
+        ProofreadChangesDialog dialog(before, after, AppPreferences{}, plan, changes, labels);
         dialog.showNormal();
         QCoreApplication::processEvents();
         dialog.resize(1200, 780);

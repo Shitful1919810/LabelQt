@@ -41,9 +41,9 @@ class ProofreadChangesDialog final : public QDialog {
 public:
     ProofreadChangesDialog(const labelqt::core::Project& beforeProject, const labelqt::core::Project& currentProject,
                            labelqt::core::AppPreferences preferences,
-                           labelqt::services::ReviewMetadata metadata,
-                           QVector<labelqt::services::ReviewChange> changes,
-                           ProofreadChangesDialogLabels labels = {}, QWidget* parent = nullptr);
+                           labelqt::services::ProjectComparisonPlan comparison,
+                           QVector<labelqt::services::ReviewChange> changes, ProofreadChangesDialogLabels labels = {},
+                           QWidget* parent = nullptr);
     ~ProofreadChangesDialog() override;
 
     int selectedImageIndex() const noexcept;

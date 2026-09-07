@@ -2,8 +2,8 @@
 
 #include "core/Project.h"
 
-#include <QHash>
 #include <QByteArray>
+#include <QHash>
 #include <QPointF>
 #include <QString>
 #include <QStringList>
@@ -62,6 +62,15 @@ struct ReviewChange {
     QByteArray noteRevision{};
     QUuid pageId{};
     bool jumpAvailable{true};
+
+    QString pageName() const
+    {
+        if (!imageName.isEmpty())
+            return imageName;
+        if (!baselineImageName.isEmpty())
+            return baselineImageName;
+        return current.imageName; // Retain the display name of a detached comment, not an image lookup target.
+    }
 };
 
 class ReviewMetadataService final {
@@ -73,8 +82,7 @@ public:
     static QVector<ReviewChange> changesForProject(const labelqt::core::Project& project,
                                                    const ReviewMetadata& metadata);
     static QVector<labelqt::core::Label> baselineImageLabels(const labelqt::core::Project& project,
-                                                             const ReviewMetadata& metadata,
-                                                             const QString& imageName);
+                                                             const ReviewMetadata& metadata, const QString& imageName);
     static QStringList rewriteCommentLines(const QStringList& commentLines, const ReviewMetadata& metadata);
 };
 

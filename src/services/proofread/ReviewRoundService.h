@@ -17,6 +17,15 @@ struct ProofreadNote {
     bool resolved{false};
     QUuid associatedPageId;
     QUuid associatedLabelId;
+
+    QUuid targetPageId() const
+    {
+        return associatedPageId.isNull() ? pageId : associatedPageId;
+    }
+    QUuid targetLabelId() const
+    {
+        return associatedPageId.isNull() ? labelId : associatedLabelId;
+    }
 };
 
 struct ReviewRound {

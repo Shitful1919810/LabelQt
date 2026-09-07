@@ -31,7 +31,8 @@ int lcsLength(const QString& lhs, const QString& rhs)
         for (int j = 1; j <= rhs.size(); ++j) {
             if (lhs.at(i - 1) == rhs.at(j - 1)) {
                 current[j] = previous.at(j - 1) + 1;
-            } else {
+            }
+            else {
                 current[j] = std::max(previous.at(j), current.at(j - 1));
             }
         }
@@ -56,8 +57,8 @@ int textSimilarityScore(const QString& baselineText, const QString& currentText)
     const int maxLength = static_cast<int>(std::max(baseline.size(), current.size()));
     const int minLength = static_cast<int>(std::min(baseline.size(), current.size()));
     const double lengthConfidence = std::clamp(static_cast<double>(minLength) / 6.0, 0.35, 1.0);
-    const int score = static_cast<int>(std::round(100.0 * static_cast<double>(commonLength) /
-                                                  static_cast<double>(maxLength) * lengthConfidence));
+    const int score = static_cast<int>(
+        std::round(100.0 * static_cast<double>(commonLength) / static_cast<double>(maxLength) * lengthConfidence));
     return score;
 }
 
@@ -80,7 +81,8 @@ int pairScore(const ReviewLabelSnapshot& baseline, const ReviewLabelSnapshot& cu
     score += positionTieBreakScore(baseline, current);
     if (baseline.labelIndex == current.labelIndex) {
         score += 8;
-    } else {
+    }
+    else {
         score -= std::min(8, std::abs(baseline.labelIndex - current.labelIndex));
     }
     return score;
@@ -103,8 +105,7 @@ void sortByLabelIndex(QVector<ReviewLabelSnapshot>& labels)
 
 QVector<LabelSequenceDiffEntry> orderedAlignment(const QVector<ReviewLabelSnapshot>& baselineLabels,
                                                  const QVector<ReviewLabelSnapshot>& currentLabels,
-                                                 QSet<int>& matchedBaselineIndexes,
-                                                 QSet<int>& matchedCurrentIndexes)
+                                                 QSet<int>& matchedBaselineIndexes, QSet<int>& matchedCurrentIndexes)
 {
     const int baselineCount = static_cast<int>(baselineLabels.size());
     const int currentCount = static_cast<int>(currentLabels.size());
@@ -132,8 +133,7 @@ QVector<LabelSequenceDiffEntry> orderedAlignment(const QVector<ReviewLabelSnapsh
     while (i > 0 || j > 0) {
         if (i > 0 && j > 0) {
             const int score = orderedPairScore(baselineLabels.at(i - 1), currentLabels.at(j - 1));
-            if (score >= minimumPairScore &&
-                scores.at(i).at(j) == scores.at(i - 1).at(j - 1) + score) {
+            if (score >= minimumPairScore && scores.at(i).at(j) == scores.at(i - 1).at(j - 1) + score) {
                 const ReviewLabelSnapshot& baseline = baselineLabels.at(i - 1);
                 const ReviewLabelSnapshot& current = currentLabels.at(j - 1);
                 entries.append({baseline.labelIndex, current.labelIndex, baseline, current, false});
@@ -188,8 +188,8 @@ void pairMovedLabels(QVector<LabelSequenceDiffEntry>& entries, const QVector<Rev
 
         const ReviewLabelSnapshot& baseline = baselineLabels.at(bestBaselineIndex);
         const ReviewLabelSnapshot& current = currentLabels.at(bestCurrentIndex);
-        entries.append({baseline.labelIndex, current.labelIndex, baseline, current,
-                        baseline.labelIndex != current.labelIndex});
+        entries.append(
+            {baseline.labelIndex, current.labelIndex, baseline, current, baseline.labelIndex != current.labelIndex});
         matchedBaselineIndexes.insert(bestBaselineIndex);
         matchedCurrentIndexes.insert(bestCurrentIndex);
     }
@@ -213,10 +213,34 @@ void appendUnmatchedLabels(QVector<LabelSequenceDiffEntry>& entries, const QVect
     }
 }
 
+void markInversions(QVector<LabelSequenceDiffEntry>& entries)
+{
+    QVector<int> matched;
+    for (int i = 0; i < entries.size(); ++i)
+        if (entries.at(i).baselineLabelIndex >= 0 && entries.at(i).currentLabelIndex >= 0)
+            matched.append(i);
+    std::sort(matched.begin(), matched.end(),
+              [&](int a, int b) { return entries.at(a).baselineLabelIndex < entries.at(b).baselineLabelIndex; });
+    // Only inversions are moves: insertions/deletions that shift row numbers are not reorder operations.
+    int maximum = -1;
+    for (int index : matched) {
+        auto& entry = entries[index];
+        entry.moved = entry.currentLabelIndex < maximum;
+        maximum = std::max(maximum, entry.currentLabelIndex);
+    }
+    int minimum = std::numeric_limits<int>::max();
+    for (auto it = matched.crbegin(); it != matched.crend(); ++it) {
+        auto& entry = entries[*it];
+        entry.moved = entry.moved || entry.currentLabelIndex > minimum;
+        minimum = std::min(minimum, entry.currentLabelIndex);
+    }
+}
+
 } // namespace
 
-QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diffByIdentity(
-    const QVector<ReviewLabelSnapshot>& baselineLabels, const QVector<ReviewLabelSnapshot>& currentLabels)
+QVector<LabelSequenceDiffEntry>
+LabelSequenceDiffService::diffByIdentity(const QVector<ReviewLabelSnapshot>& baselineLabels,
+                                         const QVector<ReviewLabelSnapshot>& currentLabels)
 {
     QHash<QUuid, ReviewLabelSnapshot> before;
     for (const auto& label : baselineLabels)
@@ -233,26 +257,7 @@ QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diffByIdentity(
     }
     for (const auto& label : before)
         entries.append({label.labelIndex, -1, label, {}});
-    QVector<int> matched;
-    for (int i = 0; i < entries.size(); ++i)
-        if (entries.at(i).baselineLabelIndex >= 0 && entries.at(i).currentLabelIndex >= 0)
-            matched.append(i);
-    std::sort(matched.begin(), matched.end(), [&](int a, int b) {
-        return entries.at(a).baselineLabelIndex < entries.at(b).baselineLabelIndex;
-    });
-    // Only inversions are moves: insertions/deletions that shift row numbers are not reorder operations.
-    int maximum = -1;
-    for (int index : matched) {
-        auto& entry = entries[index];
-        entry.moved = entry.currentLabelIndex < maximum;
-        maximum = std::max(maximum, entry.currentLabelIndex);
-    }
-    int minimum = std::numeric_limits<int>::max();
-    for (auto it = matched.crbegin(); it != matched.crend(); ++it) {
-        auto& entry = entries[*it];
-        entry.moved = entry.moved || entry.currentLabelIndex > minimum;
-        minimum = std::min(minimum, entry.currentLabelIndex);
-    }
+    markInversions(entries);
     return entries;
 }
 
@@ -279,7 +284,8 @@ QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diff(QVector<ReviewLab
 
 QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diffWithPairs(QVector<ReviewLabelSnapshot> baselineLabels,
                                                                         QVector<ReviewLabelSnapshot> currentLabels,
-                                                                        const QVector<QPair<int, int>>& pairs)
+                                                                        const QVector<QPair<int, int>>& pairs,
+                                                                        bool trustedIdentities)
 {
     QVector<LabelSequenceDiffEntry> forced;
     for (const auto& pair : pairs) {
@@ -293,8 +299,13 @@ QVector<LabelSequenceDiffEntry> LabelSequenceDiffService::diffWithPairs(QVector<
         baselineLabels.erase(before);
         currentLabels.erase(after);
     }
-    auto entries = diff(std::move(baselineLabels), std::move(currentLabels));
+    auto entries = trustedIdentities ? diffByIdentity(baselineLabels, currentLabels)
+                                     : diff(std::move(baselineLabels), std::move(currentLabels));
     entries.append(forced);
+    if (trustedIdentities) {
+        markInversions(entries);
+        return entries;
+    }
     for (auto& entry : entries) {
         if (!entry.manuallyMatched)
             continue;

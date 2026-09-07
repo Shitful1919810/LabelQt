@@ -68,6 +68,7 @@ private:
     std::optional<labelqt::services::ReviewRound> m_round;
     QStringList m_cachedComments;
     QString m_cachedPath;
+    QUuid m_cachedDocumentSession;
     bool m_cacheValid{false};
     QString m_recordError;
 };

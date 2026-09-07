@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <optional>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace {
@@ -50,33 +51,7 @@ QString text(const char* source)
 struct ComparisonTaskResult {
     labelqt::services::ProjectComparisonPlan plan;
     QVector<labelqt::services::ReviewChange> changes;
-    QString error;
 };
-
-ComparisonTaskResult buildComparison(labelqt::core::Project baseline, labelqt::core::Project current,
-                                     labelqt::services::ProjectPageMatchMode mode)
-{
-    ComparisonTaskResult result;
-    try {
-        result.plan = labelqt::services::ProjectComparisonService::planComparison(baseline, current, mode);
-        result.changes = labelqt::services::ProjectComparisonService::changesBetweenProjects(current, result.plan);
-    }
-    catch (const std::exception& error) {
-        result.error = QString::fromLocal8Bit(error.what());
-    }
-    catch (...) {
-        result.error = text("Unknown error");
-    }
-    return result;
-}
-
-std::optional<ComparisonTaskResult> runComparison(QWidget* parent, const labelqt::core::Project& baseline,
-                                                  const labelqt::core::Project& current,
-                                                  labelqt::services::ProjectPageMatchMode mode)
-{
-    labelqt::ui::BusyTaskDialog dialog(text("Comparing projects..."), text("Abort"), parent);
-    return labelqt::ui::waitForBackgroundTask(QtConcurrent::run(buildComparison, baseline, current, mode), dialog);
-}
 
 QMessageBox::StandardButton messageBox(QWidget* parent, QMessageBox::Icon icon, const QString& title,
                                        const QString& message, QMessageBox::StandardButtons buttons = QMessageBox::Ok,
@@ -101,6 +76,43 @@ void information(QWidget* parent, const QString& title, const QString& message)
 void warning(QWidget* parent, const QString& title, const QString& message)
 {
     messageBox(parent, QMessageBox::Warning, title, message);
+}
+
+template <typename Work>
+auto runComparisonTask(QWidget* parent, Work work) -> std::optional<std::invoke_result_t<Work>>
+{
+    using Result = std::invoke_result_t<Work>;
+    auto future = QtConcurrent::run([work = std::move(work)]() -> std::expected<Result, QString> {
+        try {
+            return work();
+        }
+        catch (const std::exception& error) {
+            return std::unexpected(QString::fromUtf8(error.what()));
+        }
+        catch (...) {
+            return std::unexpected(text("Unknown error"));
+        }
+    });
+    labelqt::ui::BusyTaskDialog dialog(text("Comparing projects..."), text("Abort"), parent);
+    auto result = labelqt::ui::waitForBackgroundTask(std::move(future), dialog);
+    if (!result)
+        return std::nullopt;
+    if (!*result) {
+        warning(parent, text("Compare Projects"), text("Failed to compare projects: %1").arg(result->error()));
+        return std::nullopt;
+    }
+    return std::move(**result);
+}
+
+std::optional<ComparisonTaskResult> runComparison(QWidget* parent, labelqt::core::Project baseline,
+                                                  labelqt::core::Project current,
+                                                  labelqt::services::ProjectPageMatchMode mode)
+{
+    return runComparisonTask(parent, [baseline = std::move(baseline), current = std::move(current), mode] {
+        auto plan = labelqt::services::ProjectComparisonService::planComparison(baseline, current, mode);
+        auto changes = labelqt::services::ProjectComparisonService::changesBetweenProjects(current, plan);
+        return ComparisonTaskResult{std::move(plan), std::move(changes)};
+    });
 }
 } // namespace
 
@@ -134,11 +146,13 @@ void ProofreadingController::setUi(QAction* toggleAction, QAction* showChangesAc
 bool ProofreadingController::loadRound()
 {
     const auto& project = m_callbacks.project();
-    if (m_cacheValid && project.commentLines() == m_cachedComments && project.filePath() == m_cachedPath)
+    if (m_cacheValid && m_cachedDocumentSession == m_projectController.documentSession() &&
+        project.commentLines() == m_cachedComments && project.filePath() == m_cachedPath)
         return m_recordError.isEmpty();
     m_cacheValid = true;
     m_cachedComments = project.commentLines();
     m_cachedPath = project.filePath();
+    m_cachedDocumentSession = m_projectController.documentSession();
     const auto round = labelqt::services::ReviewRoundService::read(project);
     m_recordError = round ? QString() : round.error();
     m_round = round ? *round : std::nullopt;
@@ -175,7 +189,7 @@ void ProofreadingController::toggleBaseline()
         return;
     }
     const auto& project = m_callbacks.project();
-    if (project.isEmpty())
+    if (project.isEmpty() && !m_round)
         return;
     const auto token = ReviewRoundEditService::token(m_projectController);
     const auto previous = m_round;
@@ -227,14 +241,19 @@ void ProofreadingController::showChanges()
         return;
     const auto token = ReviewRoundEditService::token(m_projectController);
     auto round = *m_round;
-    auto presentation = ReviewRoundService::present(round, m_callbacks.project());
+    auto result =
+        runComparisonTask(m_parentWidget, [round, live = ReviewRoundService::snapshot(m_callbacks.project())] {
+            return ReviewRoundService::present(round, live);
+        });
+    if (!result || ReviewRoundEditService::token(m_projectController).session != token.session)
+        return;
+    auto presentation = std::move(*result);
     if (presentation.uncertainIdentity)
         information(m_parentWidget, tr("Proofreading"),
                     tr("Some label identities changed outside LabelQt. Differences use estimated matching; comments "
                        "are never reassigned automatically."));
     presentation.after.setCommentLines(ReviewSessionService::withProjectSession({}, round.session));
-    ProofreadChangesDialog dialog(presentation.before, presentation.after, m_callbacks.preferences(),
-                                  ReviewMetadataService::captureBaseline(presentation.before),
+    ProofreadChangesDialog dialog(presentation.before, presentation.after, m_callbacks.preferences(), {},
                                   std::move(presentation.changes),
                                   {.leftProjectTitle = tr("Original translation"),
                                    .rightProjectTitle = tr("Reviewed translation"),
@@ -242,7 +261,7 @@ void ProofreadingController::showChanges()
                                    .projectReviewSession = true,
                                    .roundReview = true},
                                   m_parentWidget);
-    const int result = dialog.exec();
+    const int dialogResult = dialog.exec();
     const auto original = ReviewSessionService::decode(round.session);
     if (original && dialog.reviewSession() != ReviewSessionService::encode(*original)) {
         round.session = dialog.reviewSession();
@@ -251,7 +270,7 @@ void ProofreadingController::showChanges()
     }
     if (ReviewRoundEditService::token(m_projectController).session != token.session)
         return;
-    if (result == QDialog::Accepted) {
+    if (dialogResult == QDialog::Accepted) {
         const auto* change = dialog.selectedChange();
         if (!change)
             return;
@@ -343,6 +362,7 @@ void ProofreadingController::compareWithProject()
     if (m_callbacks.commitActiveTextInput)
         m_callbacks.commitActiveTextInput();
     auto& project = m_callbacks.project();
+    const auto documentSession = m_projectController.documentSession();
     if (project.images().isEmpty()) {
         information(m_parentWidget, text("Compare Projects"), text("Open a project before comparing."));
         return;
@@ -364,14 +384,12 @@ void ProofreadingController::compareWithProject()
                 text("Failed to open comparison project: %1").arg(QString::fromLocal8Bit(error.what())));
         return;
     }
-    const labelqt::core::Project current = project;
+    if (m_projectController.documentSession() != documentSession)
+        return;
+    const auto current = labelqt::services::ReviewRoundService::snapshot(project);
     auto result = runComparison(m_parentWidget, current, target, labelqt::services::ProjectPageMatchMode::ByName);
     if (!result)
         return;
-    if (!result->error.isEmpty()) {
-        warning(m_parentWidget, text("Compare Projects"), text("Failed to compare projects: %1").arg(result->error));
-        return;
-    }
     if (labelqt::services::ProjectComparisonService::shouldOfferOrderPageMatching(result->plan) &&
         messageBox(m_parentWidget, QMessageBox::Question, text("Compare Projects"),
                    text("The selected project has very few page names in common with the current project, but both "
@@ -380,25 +398,29 @@ void ProofreadingController::compareWithProject()
         result = runComparison(m_parentWidget, current, target, labelqt::services::ProjectPageMatchMode::ByOrder);
         if (!result)
             return;
-        if (!result->error.isEmpty()) {
-            warning(m_parentWidget, text("Compare Projects"),
-                    text("Failed to compare projects: %1").arg(result->error));
-            return;
-        }
     }
     if (result->changes.isEmpty()) {
         information(m_parentWidget, text("Compare Projects"), text("No differences from the selected project."));
         return;
     }
-    ProofreadChangesDialog dialog(current, target, m_callbacks.preferences(), std::move(result->plan.baselineMetadata),
+    ProofreadChangesDialog dialog(current, target, m_callbacks.preferences(), std::move(result->plan),
                                   std::move(result->changes),
                                   {.leftProjectTitle = text("Current Project"),
                                    .rightProjectTitle = text("Target Project"),
                                    .jumpToLeftProject = true,
                                    .reviewEnabled = true},
                                   m_parentWidget);
-    if (dialog.exec() == QDialog::Accepted)
-        selectDialogResult(dialog.selectedImageIndex(), dialog.selectedLabelIndex());
+    if (dialog.exec() == QDialog::Accepted && m_projectController.documentSession() == documentSession) {
+        const int pageIndex = dialog.selectedImageIndex();
+        if (pageIndex < 0 || pageIndex >= current.images().size())
+            return;
+        const auto& page = current.images().at(pageIndex);
+        const int labelIndex = dialog.selectedLabelIndex();
+        const auto labelId =
+            labelIndex >= 0 && labelIndex < page.labels.size() ? page.labels.at(labelIndex).id() : QUuid{};
+        const auto target = labelqt::services::ReviewRoundService::locate(project, page.id, labelId);
+        selectDialogResult(target.first, target.second);
+    }
 }
 
 void ProofreadingController::selectDialogResult(int imageIndex, int labelIndex)
@@ -419,7 +441,7 @@ void ProofreadingController::updateUi(bool automationRunning)
     m_automationRunning = automationRunning;
     loadRound();
     const bool hasProject = !m_callbacks.project().isEmpty();
-    const bool enabled = !automationRunning && hasProject && m_recordError.isEmpty();
+    const bool enabled = !automationRunning && (hasProject || m_round) && m_recordError.isEmpty();
     if (m_statusLabel) {
         m_statusLabel->setVisible(m_round.has_value() || !m_recordError.isEmpty());
         m_statusLabel->setText(!m_recordError.isEmpty()    ? tr("Proofreading record unavailable")
@@ -451,7 +473,7 @@ void ProofreadingController::updateUi(bool automationRunning)
         QHash<QUuid, bool> states;
         if (m_round)
             for (const auto& note : m_round->notes) {
-                const auto id = note.associatedPageId.isNull() ? note.labelId : note.associatedLabelId;
+                const auto id = note.targetLabelId();
                 if (!id.isNull())
                     states[id] = states.value(id, true) && note.resolved;
             }

@@ -131,7 +131,7 @@ bool ProjectRecoveryController::resolveDiskChange(std::optional<FileRevision> re
             const auto disk = labelqt::core::LabelPlusDocument::loadFromFile(m_project.project().filePath());
             const auto current = m_project.project();
             const auto plan = ProjectComparisonService::planComparison(disk, current);
-            ProofreadChangesDialog dialog(disk, current, m_callbacks.preferences(), plan.baselineMetadata,
+            ProofreadChangesDialog dialog(disk, current, m_callbacks.preferences(), plan,
                                           ProjectComparisonService::changesBetweenProjects(current, plan),
                                           {tr("Disk version"), tr("Current edits"), false}, m_window);
             dialog.exec();

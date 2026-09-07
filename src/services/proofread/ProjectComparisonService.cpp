@@ -100,7 +100,8 @@ struct FingerprintCache {
     std::optional<PageFingerprint> find(const QString& key)
     {
         const auto it = entries.constFind(key);
-        if (it == entries.cend()) return std::nullopt;
+        if (it == entries.cend())
+            return std::nullopt;
         usageOrder.removeOne(key);
         usageOrder.append(key);
         return it.value();
@@ -134,7 +135,8 @@ PageFingerprint fingerprintForImage(const labelqt::core::ImageEntry& image)
     const QString cacheKey = fingerprintCacheKey(image);
     {
         QMutexLocker locker(&fingerprintCacheMutex());
-        if (const auto cached = fingerprintCache().find(cacheKey)) return *cached;
+        if (const auto cached = fingerprintCache().find(cacheKey))
+            return *cached;
     }
 
     PageFingerprint fingerprint;
@@ -270,7 +272,8 @@ QVector<ProjectComparisonPagePair> normalizedNamePagePairs(const labelqt::core::
 
     if (baselineProject.id() == currentProject.id()) {
         QHash<QUuid, const labelqt::core::ImageEntry*> pagesById;
-        for (const auto& page : baselineProject.images()) pagesById.insert(page.id, &page);
+        for (const auto& page : baselineProject.images())
+            pagesById.insert(page.id, &page);
         for (const auto& page : currentProject.images()) {
             if (const auto* before = pagesById.value(page.id)) {
                 pairs.append({before->name, page.name, ProjectPageMatchKind::Name,
@@ -370,8 +373,8 @@ QVector<ProjectComparisonPagePair> orderPagePairs(const labelqt::core::Project& 
                       ProjectPageMatchKind::Unmatched});
     }
     for (qsizetype i = pairCount; i < currentProject.images().size(); ++i) {
-        pairs.append({currentProject.images().at(i).name, currentProject.images().at(i).name,
-                      ProjectPageMatchKind::Unmatched});
+        pairs.append(
+            {currentProject.images().at(i).name, currentProject.images().at(i).name, ProjectPageMatchKind::Unmatched});
     }
     return pairs;
 }
@@ -380,8 +383,7 @@ int matchedPageCount(const QVector<ProjectComparisonPagePair>& pagePairs)
 {
     int count = 0;
     for (const ProjectComparisonPagePair& pair : pagePairs) {
-        if (pair.matchKind == ProjectPageMatchKind::Name ||
-            pair.matchKind == ProjectPageMatchKind::ImageFingerprint ||
+        if (pair.matchKind == ProjectPageMatchKind::Name || pair.matchKind == ProjectPageMatchKind::ImageFingerprint ||
             pair.matchKind == ProjectPageMatchKind::Order) {
             ++count;
         }
@@ -390,8 +392,7 @@ int matchedPageCount(const QVector<ProjectComparisonPagePair>& pagePairs)
 }
 
 ReviewChange changeFromEntry(const labelqt::core::Project& currentProject, const QString& currentImageName,
-                             const QString& baselineImageName,
-                             const LabelSequenceDiffEntry& entry)
+                             const QString& baselineImageName, const LabelSequenceDiffEntry& entry)
 {
     ReviewChange change;
     change.imageName = currentImageName;
@@ -442,9 +443,8 @@ QVector<ReviewChange> changesForPagePairs(const labelqt::core::Project& currentP
             if (forced.baseline.imageName == pagePair.baselineImageName &&
                 forced.current.imageName == pagePair.currentImageName)
                 pairs.append({forced.baseline.labelIndex, forced.current.labelIndex});
-        const QVector<LabelSequenceDiffEntry> entries = pagePair.trustedLabelIdentities && pairs.isEmpty()
-            ? LabelSequenceDiffService::diffByIdentity(baselineLabels, currentLabels)
-            : LabelSequenceDiffService::diffWithPairs(baselineLabels, currentLabels, pairs);
+        const auto entries = LabelSequenceDiffService::diffWithPairs(baselineLabels, currentLabels, pairs,
+                                                                     pagePair.trustedLabelIdentities);
         for (const LabelSequenceDiffEntry& entry : entries) {
             ReviewChange change =
                 changeFromEntry(currentProject, pagePair.currentImageName, pagePair.baselineImageName, entry);
@@ -537,12 +537,12 @@ ProjectComparisonPlan ProjectComparisonService::planComparison(const labelqt::co
         return plan;
     }
 
-    plan.canCompareByOrder = baselineProject.images().size() == currentProject.images().size() &&
-                             !currentProject.images().isEmpty();
+    plan.canCompareByOrder =
+        baselineProject.images().size() == currentProject.images().size() && !currentProject.images().isEmpty();
     plan.comparablePageCount = static_cast<int>(currentProject.images().size());
     plan.pagePairs = matchMode == ProjectPageMatchMode::ByOrder
-        ? orderPagePairs(baselineProject, currentProject)
-        : normalizedNamePagePairs(baselineProject, currentProject, plan.baselineMetadata);
+                         ? orderPagePairs(baselineProject, currentProject)
+                         : normalizedNamePagePairs(baselineProject, currentProject, plan.baselineMetadata);
     plan.matchedPageCount = matchedPageCount(plan.pagePairs);
     return plan;
 }
@@ -579,17 +579,17 @@ QVector<ReviewChange> ProjectComparisonService::changesBetweenProjects(const lab
     return changesBetweenProjects(currentProject, planComparison(baselineProject, currentProject, matchMode));
 }
 
-QVector<labelqt::core::Label> ProjectComparisonService::baselineImageLabels(const labelqt::core::Project& currentProject,
-                                                                            const ReviewMetadata& metadata,
-                                                                            const QString& imageName)
+QVector<labelqt::core::Label>
+ProjectComparisonService::baselineImageLabels(const labelqt::core::Project& currentProject,
+                                              const ReviewMetadata& metadata, const QString& imageName)
 {
     return baselineImageLabels(currentProject, metadata, imageName, imageName);
 }
 
-QVector<labelqt::core::Label> ProjectComparisonService::baselineImageLabels(const labelqt::core::Project& currentProject,
-                                                                            const ReviewMetadata& metadata,
-                                                                            const QString& currentImageName,
-                                                                            const QString& baselineImageName)
+QVector<labelqt::core::Label>
+ProjectComparisonService::baselineImageLabels(const labelqt::core::Project& currentProject,
+                                              const ReviewMetadata& metadata, const QString& currentImageName,
+                                              const QString& baselineImageName)
 {
     int maxLabelIndex = -1;
     QVector<labelqt::core::Label> currentLabels;

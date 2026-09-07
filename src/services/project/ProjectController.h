@@ -66,7 +66,10 @@ public:
     labelqt::core::Project& project() noexcept;
     const labelqt::core::Project& project() const noexcept;
     const ProjectRevisionTracker& revisions();
-    QUuid documentSession() const noexcept { return m_documentSession; }
+    QUuid documentSession() const noexcept
+    {
+        return m_documentSession;
+    }
     bool isOwnerThread() const noexcept
     {
         return QThread::currentThread() == m_ownerThread;
@@ -91,14 +94,15 @@ public:
     void setDirty(bool dirty);
     void markDirty();
 
-    std::expected<std::optional<QString>, QString> tryPerformAutoBackup(
-        const labelqt::core::AppPreferences& preferences);
+    std::expected<std::optional<QString>, QString>
+    tryPerformAutoBackup(const labelqt::core::AppPreferences& preferences);
     AutoBackupResult performAutoBackup(const labelqt::core::AppPreferences& preferences);
 
 signals:
     void storageChanged();
 
 private:
+    void adoptProject(labelqt::core::Project project, FileRevision revision);
     void save(ProjectFileTransaction& transaction, std::optional<FileRevision> confirmedRevision = {});
     labelqt::core::Project m_project;
     QThread* const m_ownerThread{QThread::currentThread()};

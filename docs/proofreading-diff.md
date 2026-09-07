@@ -9,7 +9,7 @@
 - 哪些 label 是新增或删除。
 - 哪些 label 的文本、类别或 marker 坐标发生变化。
 - 哪些 label 只是页内顺序移动。
-- 内部“开始校对基线”和外部“与另一个工程对比”应使用同一套判断逻辑。
+- 内部校对轮次和外部“与另一个工程对比”应使用同一套判断逻辑。
 
 LabelQt 在可信的同一工程身份谱系内优先按页面与 Label UUID 比较，并用页面的 Label 身份代次判断
 能否信任对象对应关系。外部改写使身份失效时保留原序列算法回退，不能凭序号恢复批注。
@@ -23,8 +23,8 @@ LabelQt 在可信的同一工程身份谱系内优先按页面与 Label UUID 比
 - `LabelSequenceDiffService`：只负责一页内的 label 序列对齐，输出旧 label 和新 label 的对应关系，以及新增、删除和移动信息。
 - `TextDiffService`：只负责单个已匹配 label 的文本内部差异切分。它使用 `diff-match-patch`，失败时退化为整段删除/插入，不能把异常抛到 UI 层。
 - `TextDiffHtmlRenderer`：把 `TextDiffService` 的结构化结果渲染为可嵌入对话框或报告的 HTML 片段。
-- `ProofreadReportService`：生成校对 HTML 报告。它只负责文件内容，不弹文件选择窗口，也不读取 UI 状态。报告按页面分组，使用类似校对预览界面的双图展示 marker；内部校对可显示为“修改前 / 修改后”，外部工程对比显示为“当前工程 / 目标工程”。报告始终把压缩后的页面图像以内嵌 base64 的方式写入单个 HTML 文件。同一页两侧图片路径相同时，内嵌图片只写入一次并由两个预览复用。
-- `ProofreadChangesDialog`：只展示 `ReviewChange`，不参与匹配算法。
+- `ProofreadReportService`：生成校对 HTML 报告，不弹文件选择窗口或读取 UI 状态。报告按左右页面配对分组，双图展示 marker；轮次使用“原译稿 / 校对稿”，外部比较使用“当前工程 / 目标工程”。压缩图像以内嵌 base64 写入单个 HTML，两侧路径相同时只嵌入一次。页面级或失联批注不生成无依据的 marker，同名删除页和新增页不能混为同一配对。
+- `ProofreadChangesDialog`：展示 `ReviewChange`，接收服务层的完整比较计划；人工配对调用同一计划，不能由 UI 从差异行反推页面关系。预览标签直接取左右快照。
 
 这个边界很重要：UI 不应该知道 label 如何匹配，编辑控制器也不应该承担 diff 逻辑。
 

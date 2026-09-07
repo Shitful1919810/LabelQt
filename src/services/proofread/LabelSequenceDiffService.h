@@ -18,12 +18,13 @@ struct LabelSequenceDiffEntry {
 class LabelSequenceDiffService final {
 public:
     static QVector<LabelSequenceDiffEntry> diffByIdentity(const QVector<ReviewLabelSnapshot>& baselineLabels,
-                                                         const QVector<ReviewLabelSnapshot>& currentLabels);
+                                                          const QVector<ReviewLabelSnapshot>& currentLabels);
     static QVector<LabelSequenceDiffEntry> diff(QVector<ReviewLabelSnapshot> baselineLabels,
                                                 QVector<ReviewLabelSnapshot> currentLabels);
     static QVector<LabelSequenceDiffEntry> diffWithPairs(QVector<ReviewLabelSnapshot> baselineLabels,
                                                          QVector<ReviewLabelSnapshot> currentLabels,
-                                                         const QVector<QPair<int, int>>& pairs);
+                                                         const QVector<QPair<int, int>>& pairs,
+                                                         bool trustedIdentities = false);
 };
 
 } // namespace labelqt::services

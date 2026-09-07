@@ -105,13 +105,20 @@ QString ReviewSessionService::snapshotFingerprint(const ReviewLabelSnapshot& sna
 QString ReviewSessionService::fingerprint(const ReviewChange& change)
 {
     QJsonObject object{{"page", change.imageName},
-                   {"baselinePage", change.baselineImageName},
-                   {"before", snapshotObject(change.baseline)},
-                   {"after", snapshotObject(change.current)},
-                   {"kind", static_cast<int>(change.kind)},
-                   {"order", change.orderChanged},
-                   {"manual", change.manuallyMatched}};
-    if (!change.noteRevision.isEmpty()) object.insert("notes", QString::fromLatin1(change.noteRevision.toHex()));
+                       {"baselinePage", change.baselineImageName},
+                       {"before", snapshotObject(change.baseline)},
+                       {"after", snapshotObject(change.current)},
+                       {"kind", static_cast<int>(change.kind)},
+                       {"order", change.orderChanged},
+                       {"manual", change.manuallyMatched}};
+    if (!change.noteRevision.isEmpty())
+        object.insert("notes", QString::fromLatin1(change.noteRevision.toHex()));
+    // Round results have trusted anchors; equal wording on a new label must not inherit its predecessor's status.
+    if (!change.pageId.isNull()) {
+        object.insert("pageId", change.pageId.toString());
+        object.insert("beforeId", change.baseline.id.toString());
+        object.insert("afterId", change.current.id.toString());
+    }
     return digest(object);
 }
 QString ReviewSessionService::contextKey(const labelqt::core::Project& before, const labelqt::core::Project& current)

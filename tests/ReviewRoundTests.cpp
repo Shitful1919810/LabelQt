@@ -3,6 +3,8 @@
 #include "services/automation/ProjectTaskService.h"
 #include "services/label/LabelEditController.h"
 #include "services/project/ProjectLocationService.h"
+#include "services/project/ProjectRecoveryService.h"
+#include "services/proofread/ProjectComparisonService.h"
 #include "services/proofread/ProofreadReportService.h"
 #include "services/proofread/ReviewRoundEditService.h"
 #include "ui/labeltable/LabelTableModel.h"
@@ -22,6 +24,7 @@
 #include <QTableView>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QThreadPool>
 #include <QTimer>
 #include <QToolButton>
 #include <thread>
@@ -202,8 +205,7 @@ private slots:
         QVERIFY(html.contains("Reason &lt;script&gt;"));
         QVERIFY(!html.contains("<script>alert(1)</script>"));
         result.after.setCommentLines(ReviewSessionService::withProjectSession({}, {}));
-        ProofreadChangesDialog dialog(result.before, result.after, {},
-                                      ReviewMetadataService::captureBaseline(result.before), result.changes,
+        ProofreadChangesDialog dialog(result.before, result.after, {}, {}, result.changes,
                                       {.leftProjectTitle = {},
                                        .rightProjectTitle = {},
                                        .reviewEnabled = true,
@@ -440,6 +442,17 @@ private slots:
         controller.setUi(&start, &show, &compare, &status, &menu, &notes, &model);
         controller.toggleBaseline();
         QVERIFY(controller.isActive());
+        const auto commentsBeforeComparison = host.project().commentLines();
+        QTimer cancelComparison;
+        connect(&cancelComparison, &QTimer::timeout, this, [] {
+            if (auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget()))
+                dialog->reject();
+        });
+        cancelComparison.start(1);
+        controller.showChanges();
+        cancelComparison.stop();
+        QThreadPool::globalInstance()->waitForDone();
+        QCOMPARE(host.project().commentLines(), commentsBeforeComparison);
         menu.actions().first()->setChecked(false);
         QVERIFY(!controller.isActive());
         QVERIFY(ReviewRoundService::read(host.project())->has_value());
@@ -454,6 +467,16 @@ private slots:
         host.undo.undo();
         controller.updateUi(false);
         QVERIFY(!(**ReviewRoundService::read(host.project())).after.has_value());
+        host.project().images().clear();
+        controller.updateUi(false);
+        QVERIFY(start.isEnabled());
+        QVERIFY(menu.actions().last()->isEnabled());
+        QTimer::singleShot(0, [] {
+            if (auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget()))
+                box->button(QMessageBox::Ok)->click();
+        });
+        controller.toggleBaseline();
+        QVERIFY((**ReviewRoundService::read(host.project())).after.has_value());
     }
 
     void reusedPageNameDoesNotRestoreOldCommentTarget()
@@ -481,6 +504,136 @@ private slots:
         QVERIFY(!ReviewRoundService::read(host.project()));
         QVERIFY(!host.commit(host.round()));
         QCOMPARE(host.project().commentLines(), original);
+    }
+
+    void restoringBackupInvalidatesRoundUndoAndAutomation()
+    {
+        Host host;
+        QVERIFY(host.commit(host.round()));
+        host.controller.save();
+        const AppPreferences preferences;
+        const auto backup = ProjectRecoveryService::preserveLocalEdits(host.project(), preferences);
+        QVERIFY(backup);
+        const auto entries = ProjectRecoveryService::entries(host.project().filePath(), preferences);
+        QVERIFY(!entries.isEmpty());
+        const auto document = host.controller.documentSession();
+        const auto token = ReviewRoundEditService::token(host.controller);
+        const auto task = host.tasks.capture(host.request(false));
+        QVERIFY(task);
+        QVERIFY(host.controller.restoreBackup(entries.first(), preferences));
+        QVERIFY(host.controller.documentSession() != document);
+        const auto comments = host.project().commentLines();
+        host.undo.undo();
+        QCOMPARE(host.project().commentLines(), comments);
+        QVERIFY(!ReviewRoundEditService::commit(host.controller, host.undo, token, std::nullopt, "stale"));
+        const auto& page = std::as_const(host.project()).images()[0];
+        QVERIFY(!host.tasks.submit(task->taskId, {LabelChange{page.id, page.labels[0].id(), "stale", {}, {}, {}}},
+                                   "stale"));
+    }
+
+    void damagedNoteAnchorsAreRejectedInsteadOfBecomingPageComments()
+    {
+        Host host;
+        auto round = host.round();
+        round.notes.append(host.note());
+        const auto original = ReviewRoundService::encode(round, host.project().filePath());
+        for (const bool missingPage : {false, true}) {
+            auto record = original;
+            auto notes = record.value("notes").toArray();
+            auto note = notes[0].toObject();
+            if (missingPage)
+                note.insert("associatedLabelId", QUuid::createUuid().toString());
+            else
+                note.insert("labelId", false);
+            notes[0] = note;
+            record.insert("notes", notes);
+            host.project().setCommentLines(ProjectMetadataService::rewriteCommentLines({}, {{"proofreading", record}}));
+            QVERIFY(!ReviewRoundService::read(host.project()));
+            QVERIFY(!host.commit(round));
+        }
+    }
+
+    void relinkedPageCommentTracksItsActualLabelAndCurrentPageName()
+    {
+        Host host;
+        auto round = host.round();
+        auto note = host.note();
+        note.labelId = {};
+        note.associatedPageId = host.project().images()[1].id;
+        note.associatedLabelId = host.project().images()[1].labels[0].id();
+        round.notes.append(note);
+        host.project().images()[1].name = "renamed.png";
+        ProofreadNotesWidget widget;
+        widget.refresh(round, host.project(), 1, 0, true);
+        auto* list = widget.findChild<QListWidget*>();
+        QCOMPARE(list->count(), 1);
+        QVERIFY(list->item(0)->text().contains("renamed.png"));
+        host.project().images()[1].labels.clear();
+        widget.refresh(round, host.project(), 1, -1, true);
+        widget.findChild<QCheckBox*>()->setChecked(true);
+        QCOMPARE(list->count(), 1);
+        QVERIFY(list->item(0)->text().contains("Needs association"));
+    }
+
+    void pageCommentsDoNotInventMarkersAndLabelCommentsKeepBothIndexes()
+    {
+        Host host;
+        auto round = host.round();
+        auto note = host.note();
+        note.labelId = {};
+        round.notes.append(note);
+        auto result = ReviewRoundService::present(round, host.project());
+        auto html = ProofreadReportService::htmlReport(result.changes, result.before, result.after, {});
+        QVERIFY(html.contains("Reason"));
+        QVERIFY(!html.contains("<span class=\"marker "));
+        round.notes[0] = host.note();
+        result = ReviewRoundService::present(round, host.project());
+        QCOMPARE(result.changes.first().baselineLabelIndex, 0);
+        QCOMPARE(result.changes.first().currentLabelIndex, 0);
+        html = ProofreadReportService::htmlReport(result.changes, result.before, result.after, {});
+        QCOMPARE(html.count("<span class=\"marker "), 2);
+    }
+
+    void reportDoesNotCombineDeletedAndReplacementPagesWithTheSameName()
+    {
+        Host host;
+        const auto round = host.round();
+        host.project().images()[0] = {
+            "a.png", host.directory.filePath("b.png"), {Label("replacement", "dialogue", {0.5, 0.5})}};
+        const auto result = ReviewRoundService::present(round, host.project());
+        const auto html = ProofreadReportService::htmlReport(result.changes, result.before, result.after, {});
+        QCOMPARE(html.count("<section class=\"page-section\""), 2);
+    }
+
+    void newLabelWithIdenticalContentDoesNotInheritReviewState()
+    {
+        Host host;
+        const auto round = host.round();
+        host.project().images()[0].labels.append(Label("new", "dialogue", {0.5, 0.5}));
+        const auto first = ReviewRoundService::present(round, host.project()).changes.first();
+        host.project().images()[0].labels.last() = Label("new", "dialogue", {0.5, 0.5});
+        const auto second = ReviewRoundService::present(round, host.project()).changes.first();
+        QVERIFY(ReviewSessionService::fingerprint(first) != ReviewSessionService::fingerprint(second));
+    }
+
+    void externalComparisonKeepsIdentityMatchingWhenOpeningTheReviewUi()
+    {
+        Host host;
+        const auto before = ReviewRoundService::snapshot(host.project());
+        host.project().images()[0].labels[0] = Label("hello", "dialogue", {0.23, 0.45678});
+        const auto after = ReviewRoundService::snapshot(host.project());
+        const auto plan = ProjectComparisonService::planComparison(before, after);
+        const auto changes = ProjectComparisonService::changesBetweenProjects(after, plan);
+        QCOMPARE(changes.size(), 2);
+        ProofreadChangesDialog dialog(before, after, {}, plan, changes,
+                                      {.leftProjectTitle = {}, .rightProjectTitle = {}, .reviewEnabled = true});
+        QCOMPARE(dialog.findChild<QTableView*>()->model()->rowCount(), 2);
+        const auto unchanged = plan.baselineMetadata.baselineFor("a.png", 1);
+        const ManualLabelPair manual{unchanged, unchanged};
+        const auto paired =
+            ProjectComparisonService::changesWithPairs(after, plan.baselineMetadata, plan.pagePairs, {manual});
+        QVERIFY(paired);
+        QCOMPARE(paired->size(), 3); // Explicit pair plus the independent deletion and insertion.
     }
 };
 QTEST_MAIN(ReviewRoundTests)
