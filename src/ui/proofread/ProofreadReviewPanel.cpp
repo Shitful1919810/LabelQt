@@ -1,19 +1,15 @@
 #include "ui/proofread/ProofreadReviewPanel.h"
-#include <QCheckBox>
+#include "ui/proofread/ReviewStatusDelegate.h"
+#include <QAction>
 #include <QComboBox>
-#include <QDialog>
-#include <QDialogButtonBox>
 #include <QHBoxLayout>
-#include <QHeaderView>
 #include <QInputDialog>
+#include <QMenu>
 #include <QMessageBox>
-#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QStyle>
-#include <QTableWidget>
 #include <QToolButton>
-#include <QVBoxLayout>
 #include <algorithm>
 
 using namespace labelqt::services;
@@ -21,85 +17,44 @@ using namespace labelqt::services;
 ProofreadReviewPanel::ProofreadReviewPanel(Callbacks callbacks, QWidget* parent)
     : QWidget(parent), m_callbacks(std::move(callbacks))
 {
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    auto* bar = new QHBoxLayout;
+    auto* bar = new QHBoxLayout(this);
+    bar->setContentsMargins(0, 0, 0, 0);
     m_status = new QComboBox(this);
+    m_status->setObjectName(QStringLiteral("reviewStatus"));
     m_status->addItems({tr("Unseen"), tr("Reviewed"), tr("Needs confirmation")});
+    for (int i = 0; i < m_status->count(); ++i)
+        m_status->setItemIcon(i, labelqt::ui::reviewStatusIcon(static_cast<ReviewStatus>(i), *style()));
     m_status->setToolTip(tr("Set status for selected changes"));
     auto* next = new QPushButton(tr("Next unseen"), this);
-    auto* pair = new QPushButton(tr("Pair with..."), this);
-    auto* unpair = new QPushButton(tr("Remove manual pair"), this);
+    next->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
+    auto* tools = new QToolButton(this);
+    tools->setIcon(
+        QIcon::fromTheme(QStringLiteral("insert-link"), style()->standardIcon(QStyle::SP_FileDialogDetailedView)));
+    tools->setToolTip(tr("Manual pair"));
+    tools->setAccessibleName(tools->toolTip());
+    tools->setPopupMode(QToolButton::InstantPopup);
+    auto* menu = new QMenu(tools);
+    m_pairAction = menu->addAction(tr("Pair with..."), this, &ProofreadReviewPanel::pairSelected);
+    m_unpairAction = menu->addAction(tr("Remove manual pair"), this, &ProofreadReviewPanel::unpairSelected);
+    tools->setMenu(menu);
     auto* undo = new QToolButton(this);
     auto* redo = new QToolButton(this);
-    undo->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
-    redo->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
+    undo->setObjectName(QStringLiteral("undoReview"));
+    redo->setObjectName(QStringLiteral("redoReview"));
+    undo->setIcon(QIcon::fromTheme(QStringLiteral("edit-undo"), style()->standardIcon(QStyle::SP_ArrowBack)));
+    redo->setIcon(QIcon::fromTheme(QStringLiteral("edit-redo"), style()->standardIcon(QStyle::SP_ArrowForward)));
     undo->setToolTip(tr("Undo review edit"));
     redo->setToolTip(tr("Redo review edit"));
     bar->addWidget(m_status);
     bar->addWidget(next);
-    bar->addWidget(pair);
-    bar->addWidget(unpair);
+    bar->addStretch();
+    bar->addWidget(tools);
     bar->addWidget(undo);
     bar->addWidget(redo);
-    bar->addStretch();
-    layout->addLayout(bar);
-    auto* notes = new QCheckBox(tr("Review note"), this);
-    layout->addWidget(notes);
-    auto* history = new QPushButton(tr("Previous notes..."), this);
-    bar->addWidget(history);
-    connect(history, &QPushButton::clicked, this, [this] {
-        commitNote();
-        QSet<QString> active;
-        for (const auto& change : m_callbacks.allChanges())
-            active.insert(ReviewSessionService::fingerprint(change));
-        QDialog dialog(this);
-        dialog.setWindowTitle(tr("Previous notes"));
-        dialog.resize(640, 400);
-        QVBoxLayout historyLayout(&dialog);
-        QTableWidget table(0, 2, &dialog);
-        table.setHorizontalHeaderLabels({tr("Change fingerprint"), tr("Review note")});
-        table.setEditTriggers(QAbstractItemView::NoEditTriggers);
-        table.horizontalHeader()->setStretchLastSection(true);
-        for (auto it = m_session.annotations.cbegin(); it != m_session.annotations.cend(); ++it) {
-            if (active.contains(it.key()) || it->note.isEmpty())
-                continue;
-            const int row = table.rowCount();
-            table.insertRow(row);
-            table.setItem(row, 0, new QTableWidgetItem(it.key()));
-            table.setItem(row, 1, new QTableWidgetItem(it->note));
-        }
-        historyLayout.addWidget(&table);
-        QDialogButtonBox buttons(QDialogButtonBox::Close, &dialog);
-        historyLayout.addWidget(&buttons);
-        connect(&buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-        dialog.exec();
-    });
-    m_note = new QPlainTextEdit(this);
-    m_note->setMaximumHeight(90);
-    m_note->setTabChangesFocus(true);
-    auto* apply = new QPushButton(tr("Apply note"), this);
-    layout->addWidget(m_note);
-    layout->addWidget(apply, 0, Qt::AlignRight);
-    m_note->hide();
-    apply->hide();
-    connect(notes, &QCheckBox::toggled, m_note, &QWidget::setVisible);
-    connect(notes, &QCheckBox::toggled, apply, &QWidget::setVisible);
-    connect(apply, &QPushButton::clicked, this, &ProofreadReviewPanel::commitNote);
     connect(next, &QPushButton::clicked, this, &ProofreadReviewPanel::nextUnseenRequested);
-    connect(pair, &QPushButton::clicked, this, &ProofreadReviewPanel::pairSelected);
-    connect(unpair, &QPushButton::clicked, this, &ProofreadReviewPanel::unpairSelected);
-    connect(m_status, &QComboBox::activated, this, [this](int status) {
-        commitNote();
-        auto session = m_session;
-        for (const auto& change : m_callbacks.selected())
-            session.annotations[ReviewSessionService::fingerprint(change)].status = static_cast<ReviewStatus>(status);
-        changeState(std::move(session), false);
-    });
-    connect(undo, &QToolButton::clicked, this, [this] {
-        commitNote();
-        m_undo.undo();
-    });
+    connect(m_status, &QComboBox::activated, this,
+            [this](int status) { setStatus(m_callbacks.selected(), static_cast<ReviewStatus>(status)); });
+    connect(undo, &QToolButton::clicked, this, [this] { m_undo.undo(); });
     connect(redo, &QToolButton::clicked, this, [this] { m_undo.redo(); });
     m_undo.setChangedCallback([this, undo, redo] {
         undo->setEnabled(m_undo.canUndo());
@@ -107,6 +62,7 @@ ProofreadReviewPanel::ProofreadReviewPanel(Callbacks callbacks, QWidget* parent)
     });
     undo->setEnabled(false);
     redo->setEnabled(false);
+    refreshSelection();
 }
 ProofreadReviewPanel::~ProofreadReviewPanel()
 {
@@ -129,27 +85,38 @@ void ProofreadReviewPanel::setCurrentChange(const ReviewChange* change)
     const QString nextKey = change ? ReviewSessionService::fingerprint(*change) : QString();
     if (nextKey == m_currentKey)
         return;
-    commitNote();
     m_currentKey = nextKey;
     refreshCurrentAnnotation();
 }
 void ProofreadReviewPanel::refreshCurrentAnnotation()
 {
     const auto annotation = m_session.annotations.value(m_currentKey);
-    m_note->setPlainText(annotation.note);
-    m_note->setEnabled(!m_currentKey.isEmpty());
-    m_status->setEnabled(!m_currentKey.isEmpty());
+    refreshSelection();
     const QSignalBlocker blocker(m_status);
     m_status->setCurrentIndex(static_cast<int>(annotation.status));
 }
-void ProofreadReviewPanel::commitNote()
+void ProofreadReviewPanel::setStatus(const QVector<ReviewChange>& changes, ReviewStatus status)
 {
-    if (m_currentKey.isEmpty() || m_session.annotations.value(m_currentKey).note == m_note->toPlainText())
+    if (status != ReviewStatus::Unseen && status != ReviewStatus::Reviewed && status != ReviewStatus::NeedsConfirmation)
         return;
     auto session = m_session;
-    session.annotations[m_currentKey].note = m_note->toPlainText();
+    for (const auto& change : changes) {
+        const auto key = ReviewSessionService::fingerprint(change);
+        if (session.annotations.value(key).status != status)
+            session.annotations[key].status = status;
+    }
     changeState(std::move(session), false);
 }
+
+void ProofreadReviewPanel::refreshSelection()
+{
+    const auto selected = m_callbacks.selected();
+    m_status->setEnabled(!selected.isEmpty());
+    m_pairAction->setEnabled(selected.size() == 1 && selected.first().kind != ReviewChangeKind::Modified);
+    m_unpairAction->setEnabled(
+        std::ranges::any_of(selected, [](const auto& change) { return change.manuallyMatched; }));
+}
+
 void ProofreadReviewPanel::applyState(ReviewSession session, bool pairs)
 {
     m_session = std::move(session);
@@ -160,6 +127,11 @@ void ProofreadReviewPanel::applyState(ReviewSession session, bool pairs)
 }
 void ProofreadReviewPanel::changeState(ReviewSession session, bool pairs)
 {
+    const auto validSession = ReviewSessionService::validate(session);
+    if (!validSession) {
+        QMessageBox::warning(this, tr("Edit review session"), validSession.error());
+        return;
+    }
     if (ReviewSessionService::encode(session) == ReviewSessionService::encode(m_session))
         return;
     if (pairs) {
@@ -177,7 +149,6 @@ void ProofreadReviewPanel::changeState(ReviewSession session, bool pairs)
 }
 void ProofreadReviewPanel::pairSelected()
 {
-    commitNote();
     const auto selected = m_callbacks.selected();
     if (selected.size() != 1 || selected.first().kind == ReviewChangeKind::Modified) {
         QMessageBox::information(this, tr("Manual pair"), tr("Select one added or deleted change."));
@@ -214,7 +185,6 @@ void ProofreadReviewPanel::pairSelected()
 }
 void ProofreadReviewPanel::unpairSelected()
 {
-    commitNote();
     auto session = m_session;
     const auto selected = m_callbacks.selected();
     session.pairs.removeIf([&](const auto& pair) {

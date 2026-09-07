@@ -54,6 +54,7 @@ class ProjectRecoveryController;
 class ProjectExternalChangeController;
 class ProjectSearchPanel;
 class ProofreadingController;
+class PreferenceDialog;
 class ViewportFittedTableColumns;
 
 namespace labelqt::services {
@@ -246,8 +247,6 @@ private:
     QMenu* m_recentProjectsMenu{nullptr};
     QAction* m_undoAction{nullptr};
     QAction* m_redoAction{nullptr};
-    QAction* m_previousPageAction{nullptr};
-    QAction* m_nextPageAction{nullptr};
     QAction* m_preferencesAction{nullptr};
     QAction* m_quitAction{nullptr};
     QToolButton* m_labelModeButton{nullptr};
@@ -259,6 +258,7 @@ private:
     std::unique_ptr<labelqt::services::ProjectWorkflowController> m_projectWorkflowController;
     std::unique_ptr<labelqt::services::LabelEditController> m_labelEditController;
     labelqt::core::AppPreferences m_preferences;
+    QPointer<PreferenceDialog> m_preferenceDialog;
     QVector<labelqt::core::AppPreferenceWarning> m_preferenceWarnings;
     int m_currentImageIndex{-1};
     int m_currentLabelIndex{-1};

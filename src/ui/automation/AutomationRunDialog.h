@@ -12,6 +12,7 @@ class AutomationRunDialog final : public QDialog {
 
 public:
     explicit AutomationRunDialog(const QString& scriptName, QWidget* parent = nullptr);
+    ~AutomationRunDialog() override;
 
     void appendStandardOutput(const QString& text);
     void appendStandardError(const QString& text);
@@ -33,4 +34,5 @@ private:
     QPushButton* m_cancelButton{nullptr};
     QPushButton* m_closeButton{nullptr};
     bool m_finished{false};
+    bool m_previousLogCharacterWasCarriageReturn{false};
 };

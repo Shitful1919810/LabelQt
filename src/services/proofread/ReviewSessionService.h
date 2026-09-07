@@ -23,6 +23,7 @@ public:
     static QString fingerprint(const ReviewChange& change);
     static QString snapshotFingerprint(const ReviewLabelSnapshot& snapshot);
     static QString contextKey(const labelqt::core::Project& before, const labelqt::core::Project& current);
+    static std::expected<void, QString> validate(const ReviewSession& session);
     static QJsonObject encode(const ReviewSession& session);
     static std::expected<ReviewSession, QString> decode(const QJsonObject& object);
     static std::expected<ReviewSession, QString> loadLocal(const QString& key);

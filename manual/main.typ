@@ -19,7 +19,7 @@
 
 #let product-name = "LabelQt"
 #let manual-version = "开发版本"
-#let manual-date = "2026-09-06"
+#let manual-date = "2026-09-07"
 
 #import "style.typ": note
 

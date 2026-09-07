@@ -32,6 +32,10 @@ public:
     using Loader = std::function<ImagePageLoadResult(const QString&, QSize)>;
     explicit ImagePageCache(Loader loader, QObject* parent = nullptr);
 
+    // Opt-in bounded decoding; requires positive source budget and target dimensions.
+    // Use a fixed preview target per cache instance (cache entries are keyed by path).
+    static Loader previewLoader(qint64 maximumSourcePixels);
+
     void setMaxCachedPages(int maxCachedPages);
     std::optional<ImagePageLoadResult> cachedImage(const QString& path, QSize requestedPreviewSize);
     quint64 requestImage(const QString& path, QSize requestedPreviewSize);
@@ -48,7 +52,11 @@ private:
         int retries{0};
     };
 
-    static ImagePageLoadResult loadImage(const QString& path, QSize requestedPreviewSize);
+    struct LoadOptions {
+        std::optional<qint64> maximumSourcePixels;
+    };
+
+    static ImagePageLoadResult loadImage(const QString& path, QSize requestedPreviewSize, LoadOptions options);
 
     bool isCacheEntryFresh(const ImagePageLoadResult& entry) const;
     void startLoadIfNeeded(const QString& path, QSize requestedPreviewSize);

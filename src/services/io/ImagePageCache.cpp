@@ -14,9 +14,19 @@ bool ImagePageLoadResult::isValid() const noexcept
     return !image.isNull();
 }
 
-ImagePageCache::ImagePageCache(QObject* parent) : ImagePageCache(loadImage, parent) {}
+ImagePageCache::ImagePageCache(QObject* parent)
+    : ImagePageCache([](const QString& path, QSize size) { return loadImage(path, size, {}); }, parent)
+{
+}
 
 ImagePageCache::ImagePageCache(Loader loader, QObject* parent) : QObject(parent), m_loader(std::move(loader)) {}
+
+ImagePageCache::Loader ImagePageCache::previewLoader(qint64 maximumSourcePixels)
+{
+    return [maximumSourcePixels](const QString& path, QSize size) {
+        return loadImage(path, size, LoadOptions{maximumSourcePixels});
+    };
+}
 
 void ImagePageCache::setMaxCachedPages(int maxCachedPages)
 {
@@ -78,7 +88,7 @@ void ImagePageCache::clear()
     m_lruPaths.clear();
 }
 
-ImagePageLoadResult ImagePageCache::loadImage(const QString& path, QSize requestedPreviewSize)
+ImagePageLoadResult ImagePageCache::loadImage(const QString& path, QSize requestedPreviewSize, LoadOptions options)
 {
     ImagePageLoadResult result;
     result.path = path;
@@ -92,12 +102,32 @@ ImagePageLoadResult ImagePageCache::loadImage(const QString& path, QSize request
     QImageReader reader(path);
     reader.setAutoTransform(true);
     result.originalSize = reader.size();
+    if (options.maximumSourcePixels) {
+        // Some codecs scale only after decoding. Bound that transient allocation too,
+        // without changing Qt's process-wide allocation limit. Unknown sizes fail closed.
+        if (result.originalSize.isEmpty()) {
+            result.errorMessage = reader.errorString();
+            return result;
+        }
+        if (requestedPreviewSize.isEmpty() || *options.maximumSourcePixels <= 0 ||
+            qint64(result.originalSize.width()) * result.originalSize.height() > *options.maximumSourcePixels)
+            return result;
+        if (result.originalSize.width() > requestedPreviewSize.width() ||
+            result.originalSize.height() > requestedPreviewSize.height())
+            reader.setScaledSize(result.originalSize.scaled(requestedPreviewSize, Qt::KeepAspectRatio));
+    }
     result.image = reader.read();
     if (result.originalSize.isEmpty() && !result.image.isNull()) {
         result.originalSize = result.image.size();
     }
     if (result.image.isNull()) {
         result.errorMessage = reader.errorString();
+    }
+    else if (options.maximumSourcePixels) {
+        if (result.image.width() > requestedPreviewSize.width() ||
+            result.image.height() > requestedPreviewSize.height())
+            result.image = result.image.scaled(requestedPreviewSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        result.image = result.image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
     const auto after = FileRevision::read(path);
     if (!after || !after->sameContent(*before)) {

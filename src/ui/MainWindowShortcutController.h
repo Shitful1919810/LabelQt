@@ -3,6 +3,8 @@
 #include "core/AppPreferences.h"
 
 #include <QObject>
+#include <QPointer>
+#include <QVector>
 
 #include <functional>
 
@@ -29,11 +31,13 @@ public:
 
     void setPreferences(labelqt::core::AppPreferences preferences);
     void setCallbacks(Callbacks callbacks);
+    void setLabelWorkspaceWidgets(QVector<QWidget*> widgets);
     bool handleGlobalShortcut(QObject* watched, QEvent* event);
     bool handleLabelViewShortcut(QEvent* event);
 
 private:
-    QWidget* m_window{nullptr};
+    QPointer<QWidget> m_window;
+    QVector<QPointer<QWidget>> m_labelWorkspaceWidgets;
     labelqt::core::AppPreferences m_preferences;
     Callbacks m_callbacks;
 };

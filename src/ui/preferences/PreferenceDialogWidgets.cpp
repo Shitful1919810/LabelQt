@@ -6,7 +6,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QScrollBar>
+#include <QSlider>
 #include <QWidget>
 
 namespace labelqt::ui::PreferenceDialogWidgets {
@@ -37,21 +37,21 @@ QWidget* makeFontSelectorWidget(QWidget* parent, QLabel*& label, QPushButton*& c
     return widget;
 }
 
-QWidget* makePercentScrollBarWidget(QWidget* parent, QScrollBar*& scrollBar, QLabel*& label, int value)
+QWidget* makePercentSliderWidget(QWidget* parent, QSlider*& slider, QLabel*& label, int value)
 {
     auto* widget = new QWidget(parent);
     auto* layout = new QHBoxLayout(widget);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(6);
-    scrollBar = new QScrollBar(Qt::Horizontal, widget);
-    scrollBar->setRange(0, 100);
-    scrollBar->setSingleStep(5);
-    scrollBar->setPageStep(10);
-    scrollBar->setValue(value);
+    slider = new QSlider(Qt::Horizontal, widget);
+    slider->setRange(0, 100);
+    slider->setSingleStep(5);
+    slider->setPageStep(10);
+    slider->setValue(value);
     label = new QLabel(widget);
     label->setMinimumWidth(label->fontMetrics().horizontalAdvance(QStringLiteral("100%")));
     label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    layout->addWidget(scrollBar, 1);
+    layout->addWidget(slider, 1);
     layout->addWidget(label);
     return widget;
 }

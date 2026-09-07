@@ -56,6 +56,7 @@ add_library(LabelQtTestSupport STATIC
     ../src/ui/canvas/CanvasLabelTextEditor.cpp
     ../src/ui/labeltable/CurrentPageLabelContext.cpp
     ../src/ui/canvas/ImageCanvas.cpp
+    ../src/ui/canvas/ImagePageViewController.cpp
     ../src/ui/labeltable/LabelEditDelegates.cpp
     ../src/ui/labeltable/LabelSelectionController.cpp
     ../src/ui/labeltable/LabelTableModel.cpp
@@ -69,6 +70,17 @@ add_library(LabelQtTestSupport STATIC
     ../src/ui/search/ProjectSearchPanel.cpp
     ../src/ui/proofread/ProofreadChangesDialog.cpp
     ../src/ui/proofread/ProofreadReviewPanel.cpp
+    ../src/ui/proofread/ReviewStatusDelegate.cpp
+    ../src/ui/MainWindowShortcutController.cpp
+    ../src/services/preferences/PreferenceStore.cpp
+    ../src/core/TranslationManager.cpp
+    ../src/ui/preferences/PreferenceDialog.cpp
+    ../src/ui/preferences/PreferenceDialogWidgets.cpp
+    ../src/ui/preferences/GroupStyleEditorWidget.cpp
+    ../src/ui/automation/AutomationShortcutEditorWidget.cpp
+    ../src/ui/widgets/ThemeManager.cpp
+    ../src/ui/project/MergeCandidatePreview.cpp
+    ../src/ui/project/ProjectMergeDialog.cpp
     ../src/ui/proofread/ProofreadChangeTableModel.cpp
     ../src/ui/labeltable/ViewportFittedTableColumns.cpp
     ../src/ui/widgets/DialogWindowUtils.cpp
@@ -134,6 +146,15 @@ target_link_libraries(ProductWorkflowTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(ProductWorkflowTests)
 add_test(NAME ProductWorkflowTests COMMAND $<TARGET_FILE:ProductWorkflowTests>)
 set_tests_properties(ProductWorkflowTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+foreach(test_name IN ITEMS PreferenceStoreTests RecordStorageTests ResourceUiTests UiInteractionTests)
+    qt_add_executable(${test_name} ${test_name}.cpp)
+    target_link_libraries(${test_name} PRIVATE LabelQtTestSupport)
+    target_compile_definitions(${test_name} PRIVATE LABELQT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    labelqt_enable_warnings(${test_name})
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    set_tests_properties(${test_name} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+endforeach()
 
 add_test(NAME LabelQtTests COMMAND $<TARGET_FILE:LabelQtTests>)
 set_tests_properties(LabelQtTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

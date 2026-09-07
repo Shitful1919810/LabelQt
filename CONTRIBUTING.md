@@ -37,7 +37,7 @@ See `docs/architecture.md` for more detail.
 ## Qt Licensing Constraints
 
 - Keep the application on LGPL-available Qt modules unless the project intentionally changes to a GPL-compatible release strategy.
-- Current required Qt dependencies should stay limited to `Qt6::Core`, `Qt6::Gui` and `Qt6::Widgets` unless a new module is reviewed. `Qt6::Svg` is an optional enhancement for bundled stylesheet icons.
+- Current required Qt dependencies are `Qt6::Core`, `Qt6::Gui`, `Qt6::Widgets` and `Qt6::Concurrent`. Review any additional module before introducing it. `Qt6::Svg` is an optional enhancement for bundled stylesheet icons.
 - Do not introduce Qt GPL-only modules without documenting the license impact and getting an explicit project decision.
 - Keep dynamic Qt as the baseline release path; the official Windows static variant must additionally satisfy the
   repository's static-linking checklist and relinking requirements.

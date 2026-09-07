@@ -220,9 +220,10 @@ QVector<QString> pageOrderForChanges(const QVector<ReviewChange>& changes)
     return pageNames;
 }
 
-QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndexes, const QVector<ReviewChange>& changes,
-                        const labelqt::core::Project& beforeProject, const labelqt::core::Project& currentProject,
-                        const ProofreadReportTexts& texts, const ProofreadReportOptions& options)
+QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndexes,
+                        const QVector<ReviewChange>& changes, const labelqt::core::Project& beforeProject,
+                        const labelqt::core::Project& currentProject, const ProofreadReportTexts& texts,
+                        const ProofreadReportOptions& options)
 {
     const labelqt::core::ImageEntry* beforeImage = nullptr;
     const labelqt::core::ImageEntry* afterImage = nullptr;
@@ -230,11 +231,11 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
         const ReviewChange& change = changes.at(changeIndex);
         if (beforeImage == nullptr) {
             beforeImage = beforeProject.imageByName(change.baselineImageName.isEmpty() ? change.imageName
-                                                                                        : change.baselineImageName);
+                                                                                       : change.baselineImageName);
         }
         if (afterImage == nullptr) {
-            afterImage = currentProject.imageByName(change.imageName.isEmpty() ? change.baselineImageName
-                                                                                : change.imageName);
+            afterImage =
+                currentProject.imageByName(change.imageName.isEmpty() ? change.baselineImageName : change.imageName);
         }
         if (beforeImage != nullptr && afterImage != nullptr) {
             break;
@@ -279,7 +280,7 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
             const QPointF position = clampedPosition(change.baseline.position);
             html += QStringLiteral("<span class=\"marker %1\" style=\"left:%2%;top:%3%\">%4</span>")
                         .arg(markerClass(change.kind == ReviewChangeKind::Deleted ? ReviewChangeKind::Deleted
-                                                                                   : ReviewChangeKind::Modified))
+                                                                                  : ReviewChangeKind::Modified))
                         .arg(position.x() * 100.0, 0, 'f', 2)
                         .arg(position.y() * 100.0, 0, 'f', 2)
                         .arg(escaped(labelNumber(beforeLabelIndex(change))));
@@ -295,7 +296,7 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
             const QPointF position = clampedPosition(change.current.position);
             html += QStringLiteral("<span class=\"marker %1\" style=\"left:%2%;top:%3%\">%4</span>")
                         .arg(markerClass(change.kind == ReviewChangeKind::Added ? ReviewChangeKind::Added
-                                                                                 : ReviewChangeKind::Modified))
+                                                                                : ReviewChangeKind::Modified))
                         .arg(position.x() * 100.0, 0, 'f', 2)
                         .arg(position.y() * 100.0, 0, 'f', 2)
                         .arg(escaped(labelNumber(afterLabelIndex(change))));
@@ -318,10 +319,15 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
             details += QStringLiteral("<p>%1</p>").arg(escaped(texts.manualPair));
         if (options.includeReview) {
             const auto annotation = options.annotations.value(ReviewSessionService::fingerprint(change));
+            const QString color = annotation.status == ReviewStatus::Reviewed            ? QStringLiteral("#299c68")
+                                  : annotation.status == ReviewStatus::NeedsConfirmation ? QStringLiteral("#d69a19")
+                                                                                         : QStringLiteral("#db505c");
             details +=
-                QStringLiteral("<p><strong>%1: %2</strong></p><div style=\"white-space:pre-wrap\">%3</div>")
-                    .arg(escaped(texts.review), escaped(texts.reviewStates.value(static_cast<int>(annotation.status))),
-                         escaped(annotation.note));
+                QStringLiteral("<p style=\"border-left:4px solid %1;padding-left:8px\"><strong>%2: %3</strong></p>")
+                    .arg(color, escaped(texts.review),
+                         escaped(texts.reviewStates.value(static_cast<int>(annotation.status))));
+            if (!annotation.note.isEmpty())
+                details += QStringLiteral("<div style=\"white-space:pre-wrap\">%1</div>").arg(escaped(annotation.note));
         }
         html += QStringLiteral("<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td></tr>")
                     .arg(escaped(labelNumber(change.labelIndex)), escaped(changeKindText(change, texts)),
@@ -344,13 +350,12 @@ QString ProofreadReportService::htmlReport(const QVector<ReviewChange>& changes,
                        .arg(escaped(texts.title), reportStyle());
     html += QStringLiteral("<h1>%1</h1>").arg(escaped(texts.title));
     html += QStringLiteral("<div class=\"meta\">%1: %2<br/>%3: %4</div>")
-                .arg(escaped(texts.generatedAt),
-                     escaped(QDateTime::currentDateTime().toString(Qt::ISODate)),
+                .arg(escaped(texts.generatedAt), escaped(QDateTime::currentDateTime().toString(Qt::ISODate)),
                      escaped(texts.totalChanges))
                 .arg(changes.size());
     if (!filterDescription.isEmpty()) {
-        html += QStringLiteral("<div class=\"meta\">%1: %2</div>")
-                    .arg(escaped(texts.filter), escaped(filterDescription));
+        html +=
+            QStringLiteral("<div class=\"meta\">%1: %2</div>").arg(escaped(texts.filter), escaped(filterDescription));
     }
 
     const QVector<QString> pageNames = pageOrderForChanges(changes);
@@ -368,13 +373,11 @@ QString ProofreadReportService::htmlReport(const QVector<ReviewChange>& changes,
     return html;
 }
 
-std::expected<void, QString> ProofreadReportService::saveHtmlReport(const QString& filePath,
-                                                                    const QVector<ReviewChange>& changes,
-                                                                    const labelqt::core::Project& beforeProject,
-                                                                    const labelqt::core::Project& currentProject,
-                                                                    const ProofreadReportTexts& texts,
-                                                                    const QString& filterDescription,
-                                                                    ProofreadReportOptions options)
+std::expected<void, QString>
+ProofreadReportService::saveHtmlReport(const QString& filePath, const QVector<ReviewChange>& changes,
+                                       const labelqt::core::Project& beforeProject,
+                                       const labelqt::core::Project& currentProject, const ProofreadReportTexts& texts,
+                                       const QString& filterDescription, ProofreadReportOptions options)
 {
     return labelqt::core::AtomicFileWriter::write(
         filePath, htmlReport(changes, beforeProject, currentProject, texts, filterDescription, options).toUtf8());

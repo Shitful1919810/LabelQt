@@ -558,7 +558,7 @@ private slots:
 
         const auto result = labelqt::core::AppPreferences::loadFromJson(json);
         QCOMPARE(result.preferences.labelMarkerDiameterPixels(), 20.0);
-        QCOMPARE(result.preferences.labelTableMaxTextRows(), 3);
+        QCOMPARE(result.preferences.labelTableMaxTextRows(), 4);
         QCOMPARE(result.preferences.markerTextBubbleFontPointSize(), 0.0);
         QCOMPARE(result.warnings.size(), 3);
     }
@@ -2204,7 +2204,7 @@ private slots:
         QVERIFY(!result.warnings.isEmpty());
         QCOMPARE(result.preferences.labelMarkerDiameterPixels(), 20.0);
         QCOMPARE(result.preferences.labelMarkerFontPointSize(), 10.0);
-        QCOMPARE(result.preferences.labelTableMaxTextRows(), 3);
+        QCOMPARE(result.preferences.labelTableMaxTextRows(), 4);
         QCOMPARE(result.preferences.labelTableFontFamily(), QString());
         QCOMPARE(result.preferences.labelTableFontPointSize(), 0.0);
         QCOMPARE(result.preferences.labelTextEditorFontFamily(), QString());
@@ -2218,18 +2218,18 @@ private slots:
         QCOMPARE(result.preferences.moveLabelModifiers(), Qt::ControlModifier);
         QCOMPARE(result.preferences.previousLabelModifiers(), Qt::ControlModifier);
         QCOMPARE(result.preferences.undoShortcut().toString(QKeySequence::PortableText), QStringLiteral("Ctrl+Z"));
-        QCOMPARE(result.preferences.redoShortcut().toString(QKeySequence::PortableText), QStringLiteral("Ctrl+Y"));
+        QCOMPARE(result.preferences.redoShortcut().toString(QKeySequence::PortableText), QStringLiteral("Ctrl+Shift+Z"));
         QCOMPARE(result.preferences.nextLabelShortcut().toString(QKeySequence::PortableText), QStringLiteral("Tab"));
         QCOMPARE(result.preferences.previousPageShortcut().toString(QKeySequence::PortableText),
-                 QStringLiteral("Alt+Left"));
+                 QStringLiteral("Ctrl+Left"));
         QCOMPARE(result.preferences.nextPageShortcut().toString(QKeySequence::PortableText),
-                 QStringLiteral("Alt+Right"));
+                 QStringLiteral("Ctrl+Right"));
         QCOMPARE(result.preferences.editLabelTextShortcut().toString(QKeySequence::PortableText),
                  QStringLiteral("Return"));
         QCOMPARE(result.preferences.commitLabelTextShortcut().toString(QKeySequence::PortableText),
                  QStringLiteral("Ctrl+Return"));
         QCOMPARE(result.preferences.backupPath(), QStringLiteral("bak"));
-        QCOMPARE(result.preferences.backupIntervalSeconds(), 60);
+        QCOMPARE(result.preferences.backupIntervalSeconds(), 200);
         QCOMPARE(result.preferences.groupStyles().size(), 3);
         QCOMPARE(result.preferences.groupStyles().at(0).groupColor, QColor(QStringLiteral("#ef4444")));
     }

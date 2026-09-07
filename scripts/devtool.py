@@ -123,6 +123,7 @@ MODULE_TOPICS = (
             "src/services/proofread/ProofreadReportService.*",
             "src/services/proofread/ReviewSessionService.*",
             "src/ui/proofread/ProofreadReviewPanel.*",
+            "src/ui/proofread/ReviewStatusDelegate.*",
             "src/ui/proofread/ProofreadingController.*",
             "src/ui/proofread/ProofreadChangeTableModel.*",
             "src/ui/proofread/ProofreadChangesDialog.*",
@@ -166,6 +167,8 @@ MODULE_TOPICS = (
             "src/services/project/ProjectController.*",
             "src/services/project/ProjectWorkflowController.*",
             "src/services/project/ProjectMergeService.*",
+            "src/ui/project/ProjectMergeDialog.*",
+            "src/ui/project/MergeCandidatePreview.*",
             "src/services/project/ProjectPageOrderService.*",
             "src/core/ProjectMetadataService.*",
         ),
@@ -180,12 +183,15 @@ MODULE_TOPICS = (
         files=(
             "src/core/AppPreferences.*",
             "src/core/TranslationManager.*",
+            "src/services/preferences/PreferenceStore.*",
+            "src/services/io/BoundedJsonIo.h",
             "src/ui/preferences/PreferenceDialog.*",
             "translations/labelqt_*.ts",
         ),
         notes=(
             "新增用户可见文本必须使用 tr() 并同步四种 .ts。",
             "可配置行为应通过 AppPreferences 和 preference.json。",
+            "偏好持久化与外改冲突由 PreferenceStore 负责，不复用工程恢复事务。",
         ),
     ),
     ModuleTopic(

@@ -3,6 +3,7 @@
 
 #include "core/AtomicFileWriter.h"
 #include "core/LabelPlusDocument.h"
+#include "services/io/BoundedJsonIo.h"
 #include "services/io/FileRenameTransaction.h"
 #include "services/io/FileRevision.h"
 #include "services/project/ProjectLocationService.h"
@@ -16,10 +17,25 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSet>
+#include <QTextStream>
 #include <algorithm>
 #include <exception>
 
 namespace labelqt::services {
+namespace {
+QString invalidBackup()
+{
+    return QCoreApplication::translate("ProjectRecoveryService", "The backup cannot be verified.");
+}
+
+bool validBackupRecord(const QJsonObject& record)
+{
+    return BoundedJsonIo::isInteger(record.value("version"), 1, 1) && record.value("automatic").isBool() &&
+           !record.value("project").toString().isEmpty() && !record.value("snapshot").toString().isEmpty() &&
+           QDateTime::fromString(record.value("created").toString(), Qt::ISODateWithMs).isValid() &&
+           BoundedJsonIo::isDigest(record.value("sha256"));
+}
+} // namespace
 
 QString ProjectRecoveryService::backupDirectory(const QString& projectPath,
                                                 const labelqt::core::AppPreferences& preferences)
@@ -34,9 +50,6 @@ std::expected<void, QString> ProjectRecoveryService::writeBackup(const labelqt::
     try {
         const auto output = ProjectLocationService::forOutput(project, path);
         const auto bytes = labelqt::core::LabelPlusDocument::serialize(output).toUtf8();
-        const auto written = labelqt::core::AtomicFileWriter::writeNew(path, bytes);
-        if (!written)
-            return written;
         const QJsonObject record{
             {"version", 1},
             {"automatic", automatic},
@@ -44,8 +57,15 @@ std::expected<void, QString> ProjectRecoveryService::writeBackup(const labelqt::
             {"snapshot", QFileInfo(path).absoluteFilePath()},
             {"created", QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},
             {"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())}};
-        return labelqt::core::AtomicFileWriter::writeNew(path + QStringLiteral(".labelqt-backup.json"),
-                                                         QJsonDocument(record).toJson());
+        const auto recordPath = path + QStringLiteral(".labelqt-backup.json");
+        const auto recordBytes = BoundedJsonIo::encode(record, BoundedJsonIo::Backup, invalidBackup());
+        if (bytes.size() > BoundedJsonIo::SnapshotBytes || !validBackupRecord(record) || !recordBytes ||
+            !BoundedJsonIo::writableFile(path, true) || !BoundedJsonIo::writableFile(recordPath, true))
+            return std::unexpected(invalidBackup());
+        const auto written = labelqt::core::AtomicFileWriter::writeNew(path, bytes);
+        if (!written)
+            return written;
+        return labelqt::core::AtomicFileWriter::writeNew(recordPath, *recordBytes);
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));
@@ -77,19 +97,27 @@ QVector<ProjectRecoveryEntry> ProjectRecoveryService::entries(const QString& pro
         return result;
     const auto project = QFileInfo(projectPath).absoluteFilePath();
     const auto previousPath = ProjectFileTransaction::previousVersionPath(projectPath);
-    const auto previous = FileRevision::read(previousPath);
-    if (previous && previous->exists)
-        result.append({ProjectRecoveryEntry::Kind::Backup, previousPath, project, previousPath, previous->modified,
-                       previous->sha256, false});
+    const auto previous = BoundedJsonIo::readBytes(previousPath, BoundedJsonIo::SnapshotBytes, invalidBackup());
+    if (previous)
+        result.append({ProjectRecoveryEntry::Kind::Backup, previousPath, project, previousPath,
+                       QFileInfo(previousPath).lastModified(),
+                       QCryptographicHash::hash(*previous, QCryptographicHash::Sha256), false});
     const auto append = [&](const QFileInfo& info, ProjectRecoveryEntry::Kind kind) {
-        QFile file(info.absoluteFilePath());
-        if (!file.open(QIODevice::ReadOnly))
+        if (kind == ProjectRecoveryEntry::Kind::Rename) {
+            const auto record = recoveryDetails(info.absoluteFilePath());
+            if (record && !record->projectPath.isEmpty() &&
+                QFileInfo(record->projectPath).absoluteFilePath() != project)
+                return;
+            // Keep damaged mappings discoverable, but never enable automatic recovery for them.
+            result.append({kind, info.absoluteFilePath(), project, {}, info.lastModified(), {}, false});
             return;
-        const auto object = QJsonDocument::fromJson(file.readAll()).object();
+        }
+        const auto loaded = BoundedJsonIo::read(info.absoluteFilePath(), BoundedJsonIo::Backup, invalidBackup());
+        if (!loaded || !validBackupRecord(*loaded))
+            return;
+        const auto& object = *loaded;
         const auto owner = object.value("project").toString();
         if (!owner.isEmpty() && QFileInfo(owner).absoluteFilePath() != project)
-            return;
-        if (kind == ProjectRecoveryEntry::Kind::Backup && (owner.isEmpty() || object.value("version").toInt() != 1))
             return;
         result.append(
             {kind, info.absoluteFilePath(), owner.isEmpty() ? project : owner, object.value("snapshot").toString(),
@@ -103,7 +131,8 @@ QVector<ProjectRecoveryEntry> ProjectRecoveryService::entries(const QString& pro
         append(info, ProjectRecoveryEntry::Kind::Backup);
     for (const auto& info : QFileInfo(projectPath)
                                 .dir()
-                                .entryInfoList({QStringLiteral(".labelqt-rename-*.json")}, QDir::Files | QDir::Hidden))
+                                .entryInfoList({QStringLiteral(".labelqt-rename-*.json")},
+                                               QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot))
         append(info, ProjectRecoveryEntry::Kind::Rename);
     std::sort(result.begin(), result.end(),
               [](const auto& left, const auto& right) { return left.created > right.created; });
@@ -115,16 +144,17 @@ std::expected<labelqt::core::Project, QString> ProjectRecoveryService::preview(c
     if (entry.kind != ProjectRecoveryEntry::Kind::Backup)
         return std::unexpected(
             QCoreApplication::translate("ProjectRecoveryService", "This record requires file recovery."));
-    const auto revision = FileRevision::read(entry.snapshotPath);
-    if (!revision || !revision->exists || entry.digest.size() != 32 || revision->sha256 != entry.digest)
+    const auto bytes = BoundedJsonIo::readBytes(entry.snapshotPath, BoundedJsonIo::SnapshotBytes, invalidBackup());
+    if (!bytes || entry.digest.size() != 32 ||
+        QCryptographicHash::hash(*bytes, QCryptographicHash::Sha256) != entry.digest)
         return std::unexpected(QCoreApplication::translate("ProjectRecoveryService", "The backup cannot be verified."));
     try {
-        auto loaded = labelqt::core::LabelPlusDocument::readFromFile(entry.snapshotPath);
-        const auto after = FileRevision::read(entry.snapshotPath);
-        if (!after || !after->sameContent(*revision) || loaded.sha256 != entry.digest)
-            return std::unexpected(
-                QCoreApplication::translate("ProjectRecoveryService", "The backup cannot be verified."));
-        return std::move(loaded.project);
+        QTextStream stream(*bytes);
+        stream.setEncoding(QStringConverter::Utf8);
+        const auto text = stream.readAll();
+        if (stream.status() != QTextStream::Ok)
+            return std::unexpected(invalidBackup());
+        return labelqt::core::LabelPlusDocument::parse(text, entry.snapshotPath);
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));
@@ -134,7 +164,7 @@ std::expected<labelqt::core::Project, QString> ProjectRecoveryService::preview(c
 std::expected<void, QString> ProjectRecoveryService::restoreCopy(const ProjectRecoveryEntry& entry,
                                                                  const QString& target)
 {
-    if (QFileInfo::exists(target) ||
+    if (!BoundedJsonIo::writableFile(target, true) ||
         QFileInfo(target).absoluteFilePath() == QFileInfo(entry.projectPath).absoluteFilePath())
         return std::unexpected(
             QCoreApplication::translate("ProjectRecoveryService", "Choose a new file for the recovered copy."));
@@ -143,8 +173,10 @@ std::expected<void, QString> ProjectRecoveryService::restoreCopy(const ProjectRe
         return std::unexpected(snapshot.error());
     try {
         const auto output = ProjectLocationService::forOutput(*snapshot, target);
-        return labelqt::core::AtomicFileWriter::writeNew(target,
-                                                         labelqt::core::LabelPlusDocument::serialize(output).toUtf8());
+        const auto bytes = labelqt::core::LabelPlusDocument::serialize(output).toUtf8();
+        if (bytes.size() > BoundedJsonIo::SnapshotBytes)
+            return std::unexpected(invalidBackup());
+        return labelqt::core::AtomicFileWriter::writeNew(target, bytes);
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));
@@ -191,12 +223,18 @@ void ProjectRecoveryService::pruneAutomaticBackups(const QString& projectPath,
             snapshot.dir().canonicalPath() != directory || record.dir().canonicalPath() != directory ||
             entry.recordPath != entry.snapshotPath + QStringLiteral(".labelqt-backup.json"))
             continue;
-        const auto revision = FileRevision::read(entry.snapshotPath);
-        if (!revision || revision->sha256 != entry.digest)
+        const auto bytes = BoundedJsonIo::readBytes(entry.snapshotPath, BoundedJsonIo::SnapshotBytes, invalidBackup());
+        if (!bytes || QCryptographicHash::hash(*bytes, QCryptographicHash::Sha256) != entry.digest)
             continue;
         if (QFile::remove(entry.snapshotPath))
             QFile::remove(entry.recordPath);
     }
+}
+
+std::expected<FileRenameTransaction::RecoveryRecord, QString>
+ProjectRecoveryService::recoveryDetails(const QString& recordPath)
+{
+    return FileRenameTransaction::readRecoveryRecord(recordPath);
 }
 
 std::expected<void, QString> ProjectRecoveryService::recoverFiles(const QString& recordPath, bool complete)
@@ -207,21 +245,13 @@ std::expected<void, QString> ProjectRecoveryService::recoverFiles(const QString&
                 "ProjectRecoveryService",
                 "Recovery is ambiguous or files have changed. No automatic recovery is possible."));
         };
-        QFile file(recordPath);
-        if (!file.open(QIODevice::ReadOnly))
-            return std::unexpected(file.errorString());
-        const auto document = QJsonDocument::fromJson(file.readAll());
-        file.close();
-        const auto record = document.object();
-        if (record.value("version").toInt() != 2 || !record.value("moves").isArray())
+        const auto record = recoveryDetails(recordPath);
+        if (!record || !record->canRecover)
             return unsafe();
-        const QString project = record.value("project").toString();
-        const auto before = QByteArray::fromBase64(record.value("before").toString().toLatin1(),
-                                                   QByteArray::AbortOnBase64DecodingErrors);
-        const auto after = QByteArray::fromBase64(record.value("after").toString().toLatin1(),
-                                                  QByteArray::AbortOnBase64DecodingErrors);
-        if (project.isEmpty() || before.isEmpty() || after.isEmpty() ||
-            QFileInfo(project).absolutePath() != QFileInfo(recordPath).absolutePath())
+        const QString& project = record->projectPath;
+        const auto& before = record->before;
+        const auto& after = record->after;
+        if (QFileInfo(project).isSymLink() || !QFileInfo(project).isFile())
             return unsafe();
         ProjectFileTransaction transaction(project);
         const auto revision = FileRevision::read(project);
@@ -229,13 +259,6 @@ std::expected<void, QString> ProjectRecoveryService::recoverFiles(const QString&
             (revision->sha256 != QCryptographicHash::hash(before, QCryptographicHash::Sha256) &&
              revision->sha256 != QCryptographicHash::hash(after, QCryptographicHash::Sha256)))
             return unsafe();
-        try {
-            labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(before), project);
-            labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(after), project);
-        }
-        catch (const std::exception&) {
-            return unsafe();
-        }
 
         struct RecoveryMove {
             QString current, temporary, destination;
@@ -244,12 +267,11 @@ std::expected<void, QString> ProjectRecoveryService::recoverFiles(const QString&
         QVector<RecoveryMove> moves;
         QSet<QString> allPaths, occupied, destinations, temporaryPaths;
         QSet<QByteArray> hashes;
-        for (const auto& value : record.value("moves").toArray()) {
-            const auto item = value.toObject();
-            const QString source = item.value("source").toString();
-            const QString target = item.value("target").toString();
-            const QString temporary = item.value("temporary").toString();
-            const QByteArray hash = QByteArray::fromHex(item.value("sha256").toString().toLatin1());
+        for (const auto& item : record->moves) {
+            const QString& source = item.source;
+            const QString& target = item.target;
+            const QString& temporary = item.temporary;
+            const QByteArray& hash = item.digest;
             if (hash.size() != 32 || hashes.contains(hash) || temporaryPaths.contains(temporary))
                 return unsafe();
             hashes.insert(hash);

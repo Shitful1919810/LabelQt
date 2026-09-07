@@ -26,7 +26,7 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 - 提供备份与恢复入口、工程 TXT 外部修改主动检测与重载确认、保存冲突处理，以及带文件内容校验的重命名恢复。
 - 页面管理支持累计待处理目标、局部撤销、范围与问题筛选，以及直接指定缺失图片。
 - 支持工程全文查找、分组和页码范围、替换预览与整批撤销。
-- 校对支持审阅状态、批注、人工配对与筛选后报告导出。具体操作与首版限制见 [工作流说明](docs/product-workflows.md)。
+- 校对支持彩色审阅状态、人工配对与筛选后报告导出。具体操作与首版限制见 [工作流说明](docs/product-workflows.md)。
 - 支持通过“自动化”菜单运行外部 Python 自动化脚本，提供原生 v2 批处理 SDK 和开发示例；旧 OCR/AI 翻译脚本已移除。
 - 偏好设置窗口支持通过系统字体选择器分别调整标签列表和大文本编辑框字体。
 - 支持通过偏好设置启用内置 Breeze 风格 QSS 主题。
@@ -111,7 +111,7 @@ git submodule update --init --recursive
 python scripts/build_manual.py
 ```
 
-默认输出到 `dist/LabelQt-user-manual-zh_CN.pdf`。手册截图素材放在 `manual/assets/`，缺少截图时会使用占位框，不影响编译。正式发布时建议把编译好的 PDF 作为独立 release 附件上传。
+默认输出到 `dist/LabelQt-user-manual-zh_CN.pdf`，默认构建使用截图占位框。素材放在 `manual/assets/`；加入 `--with-screenshots` 才会嵌入真实截图，此时缺少素材会构建失败。正式发布时建议把带截图的 PDF 作为独立 release 附件上传。
 
 ### Linux
 
@@ -311,6 +311,10 @@ cmake --build --preset windows-vs-release --target deploy_windows
 
 完整示例见仓库根目录 `preference.json`。便携版可以把这份文件放在 exe 旁边；Linux 安装包通常不安装这份可编辑配置。如果没有 exe 旁边的配置文件，用户保存偏好设置时会写入用户配置目录。下面片段展示主要结构：
 
+随附 JSON 与 `AppPreferencesValues` 内置默认值由测试保持一致，界面语言默认跟随系统。
+已有配置不会被迁移覆盖；实际生效值以偏好设置窗口为准。
+设置使用“应用 / 关闭”，未应用修改关闭前会询问；外部修改造成冲突时保留草稿并拒绝覆盖。
+
 ```json
 {
   "appearance": {
@@ -329,7 +333,7 @@ cmake --build --preset windows-vs-release --target deploy_windows
     "showRunLog": false
   },
   "backupPath": "bak",
-  "backupIntervalSeconds": 60,
+  "backupIntervalSeconds": 200,
   "labelMarker": {
     "diameter": 20.0,
     "fontPointSize": 10.0
@@ -337,7 +341,7 @@ cmake --build --preset windows-vs-release --target deploy_windows
   "labelTable": {
     "fontFamily": "",
     "fontPointSize": 0.0,
-    "maxTextRows": 3
+    "maxTextRows": 4
   },
   "labelTextEditor": {
     "fontFamily": "",
@@ -346,10 +350,10 @@ cmake --build --preset windows-vs-release --target deploy_windows
   "markerTextBubble": {
     "fontFamily": "",
     "fontPointSize": 0.0,
-    "opacity": 1.0
+    "opacity": 0.85
   },
   "canvasLabelTextEditor": {
-    "opacity": 1.0
+    "opacity": 0.75
   },
   "input": {
     "moveLabelModifier": "ctrl",
@@ -357,12 +361,12 @@ cmake --build --preset windows-vs-release --target deploy_windows
     "nextLabelShortcut": "Tab",
     "alternatePreviousLabelShortcut": "Ctrl+Up",
     "alternateNextLabelShortcut": "Ctrl+Down",
-    "previousPageShortcut": "Alt+Left",
-    "nextPageShortcut": "Alt+Right",
+    "previousPageShortcut": "Ctrl+Left",
+    "nextPageShortcut": "Ctrl+Right",
     "editLabelTextShortcut": "Return",
     "commitLabelTextShortcut": "Ctrl+Return",
     "undoShortcut": "Ctrl+Z",
-    "redoShortcut": "Ctrl+Y"
+    "redoShortcut": "Ctrl+Shift+Z"
   },
   "groupStyles": [
     {
@@ -407,21 +411,21 @@ cmake --build --preset windows-vs-release --target deploy_windows
 - `labelTextEditor.fontPointSize`：右下角大文本编辑框字号。为 `0` 时使用系统默认字号。
 - `markerTextBubble.fontFamily`：图像 marker 文本气泡字体。为空时使用系统默认字体。
 - `markerTextBubble.fontPointSize`：图像 marker 文本气泡字号。为 `0` 时使用系统默认字号。
-- `markerTextBubble.opacity`：图像 marker 文本气泡不透明度，范围 `0.0` 到 `1.0`，默认 `1.0`。
-- `canvasLabelTextEditor.opacity`：双击 marker 打开的临时文本编辑框不透明度，范围 `0.0` 到 `1.0`，默认 `1.0`。
+- `markerTextBubble.opacity`：图像 marker 文本气泡不透明度，范围 `0.0` 到 `1.0`，默认 `0.85`。
+- `canvasLabelTextEditor.opacity`：双击 marker 打开的临时文本编辑框不透明度，范围 `0.0` 到 `1.0`，默认 `0.75`。
 - `input.moveLabelModifier`：拖动图像 marker 时需要按住的修饰键，默认 `ctrl`。
 - `input.previousLabelModifier`：反向切换标签时需要按住的修饰键，默认 `ctrl`。
 - `input.nextLabelShortcut`：在主窗口内切换到下一个可见标签的快捷键，默认 `Tab`。按住 `input.previousLabelModifier` 再触发该快捷键会切换到上一个可见标签。
 - `input.alternatePreviousLabelShortcut`：在主窗口内切换到上一个可见标签的额外快捷键，默认 `Ctrl+Up`。
 - `input.alternateNextLabelShortcut`：在主窗口内切换到下一个可见标签的额外快捷键，默认 `Ctrl+Down`。
-- `input.previousPageShortcut`：在主窗口内切换到上一页的快捷键，默认 `Alt+Left`。
-- `input.nextPageShortcut`：在主窗口内切换到下一页的快捷键，默认 `Alt+Right`。
+- `input.previousPageShortcut`：在标签工作区切换到上一页的快捷键，默认 `Ctrl+Left`。
+- `input.nextPageShortcut`：在标签工作区切换到下一页的快捷键，默认 `Ctrl+Right`。标签与页面导航不截获查找表单等其他输入框的按键。
 - `input.editLabelTextShortcut`：焦点位于右侧标签列表时进入当前标签文本原地编辑的快捷键，默认 `Return`。
 - `input.commitLabelTextShortcut`：焦点位于标签文本原地编辑器时提交并退出编辑的快捷键，默认 `Ctrl+Return`。
 - `input.undoShortcut`：撤销快捷键，使用 Qt portable key sequence 文本格式，默认 `Ctrl+Z`。
-- `input.redoShortcut`：重做快捷键，使用 Qt portable key sequence 文本格式，默认 `Ctrl+Y`，可改为 `Ctrl+Shift+Z` 等组合键。
+- `input.redoShortcut`：重做快捷键，使用 Qt portable key sequence 文本格式，默认 `Ctrl+Shift+Z`。
 - `backupPath`：自动备份目录，默认 `bak`。相对路径会解析到当前工程文件所在目录下，绝对路径会直接使用。
-- `backupIntervalSeconds`：自动备份检查间隔，单位为秒，默认 60。
+- `backupIntervalSeconds`：自动备份检查间隔，单位为秒，默认 200。
 - `backupMaximumCount`：每工程自动备份上限，0 表示全部保留；不清理手工备份或未解决事务材料。
 - `input.findProjectShortcut`、`input.nextSearchMatchShortcut`、`input.previousSearchMatchShortcut`：工程查找、下一匹配、上一匹配，默认 `Ctrl+F`、`F3`、`Shift+F3`。
 - `groupStyles`：按分组顺序应用的分组样式数组。
@@ -500,3 +504,4 @@ scripts         开发辅助脚本，以及 official/custom 自动化脚本目�
 - `docs/architecture.md`
 - `docs/code-walkthrough.md`
 - `AGENTS.md`
+- [系统性 BUG、文档与 UI 审查（2026-09-07）](docs/system-review-2026-09-07.md)

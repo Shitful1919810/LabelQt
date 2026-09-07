@@ -1,20 +1,16 @@
 #include "ui/project/ProjectMergeDialog.h"
 
+#include "ui/project/MergeCandidatePreview.h"
 #include "ui/widgets/DialogWindowUtils.h"
-#include "ui/canvas/ImageCanvas.h"
 
-#include <QButtonGroup>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialogButtonBox>
-#include <QFileInfo>
-#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
-#include <QRadioButton>
-#include <QScrollArea>
+#include <QScopedValueRollback>
 #include <QSplitter>
-#include <QStackedWidget>
 #include <QVBoxLayout>
 
 ProjectMergeDialog::ProjectMergeDialog(labelqt::services::ProjectMergePlan mergePlan,
@@ -22,11 +18,17 @@ ProjectMergeDialog::ProjectMergeDialog(labelqt::services::ProjectMergePlan merge
     : QDialog(parent), m_mergePlan(std::move(mergePlan)), m_preferences(std::move(preferences))
 {
     m_selectedCandidateIndexes.resize(m_mergePlan.conflicts.size());
-    m_candidateCanvases.resize(m_mergePlan.conflicts.size());
-    for (int i = 0; i < m_selectedCandidateIndexes.size(); ++i) {
+    m_conflictViewStates.resize(m_mergePlan.conflicts.size());
+    for (int i = 0; i < m_selectedCandidateIndexes.size(); ++i)
         m_selectedCandidateIndexes[i] = m_mergePlan.conflicts.at(i).selectedCandidateIndex;
-    }
     buildUi();
+}
+
+ProjectMergeDialog::~ProjectMergeDialog()
+{
+    stopPreviews();
+    for (QObject* child : findChildren<QObject*>())
+        disconnect(child, nullptr, this, nullptr);
 }
 
 QVector<int> ProjectMergeDialog::selectedCandidateIndexes() const
@@ -41,15 +43,13 @@ bool ProjectMergeDialog::shouldOpenMergedProjectAfterSave() const noexcept
 
 void ProjectMergeDialog::setShouldOpenMergedProjectAfterSave(bool shouldOpen)
 {
-    if (m_openMergedProjectCheckBox != nullptr) {
+    if (m_openMergedProjectCheckBox != nullptr)
         m_openMergedProjectCheckBox->setChecked(shouldOpen);
-    }
 }
 
 void ProjectMergeDialog::done(int result)
 {
-    m_isClosing = true;
-    disconnectCandidateCanvases();
+    stopPreviews();
     QDialog::done(result);
 }
 
@@ -65,23 +65,54 @@ void ProjectMergeDialog::buildUi()
 
     auto* splitter = new QSplitter(Qt::Horizontal, this);
     m_conflictList = new QListWidget(splitter);
-    m_conflictList->setMinimumWidth(220);
-    m_conflictStack = new QStackedWidget(splitter);
-    splitter->addWidget(m_conflictList);
-    splitter->addWidget(m_conflictStack);
+    m_conflictList->setObjectName(QStringLiteral("mergeConflicts"));
+    m_conflictList->setMinimumWidth(160);
+    auto* content = new QWidget(splitter);
+    auto* contentLayout = new QVBoxLayout(content);
+    m_conflictTitle = new QLabel(content);
+    m_conflictTitle->setWordWrap(true);
+    contentLayout->addWidget(m_conflictTitle);
+    m_sourceChoice = new QComboBox(content);
+    m_sourceChoice->setObjectName(QStringLiteral("mergeSourceChoice"));
+    m_sourceChoice->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    m_sourceChoice->setMinimumContentsLength(12);
+    m_conflictTitle->setBuddy(m_sourceChoice);
+    contentLayout->addWidget(m_sourceChoice);
+
+    auto* previewsLayout = new QHBoxLayout;
+    for (std::size_t slot = 0; slot < 2; ++slot) {
+        auto* column = new QVBoxLayout;
+        auto* choice = new QComboBox(content);
+        choice->setObjectName(QStringLiteral("mergePreviewChoice%1").arg(slot));
+        choice->setToolTip(tr("Preview candidate"));
+        choice->setAccessibleName(tr("Preview candidate"));
+        choice->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+        choice->setMinimumContentsLength(8);
+        m_candidateChoices[slot] = choice;
+        column->addWidget(choice);
+        auto* preview = new MergeCandidatePreview(m_preferences, m_mergePlan.mergedProject.groups(), content);
+        m_previews[slot] = preview;
+        column->addWidget(preview, 1);
+        previewsLayout->addLayout(column, 1);
+        connect(choice, &QComboBox::currentIndexChanged, this,
+                [this, slot](int candidateIndex) { displayCandidate(slot, candidateIndex); });
+        connect(preview, &MergeCandidatePreview::viewportStateChanged, this,
+                [this, slot](int zoom, QPointF center) { syncCandidateCanvasViews(slot, zoom, center); });
+    }
+    contentLayout->addLayout(previewsLayout, 1);
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
+    splitter->setSizes({220, 850});
     rootLayout->addWidget(splitter, 1);
 
     populateConflictList();
-    for (int i = 0; i < m_mergePlan.conflicts.size(); ++i) {
-        m_conflictStack->addWidget(createConflictPage(i));
-    }
-
-    connect(m_conflictList, &QListWidget::currentRowChanged, m_conflictStack, &QStackedWidget::setCurrentIndex);
-    if (m_conflictList->count() > 0) {
+    connect(m_conflictList, &QListWidget::currentRowChanged, this, &ProjectMergeDialog::displayConflict);
+    connect(m_sourceChoice, &QComboBox::currentIndexChanged, this,
+            [this](int candidateIndex) { selectCandidate(m_currentConflict, candidateIndex); });
+    if (m_conflictList->count() > 0)
         m_conflictList->setCurrentRow(0);
-    }
+    else
+        displayConflict(-1);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
@@ -89,14 +120,12 @@ void ProjectMergeDialog::buildUi()
     m_openMergedProjectCheckBox = new QCheckBox(tr("Open merged project after saving"), this);
     buttons->addButton(m_openMergedProjectCheckBox, QDialogButtonBox::ActionRole);
     rootLayout->addWidget(buttons);
-
     updateSummary();
 }
 
 void ProjectMergeDialog::populateConflictList()
 {
-    for (int i = 0; i < m_mergePlan.conflicts.size(); ++i) {
-        const labelqt::services::ProjectMergeConflict& conflict = m_mergePlan.conflicts.at(i);
+    for (const auto& conflict : std::as_const(m_mergePlan.conflicts)) {
         auto* item = new QListWidgetItem(
             tr("%1 (%n candidate(s))", nullptr, static_cast<int>(conflict.candidates.size())).arg(conflict.imageName));
         item->setToolTip(conflict.imageName);
@@ -104,80 +133,64 @@ void ProjectMergeDialog::populateConflictList()
     }
 }
 
-QWidget* ProjectMergeDialog::createConflictPage(int conflictIndex)
+void ProjectMergeDialog::displayConflict(int conflictIndex)
 {
-    const labelqt::services::ProjectMergeConflict& conflict = m_mergePlan.conflicts.at(conflictIndex);
-
-    auto* page = new QWidget(m_conflictStack);
-    auto* layout = new QVBoxLayout(page);
-    auto* title = new QLabel(tr("Choose the project to use for %1.").arg(conflict.imageName), page);
-    title->setWordWrap(true);
-    layout->addWidget(title);
-
-    auto* scrollArea = new QScrollArea(page);
-    scrollArea->setWidgetResizable(true);
-    auto* content = new QWidget(scrollArea);
-    auto* contentLayout = new QHBoxLayout(content);
-    auto* buttonGroup = new QButtonGroup(content);
-    buttonGroup->setExclusive(true);
-
-    for (int candidateIndex = 0; candidateIndex < conflict.candidates.size(); ++candidateIndex) {
-        QWidget* candidateWidget = createCandidateWidget(conflictIndex, candidateIndex);
-        auto* radioButton = candidateWidget->findChild<QRadioButton*>();
-        if (radioButton != nullptr) {
-            buttonGroup->addButton(radioButton, candidateIndex);
-            radioButton->setChecked(candidateIndex == m_selectedCandidateIndexes.at(conflictIndex));
+    if (m_isClosing)
+        return;
+    {
+        const QScopedValueRollback updating(m_isUpdating, true);
+        m_currentConflict = conflictIndex;
+        m_sourceChoice->clear();
+        for (std::size_t slot = 0; slot < 2; ++slot) {
+            m_previews[slot]->clear();
+            m_candidateChoices[slot]->clear();
         }
-        contentLayout->addWidget(candidateWidget);
+        const bool valid = conflictIndex >= 0 && conflictIndex < m_mergePlan.conflicts.size();
+        m_sourceChoice->setEnabled(valid);
+        m_conflictTitle->clear();
+        if (!valid)
+            return;
+
+        const auto& conflict = m_mergePlan.conflicts.at(conflictIndex);
+        m_conflictTitle->setText(tr("Choose the project to use for %1.").arg(conflict.imageName));
+        for (const auto& candidate : conflict.candidates) {
+            const QString title = tr("%1 - %n label(s)", nullptr, candidate.labelCount).arg(candidate.projectPath);
+            for (QComboBox* choice : {m_sourceChoice, m_candidateChoices[0], m_candidateChoices[1]}) {
+                choice->addItem(title);
+                choice->setItemData(choice->count() - 1, candidate.projectPath, Qt::ToolTipRole);
+            }
+        }
+        const int selected = m_selectedCandidateIndexes.at(conflictIndex);
+        m_sourceChoice->setCurrentIndex(selected);
+        auto& state = m_conflictViewStates[conflictIndex];
+        if (state.candidates[0] < 0) {
+            state.candidates[0] = selected >= 0 && selected < conflict.candidates.size() ? selected : 0;
+            state.candidates[1] = conflict.candidates.size() > 1 ? (state.candidates[0] == 0 ? 1 : 0) : -1;
+        }
+        for (std::size_t slot = 0; slot < 2; ++slot) {
+            m_candidateChoices[slot]->setCurrentIndex(state.candidates[slot]);
+            m_candidateChoices[slot]->setVisible(slot == 0 || conflict.candidates.size() > 1);
+            m_previews[slot]->setVisible(slot == 0 || conflict.candidates.size() > 1);
+            m_previews[slot]->restoreView(state.zoomPercent, state.normalizedCenter);
+        }
     }
-    contentLayout->addStretch();
-
-    connect(buttonGroup, &QButtonGroup::idClicked, this,
-            [this, conflictIndex](int candidateIndex) { selectCandidate(conflictIndex, candidateIndex); });
-
-    scrollArea->setWidget(content);
-    layout->addWidget(scrollArea, 1);
-    return page;
+    for (std::size_t slot = 0; slot < 2; ++slot)
+        displayCandidate(slot, m_candidateChoices[slot]->currentIndex());
 }
 
-QWidget* ProjectMergeDialog::createCandidateWidget(int conflictIndex, int candidateIndex)
+void ProjectMergeDialog::displayCandidate(std::size_t slot, int candidateIndex)
 {
-    const labelqt::services::ProjectMergeCandidate& candidate =
-        m_mergePlan.conflicts.at(conflictIndex).candidates.at(candidateIndex);
-
-    auto* groupBox = new QGroupBox(this);
-    groupBox->setMinimumWidth(640);
-    auto* layout = new QVBoxLayout(groupBox);
-
-    auto* radioButton = new QRadioButton(
-        tr("%1 - %n label(s)", nullptr, candidate.labelCount).arg(QFileInfo(candidate.projectPath).fileName()),
-        groupBox);
-    radioButton->setToolTip(candidate.projectPath);
-    layout->addWidget(radioButton);
-
-    auto* pathLabel = new QLabel(candidate.projectPath, groupBox);
-    pathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    pathLabel->setWordWrap(true);
-    layout->addWidget(pathLabel);
-
-    auto* canvas = new ImageCanvas(groupBox);
-    canvas->setMinimumHeight(360);
-    canvas->setMinimumWidth(600);
-    canvas->setReadOnly(true);
-    canvas->setPreferences(m_preferences);
-    canvas->setGroups(m_mergePlan.mergedProject.groups());
-    canvas->setVisibleGroups(m_mergePlan.mergedProject.groups());
-    canvas->setImage(candidate.image.path, candidate.image.labels);
-    if (conflictIndex >= 0 && conflictIndex < m_candidateCanvases.size()) {
-        m_candidateCanvases[conflictIndex].append(canvas);
+    if (m_isUpdating || m_isClosing || m_currentConflict < 0 || m_currentConflict >= m_mergePlan.conflicts.size())
+        return;
+    const auto& candidates = m_mergePlan.conflicts.at(m_currentConflict).candidates;
+    auto& state = m_conflictViewStates[m_currentConflict];
+    state.candidates[slot] = candidateIndex;
+    if (candidateIndex < 0 || candidateIndex >= candidates.size()) {
+        m_previews[slot]->clear();
+        return;
     }
-    connect(canvas, &ImageCanvas::viewportStateChanged, this,
-            [this, conflictIndex, canvas](int zoomPercent, QPointF normalizedCenter) {
-                syncCandidateCanvasViews(conflictIndex, canvas, zoomPercent, normalizedCenter);
-            });
-    layout->addWidget(canvas, 1);
-
-    return groupBox;
+    m_previews[slot]->restoreView(state.zoomPercent, state.normalizedCenter);
+    m_previews[slot]->setCandidate(candidates.at(candidateIndex).image);
 }
 
 void ProjectMergeDialog::updateSummary()
@@ -190,36 +203,32 @@ void ProjectMergeDialog::updateSummary()
 
 void ProjectMergeDialog::selectCandidate(int conflictIndex, int candidateIndex)
 {
-    if (conflictIndex < 0 || conflictIndex >= m_selectedCandidateIndexes.size()) {
+    if (m_isUpdating || m_isClosing || conflictIndex < 0 || conflictIndex >= m_selectedCandidateIndexes.size() ||
+        candidateIndex < 0 || candidateIndex >= m_mergePlan.conflicts.at(conflictIndex).candidates.size())
         return;
-    }
     m_selectedCandidateIndexes[conflictIndex] = candidateIndex;
+    m_candidateChoices[0]->setCurrentIndex(candidateIndex);
 }
 
-void ProjectMergeDialog::syncCandidateCanvasViews(int conflictIndex, ImageCanvas* sourceCanvas, int zoomPercent,
-                                                  QPointF normalizedCenter)
+void ProjectMergeDialog::syncCandidateCanvasViews(std::size_t sourceSlot, int zoomPercent, QPointF normalizedCenter)
 {
-    if (m_isSyncingCanvasViews || sourceCanvas == nullptr || conflictIndex < 0 ||
-        conflictIndex >= m_candidateCanvases.size() || m_isClosing) {
+    if (m_isUpdating || m_isClosing || m_currentConflict < 0 || m_currentConflict >= m_conflictViewStates.size())
         return;
-    }
-
-    m_isSyncingCanvasViews = true;
-    for (const QPointer<ImageCanvas>& canvas : m_candidateCanvases.at(conflictIndex)) {
-        if (!canvas.isNull() && canvas != sourceCanvas) {
-            canvas->restoreView(zoomPercent, normalizedCenter);
-        }
-    }
-    m_isSyncingCanvasViews = false;
+    const QScopedValueRollback updating(m_isUpdating, true);
+    auto& state = m_conflictViewStates[m_currentConflict];
+    state.zoomPercent = zoomPercent;
+    state.normalizedCenter = normalizedCenter;
+    m_previews[1 - sourceSlot]->restoreView(zoomPercent, normalizedCenter);
 }
 
-void ProjectMergeDialog::disconnectCandidateCanvases()
+void ProjectMergeDialog::stopPreviews()
 {
-    for (const QVector<QPointer<ImageCanvas>>& canvases : std::as_const(m_candidateCanvases)) {
-        for (const QPointer<ImageCanvas>& canvas : canvases) {
-            if (!canvas.isNull()) {
-                disconnect(canvas, nullptr, this, nullptr);
-            }
+    m_isClosing = true;
+    for (auto& preview : m_previews) {
+        if (preview) {
+            disconnect(preview, nullptr, this, nullptr);
+            preview->stop();
         }
+        preview.clear();
     }
 }

@@ -2,10 +2,12 @@
 
 #include "core/AppPreferences.h"
 #include "services/automation/AutomationService.h"
+#include "services/preferences/PreferenceStore.h"
 
 #include <QDialog>
 #include <QFont>
 #include <QJsonDocument>
+#include <QPointer>
 #include <QString>
 
 class QComboBox;
@@ -19,7 +21,7 @@ class QListWidget;
 class QListWidgetItem;
 class QPlainTextEdit;
 class QPushButton;
-class QScrollBar;
+class QSlider;
 class QSpinBox;
 class QStackedWidget;
 class QWidget;
@@ -32,6 +34,11 @@ class PreferenceDialog final : public QDialog {
 public:
     PreferenceDialog(QString preferencePath, labelqt::core::AppPreferences currentPreferences,
                      QVector<labelqt::services::AutomationScript> automationScripts, QWidget* parent = nullptr);
+    ~PreferenceDialog() override;
+    // Disk-draft edits and unapplied runtime changes are independent states.
+    bool hasUnsavedChanges() const;
+    bool hasUnappliedChanges() const;
+    void done(int result) override;
 
 signals:
     void preferencesApplied(labelqt::core::AppPreferencesLoadResult result);
@@ -49,13 +56,15 @@ private:
     QWidget* createAutomationPage(QWidget* parent);
     QWidget* createAutomationShortcutsPage(QWidget* parent);
     QWidget* createGroupStylesPage(QWidget* parent);
-    QWidget* createJsonPage(QWidget* parent);
+    void showJsonPreview();
     void connectPreferenceChangeSignals();
     void loadFromDisk();
+    void readDraftFromDisk();
     void loadPreferences(const labelqt::core::AppPreferences& preferences);
     labelqt::core::AppPreferences preferencesFromUi() const;
     QJsonDocument documentFromUi() const;
     void updateJsonPreview();
+    void showStoreError(const labelqt::services::PreferenceStore::Error& error);
     void setMessage(const QString& message, bool warning = false);
     void chooseLabelTableFont();
     void resetLabelTableFont();
@@ -70,11 +79,15 @@ private:
     void chooseConfiguredFont(QFont* targetFont, bool* usesDefaultFont, QLabel* summaryLabel, const QString& title);
     void resetConfiguredFont(QFont* targetFont, bool* usesDefaultFont, QLabel* summaryLabel);
     void updateFontSummary(QLabel* summaryLabel, const QFont& targetFont, bool usesDefaultFont);
-    void savePreferences();
+    bool savePreferences();
     void openPreferenceFile();
 
-    QString m_preferencePath;
-    labelqt::core::AppPreferences m_currentPreferences;
+    labelqt::services::PreferenceStore m_store;
+    labelqt::core::AppPreferences m_draftBasePreferences;
+    QJsonDocument m_cleanDiskDocument;
+    QJsonDocument m_appliedDocument;
+    bool m_loadingPreferences{false};
+    bool m_promptActive{false};
     QVector<labelqt::services::AutomationScript> m_automationScripts;
     QListWidget* m_categoryList{nullptr};
     QStackedWidget* m_pageStack{nullptr};
@@ -102,9 +115,9 @@ private:
     QPushButton* m_chooseMarkerTextBubbleFontButton{nullptr};
     QPushButton* m_resetMarkerTextBubbleFontButton{nullptr};
     QSpinBox* m_markerTextBubbleMaxLineCharactersSpinBox{nullptr};
-    QScrollBar* m_markerTextBubbleOpacityScrollBar{nullptr};
+    QSlider* m_markerTextBubbleOpacitySlider{nullptr};
     QLabel* m_markerTextBubbleOpacityLabel{nullptr};
-    QScrollBar* m_canvasLabelTextEditorOpacityScrollBar{nullptr};
+    QSlider* m_canvasLabelTextEditorOpacitySlider{nullptr};
     QLabel* m_canvasLabelTextEditorOpacityLabel{nullptr};
     QComboBox* m_moveModifierComboBox{nullptr};
     QComboBox* m_previousLabelModifierComboBox{nullptr};
@@ -126,9 +139,10 @@ private:
     QSpinBox* m_backupMaximumSpinBox{nullptr};
     QSpinBox* m_backupIntervalSpinBox{nullptr};
     GroupStyleEditorWidget* m_groupStyleEditor{nullptr};
-    QPlainTextEdit* m_jsonPreview{nullptr};
+    QPointer<QDialog> m_jsonDialog;
+    QPointer<QPlainTextEdit> m_jsonPreview;
     QLabel* m_messageLabel{nullptr};
-    QPushButton* m_saveButton{nullptr};
+    QPushButton* m_applyButton{nullptr};
     QFont m_labelTableFont;
     QFont m_textEditorFont;
     QFont m_markerTextBubbleFont;

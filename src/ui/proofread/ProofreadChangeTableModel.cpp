@@ -61,10 +61,6 @@ QVariant ProofreadChangeTableModel::data(const QModelIndex& index, int role) con
         break;
     case ReviewColumn:
         text = m_statusNames.value(static_cast<int>(annotation.status));
-        if (role == Qt::DisplayRole)
-            return annotation.status == labelqt::services::ReviewStatus::Reviewed            ? QString(QChar(0x2713))
-                   : annotation.status == labelqt::services::ReviewStatus::NeedsConfirmation ? QStringLiteral("?")
-                                                                                             : QString(QChar(0x25cb));
         if (role == Qt::ToolTipRole && !annotation.note.isEmpty())
             text += QLatin1Char('\n') + annotation.note;
         break;
@@ -73,7 +69,7 @@ QVariant ProofreadChangeTableModel::data(const QModelIndex& index, int role) con
     }
     if (role == SortTextRole)
         return index.column() == NumberColumn ? QString() : text;
-    if (role == Qt::DisplayRole || role == Qt::ToolTipRole)
+    if (role == Qt::DisplayRole || role == Qt::ToolTipRole || role == Qt::AccessibleTextRole)
         return text;
     return {};
 }

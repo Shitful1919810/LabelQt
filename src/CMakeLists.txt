@@ -40,6 +40,7 @@ set(LABELQT_SERVICE_SOURCES
     services/label/LabelNavigator.cpp
     services/label/LabelPastePlanner.cpp
     services/label/LabelPastePlanner.h
+    services/preferences/PreferenceStore.cpp
     services/project/PageSourceInfoService.cpp
     services/project/ProjectController.cpp
     services/project/ProjectRevisionTracker.cpp
@@ -103,6 +104,7 @@ set(LABELQT_UI_SOURCES
     ui/project/PageOrderListModel.cpp
     ui/project/PageSelectorComboBox.cpp
     ui/project/ProjectMergeDialog.cpp
+    ui/project/MergeCandidatePreview.cpp
     ui/project/ProjectViewController.cpp
     ui/project/ProjectRecoveryDialog.cpp
     ui/project/ProjectRecoveryController.cpp
@@ -111,6 +113,7 @@ set(LABELQT_UI_SOURCES
     ui/search/ProjectTextSearchModel.cpp
     ui/proofread/ProofreadChangesDialog.cpp
     ui/proofread/ProofreadReviewPanel.cpp
+    ui/proofread/ReviewStatusDelegate.cpp
     ui/proofread/ProofreadChangeTableModel.cpp
     ui/proofread/ProofreadingController.cpp
     ui/widgets/CheckableFilterButton.cpp

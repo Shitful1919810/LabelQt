@@ -6,12 +6,9 @@
 #include "ui/proofread/ProofreadChangesDialog.h"
 #include <QDesktopServices>
 #include <QDialogButtonBox>
-#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
-#include <QJsonArray>
-#include <QJsonDocument>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
@@ -120,6 +117,8 @@ void ProjectRecoveryDialog::showDetails()
     m_replace->setEnabled(backup && bool(m_replaceBackup));
     m_rollback->setVisible(entry && !backup);
     m_complete->setVisible(entry && !backup);
+    m_rollback->setEnabled(false);
+    m_complete->setEnabled(false);
     if (!entry) {
         m_details->setPlainText(tr("No recovery records."));
         return;
@@ -140,21 +139,19 @@ void ProjectRecoveryDialog::showDetails()
         m_replace->setEnabled(bool(snapshot) && bool(m_replaceBackup));
     }
     else {
-        QFile file(entry->recordPath);
-        if (file.open(QIODevice::ReadOnly)) {
-            const auto object = QJsonDocument::fromJson(file.readAll()).object();
-            details += tr("File operations: %1").arg(object.value("moves").toArray().size()) + QLatin1Char('\n');
-            for (const auto& value : object.value("moves").toArray()) {
-                const auto move = value.toObject();
-                details += move.value("source").toString() + QStringLiteral(" -> ") + move.value("target").toString() +
-                           QLatin1Char('\n');
-            }
-            const bool supported = object.value("version").toInt() == 2;
+        const auto record = ProjectRecoveryService::recoveryDetails(entry->recordPath);
+        if (record) {
+            details += tr("File operations: %1").arg(record->moves.size()) + QLatin1Char('\n');
+            for (const auto& move : record->moves)
+                details += move.source + QStringLiteral(" -> ") + move.target + QLatin1Char('\n');
+            const bool supported = record->canRecover;
             m_rollback->setEnabled(supported);
             m_complete->setEnabled(supported);
             if (!supported)
                 details += tr("This older record is available for manual inspection only.");
         }
+        else
+            details += record.error();
     }
     m_details->setPlainText(details);
 }

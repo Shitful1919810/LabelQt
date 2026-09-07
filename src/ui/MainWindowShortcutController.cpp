@@ -10,6 +10,7 @@
 #include <QTextEdit>
 #include <QWidget>
 
+#include <algorithm>
 #include <utility>
 
 namespace {
@@ -33,8 +34,12 @@ bool hasSameKeyIgnoringModifiers(QKeyCombination lhs, QKeyCombination rhs)
 
 bool isTextInputWidget(const QWidget* widget)
 {
-    return qobject_cast<const QLineEdit*>(widget) != nullptr || qobject_cast<const QTextEdit*>(widget) != nullptr ||
-           qobject_cast<const QPlainTextEdit*>(widget) != nullptr;
+    for (auto* ancestor = widget; ancestor != nullptr; ancestor = ancestor->parentWidget()) {
+        if (qobject_cast<const QLineEdit*>(ancestor) || qobject_cast<const QTextEdit*>(ancestor) ||
+            qobject_cast<const QPlainTextEdit*>(ancestor))
+            return true;
+    }
+    return false;
 }
 } // namespace
 
@@ -53,6 +58,14 @@ void MainWindowShortcutController::setCallbacks(Callbacks callbacks)
     m_callbacks = std::move(callbacks);
 }
 
+void MainWindowShortcutController::setLabelWorkspaceWidgets(QVector<QWidget*> widgets)
+{
+    m_labelWorkspaceWidgets.clear();
+    for (auto* widget : widgets)
+        if (widget)
+            m_labelWorkspaceWidgets.append(widget);
+}
+
 bool MainWindowShortcutController::handleGlobalShortcut(QObject* watched, QEvent* event)
 {
     const bool isShortcutOverride = event->type() == QEvent::ShortcutOverride;
@@ -64,6 +77,13 @@ bool MainWindowShortcutController::handleGlobalShortcut(QObject* watched, QEvent
     if (watchedWidget == nullptr || watchedWidget->window() != m_window) {
         return false;
     }
+
+    const bool labelWorkspace = std::ranges::any_of(m_labelWorkspaceWidgets, [watchedWidget](const auto& root) {
+        return root && (root == watchedWidget || root->isAncestorOf(watchedWidget));
+    });
+    // Navigation belongs to the label workspace, not every input hosted by the main window.
+    if (!labelWorkspace)
+        return false;
 
     const auto* keyEvent = static_cast<QKeyEvent*>(event);
     if (keyEvent->key() == Qt::Key_unknown) {

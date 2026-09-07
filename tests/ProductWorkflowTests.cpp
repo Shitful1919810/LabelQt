@@ -470,27 +470,21 @@ private slots:
              [](const QVector<ManualLabelPair>&) -> std::expected<void, QString> { return {}; }});
         panel.setCurrentChange(&change);
         QVERIFY(panel.session().annotations.isEmpty());
-        auto* note = panel.findChild<QPlainTextEdit*>();
-        note->setPlainText("check wording");
-        panel.commitNote();
+        QVERIFY(!panel.findChild<QPlainTextEdit*>());
         const auto key = ReviewSessionService::fingerprint(change);
-        QCOMPARE(panel.session().annotations.value(key).status, ReviewStatus::Unseen);
-        QCOMPARE(panel.session().annotations.value(key).note, "check wording");
         auto saved = panel.session();
         saved.annotations[key].note = "saved note";
         panel.setSession(saved);
-        QCOMPARE(note->toPlainText(), "saved note");
-        panel.commitNote();
         QCOMPARE(panel.session().annotations.value(key).note, "saved note");
-        note->setPlainText("check wording");
-        panel.commitNote();
         auto* status = panel.findChild<QComboBox*>();
         status->setCurrentIndex(1);
         QVERIFY(QMetaObject::invokeMethod(status, "activated", Q_ARG(int, 1)));
         QCOMPARE(panel.session().annotations.value(key).status, ReviewStatus::Reviewed);
-        panel.findChildren<QToolButton*>().first()->click();
+        panel.findChild<QToolButton*>("undoReview")->click();
         QCOMPARE(panel.session().annotations.value(key).status, ReviewStatus::Unseen);
-        QCOMPARE(panel.session().annotations.value(key).note, "check wording");
+        QCOMPARE(panel.session().annotations.value(key).note, "saved note");
+        panel.findChild<QToolButton*>("redoReview")->click();
+        QCOMPARE(panel.session().annotations.value(key).status, ReviewStatus::Reviewed);
     }
 
     void reviewDialogPreservesStateAndHasNoImplicitEdits()
@@ -516,6 +510,16 @@ private slots:
         QCoreApplication::processEvents();
         QCOMPARE(panel->session().annotations.value(ReviewSessionService::fingerprint(changes.first())).status,
                  ReviewStatus::Reviewed);
+        auto* table = dialog.findChild<QTableView*>();
+        QVERIFY(table);
+        const auto reviewIndex = table->model()->index(0, ProofreadChangeTableModel::ReviewColumn);
+        QTest::mouseClick(table->viewport(), Qt::LeftButton, Qt::NoModifier, table->visualRect(reviewIndex).center());
+        QCOMPARE(panel->session().annotations.value(ReviewSessionService::fingerprint(changes.first())).status,
+                 ReviewStatus::Unseen);
+        panel->setEnabled(false);
+        QTest::mouseClick(table->viewport(), Qt::LeftButton, Qt::NoModifier, table->visualRect(reviewIndex).center());
+        QCOMPARE(panel->session().annotations.value(ReviewSessionService::fingerprint(changes.first())).status,
+                 ReviewStatus::Unseen);
         dialog.reject();
         QVERIFY(!dialog.reviewSession().value("annotations").toObject().isEmpty());
     }

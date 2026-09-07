@@ -239,8 +239,8 @@ QString markerShapeToString(MarkerShape markerShape)
     return markerShape == MarkerShape::Square ? QStringLiteral("square") : QStringLiteral("circle");
 }
 
-TextDiffCleanupMode textDiffCleanupModeFromString(const QString& text, TextDiffCleanupMode fallback,
-                                                  const QString& key, QVector<AppPreferenceWarning>& warnings)
+TextDiffCleanupMode textDiffCleanupModeFromString(const QString& text, TextDiffCleanupMode fallback, const QString& key,
+                                                  QVector<AppPreferenceWarning>& warnings)
 {
     const QString normalized = text.trimmed().toLower();
     if (normalized == QStringLiteral("auto")) {
@@ -363,96 +363,15 @@ QVector<LabelGroupStyle> defaultLabelGroupStyles()
 
 AppPreferences AppPreferences::fromValues(AppPreferencesValues values)
 {
+    values.backupMaximumCount = std::clamp(values.backupMaximumCount, 0, 10000);
     AppPreferences preferences;
-    preferences.m_labelMarkerDiameterPixels = values.labelMarkerDiameterPixels;
-    preferences.m_labelMarkerFontPointSize = values.labelMarkerFontPointSize;
-    preferences.m_labelTableMaxTextRows = values.labelTableMaxTextRows;
-    preferences.m_labelTableFontFamily = std::move(values.labelTableFontFamily);
-    preferences.m_labelTableFontPointSize = values.labelTableFontPointSize;
-    preferences.m_labelTextEditorFontFamily = std::move(values.labelTextEditorFontFamily);
-    preferences.m_labelTextEditorFontPointSize = values.labelTextEditorFontPointSize;
-    preferences.m_markerTextBubbleFontFamily = std::move(values.markerTextBubbleFontFamily);
-    preferences.m_markerTextBubbleFontPointSize = values.markerTextBubbleFontPointSize;
-    preferences.m_markerTextBubbleOpacity = values.markerTextBubbleOpacity;
-    preferences.m_markerTextBubbleMaxLineCharacters = values.markerTextBubbleMaxLineCharacters;
-    preferences.m_canvasLabelTextEditorOpacity = values.canvasLabelTextEditorOpacity;
-    preferences.m_applicationStyle = std::move(values.applicationStyle);
-    preferences.m_applicationTheme = std::move(values.applicationTheme);
-    preferences.m_applicationLanguage = std::move(values.applicationLanguage);
-    preferences.m_textDiffCleanupMode = values.textDiffCleanupMode;
-    preferences.m_showAutomationRunLog = values.showAutomationRunLog;
-    preferences.m_automationPythonCommand = std::move(values.automationPythonCommand);
-    preferences.m_automationPythonArguments = std::move(values.automationPythonArguments);
-    preferences.m_automationAutoInstallRequirements = values.automationAutoInstallRequirements;
-    preferences.m_automationPipIndexUrl = std::move(values.automationPipIndexUrl);
-    preferences.m_automationShortcuts = std::move(values.automationShortcuts);
-    preferences.m_moveLabelModifiers = values.moveLabelModifiers;
-    preferences.m_previousLabelModifiers = values.previousLabelModifiers;
-    preferences.m_undoShortcut = std::move(values.undoShortcut);
-    preferences.m_redoShortcut = std::move(values.redoShortcut);
-    preferences.m_nextLabelShortcut = std::move(values.nextLabelShortcut);
-    preferences.m_alternatePreviousLabelShortcut = std::move(values.alternatePreviousLabelShortcut);
-    preferences.m_alternateNextLabelShortcut = std::move(values.alternateNextLabelShortcut);
-    preferences.m_previousPageShortcut = std::move(values.previousPageShortcut);
-    preferences.m_nextPageShortcut = std::move(values.nextPageShortcut);
-    preferences.m_editLabelTextShortcut = std::move(values.editLabelTextShortcut);
-    preferences.m_commitLabelTextShortcut = std::move(values.commitLabelTextShortcut);
-    preferences.m_deleteLabelShortcut = std::move(values.deleteLabelShortcut);
-    preferences.m_findProjectShortcut = std::move(values.findProjectShortcut);
-    preferences.m_nextSearchMatchShortcut = std::move(values.nextSearchMatchShortcut);
-    preferences.m_previousSearchMatchShortcut = std::move(values.previousSearchMatchShortcut);
-    preferences.m_backupPath = std::move(values.backupPath);
-    preferences.m_backupIntervalSeconds = values.backupIntervalSeconds;
-    preferences.m_backupMaximumCount = std::clamp(values.backupMaximumCount, 0, 10000);
-    preferences.m_groupStyles = std::move(values.groupStyles);
+    preferences.m_values = std::move(values);
     return preferences;
 }
 
 AppPreferencesValues AppPreferences::values() const
 {
-    return {
-        .labelMarkerDiameterPixels = m_labelMarkerDiameterPixels,
-        .labelMarkerFontPointSize = m_labelMarkerFontPointSize,
-        .labelTableMaxTextRows = m_labelTableMaxTextRows,
-        .labelTableFontFamily = m_labelTableFontFamily,
-        .labelTableFontPointSize = m_labelTableFontPointSize,
-        .labelTextEditorFontFamily = m_labelTextEditorFontFamily,
-        .labelTextEditorFontPointSize = m_labelTextEditorFontPointSize,
-        .markerTextBubbleFontFamily = m_markerTextBubbleFontFamily,
-        .markerTextBubbleFontPointSize = m_markerTextBubbleFontPointSize,
-        .markerTextBubbleOpacity = m_markerTextBubbleOpacity,
-        .markerTextBubbleMaxLineCharacters = m_markerTextBubbleMaxLineCharacters,
-        .canvasLabelTextEditorOpacity = m_canvasLabelTextEditorOpacity,
-        .applicationStyle = m_applicationStyle,
-        .applicationTheme = m_applicationTheme,
-        .applicationLanguage = m_applicationLanguage,
-        .textDiffCleanupMode = m_textDiffCleanupMode,
-        .showAutomationRunLog = m_showAutomationRunLog,
-        .automationPythonCommand = m_automationPythonCommand,
-        .automationPythonArguments = m_automationPythonArguments,
-        .automationAutoInstallRequirements = m_automationAutoInstallRequirements,
-        .automationPipIndexUrl = m_automationPipIndexUrl,
-        .automationShortcuts = m_automationShortcuts,
-        .moveLabelModifiers = m_moveLabelModifiers,
-        .previousLabelModifiers = m_previousLabelModifiers,
-        .undoShortcut = m_undoShortcut,
-        .redoShortcut = m_redoShortcut,
-        .nextLabelShortcut = m_nextLabelShortcut,
-        .alternatePreviousLabelShortcut = m_alternatePreviousLabelShortcut,
-        .alternateNextLabelShortcut = m_alternateNextLabelShortcut,
-        .previousPageShortcut = m_previousPageShortcut,
-        .nextPageShortcut = m_nextPageShortcut,
-        .editLabelTextShortcut = m_editLabelTextShortcut,
-        .commitLabelTextShortcut = m_commitLabelTextShortcut,
-        .deleteLabelShortcut = m_deleteLabelShortcut,
-        .findProjectShortcut = m_findProjectShortcut,
-        .nextSearchMatchShortcut = m_nextSearchMatchShortcut,
-        .previousSearchMatchShortcut = m_previousSearchMatchShortcut,
-        .backupPath = m_backupPath,
-        .backupIntervalSeconds = m_backupIntervalSeconds,
-        .backupMaximumCount = m_backupMaximumCount,
-        .groupStyles = m_groupStyles,
-    };
+    return m_values;
 }
 
 AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& document,
@@ -481,7 +400,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             const QJsonValue showRunLogValue = automationValue.toObject().value(QStringLiteral("showRunLog"));
             if (!showRunLogValue.isUndefined()) {
                 if (showRunLogValue.isBool()) {
-                    preferences.m_showAutomationRunLog = showRunLogValue.toBool();
+                    preferences.m_values.showAutomationRunLog = showRunLogValue.toBool();
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::AutomationShowRunLogWrongType,
@@ -500,7 +419,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                     const QJsonValue commandValue = python.value(QStringLiteral("command"));
                     if (!commandValue.isUndefined()) {
                         if (commandValue.isString()) {
-                            preferences.m_automationPythonCommand = commandValue.toString().trimmed();
+                            preferences.m_values.automationPythonCommand = commandValue.toString().trimmed();
                         }
                         else {
                             warnings.append(makeWarning(AppPreferenceWarningType::AutomationPythonCommandWrongType,
@@ -523,7 +442,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                                                     QStringLiteral("automation.python.arguments"), {}, i));
                                     continue;
                                 }
-                                preferences.m_automationPythonArguments.append(arguments.at(i).toString());
+                                preferences.m_values.automationPythonArguments.append(arguments.at(i).toString());
                             }
                         }
                     }
@@ -531,7 +450,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                     const QJsonValue autoInstallValue = python.value(QStringLiteral("autoInstallRequirements"));
                     if (!autoInstallValue.isUndefined()) {
                         if (autoInstallValue.isBool()) {
-                            preferences.m_automationAutoInstallRequirements = autoInstallValue.toBool();
+                            preferences.m_values.automationAutoInstallRequirements = autoInstallValue.toBool();
                         }
                         else {
                             warnings.append(
@@ -543,7 +462,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                     const QJsonValue pipIndexValue = python.value(QStringLiteral("pipIndexUrl"));
                     if (!pipIndexValue.isUndefined()) {
                         if (pipIndexValue.isString()) {
-                            preferences.m_automationPipIndexUrl = pipIndexValue.toString().trimmed();
+                            preferences.m_values.automationPipIndexUrl = pipIndexValue.toString().trimmed();
                         }
                         else {
                             warnings.append(makeWarning(AppPreferenceWarningType::AutomationPythonPipIndexUrlWrongType,
@@ -582,7 +501,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                                                         QStringLiteral("automation.shortcuts.%1").arg(scriptId)));
                             continue;
                         }
-                        preferences.m_automationShortcuts.insert(scriptId, shortcut);
+                        preferences.m_values.automationShortcuts.insert(scriptId, shortcut);
                     }
                 }
             }
@@ -598,7 +517,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             const QJsonValue styleValue = appearanceValue.toObject().value(QStringLiteral("style"));
             if (!styleValue.isUndefined()) {
                 if (styleValue.isString()) {
-                    preferences.m_applicationStyle = styleValue.toString().trimmed();
+                    preferences.m_values.applicationStyle = styleValue.toString().trimmed();
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::AppearanceStyleWrongType,
@@ -611,7 +530,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 if (themeValue.isString()) {
                     const QString applicationTheme = themeValue.toString().trimmed();
                     if (isBuiltInApplicationTheme(applicationTheme)) {
-                        preferences.m_applicationTheme = applicationTheme;
+                        preferences.m_values.applicationTheme = applicationTheme;
                     }
                     else {
                         warnings.append(makeWarning(AppPreferenceWarningType::AppearanceThemeWrongType,
@@ -627,7 +546,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             const QJsonValue languageValue = appearanceValue.toObject().value(QStringLiteral("language"));
             if (!languageValue.isUndefined()) {
                 if (languageValue.isString()) {
-                    preferences.m_applicationLanguage = languageValue.toString().trimmed();
+                    preferences.m_values.applicationLanguage = languageValue.toString().trimmed();
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::AppearanceLanguageWrongType,
@@ -647,8 +566,8 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 proofreadingValue.toObject().value(QStringLiteral("textDiffCleanup"));
             if (!textDiffCleanupValue.isUndefined()) {
                 if (textDiffCleanupValue.isString()) {
-                    preferences.m_textDiffCleanupMode = textDiffCleanupModeFromString(
-                        textDiffCleanupValue.toString(), preferences.m_textDiffCleanupMode,
+                    preferences.m_values.textDiffCleanupMode = textDiffCleanupModeFromString(
+                        textDiffCleanupValue.toString(), preferences.m_values.textDiffCleanupMode,
                         QStringLiteral("proofreading.textDiffCleanup"), warnings);
                 }
                 else {
@@ -666,12 +585,12 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
         }
         else {
             const QJsonObject labelMarker = labelMarkerValue.toObject();
-            preferences.m_labelMarkerDiameterPixels = positiveNumberFromJsonValue(
-                labelMarker, QStringLiteral("diameter"), preferences.m_labelMarkerDiameterPixels, 1.0, 256.0,
+            preferences.m_values.labelMarkerDiameterPixels = positiveNumberFromJsonValue(
+                labelMarker, QStringLiteral("diameter"), preferences.m_values.labelMarkerDiameterPixels, 1.0, 256.0,
                 AppPreferenceWarningType::MarkerSizeWrongType, AppPreferenceWarningType::MarkerSizeOutOfRange,
                 QStringLiteral("labelMarker"), warnings);
-            preferences.m_labelMarkerFontPointSize = positiveNumberFromJsonValue(
-                labelMarker, QStringLiteral("fontPointSize"), preferences.m_labelMarkerFontPointSize, 0.1, 256.0,
+            preferences.m_values.labelMarkerFontPointSize = positiveNumberFromJsonValue(
+                labelMarker, QStringLiteral("fontPointSize"), preferences.m_values.labelMarkerFontPointSize, 0.1, 256.0,
                 AppPreferenceWarningType::MarkerSizeWrongType, AppPreferenceWarningType::MarkerSizeOutOfRange,
                 QStringLiteral("labelMarker"), warnings);
         }
@@ -684,15 +603,16 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
         }
         else {
             const QJsonObject labelTable = labelTableValue.toObject();
-            preferences.m_labelTableMaxTextRows = positiveIntegerFromJsonValue(
+            preferences.m_values.labelTableMaxTextRows = positiveIntegerFromJsonValue(
                 labelTable, QStringLiteral("maxTextRows"), QStringLiteral("labelTable.maxTextRows"),
-                preferences.m_labelTableMaxTextRows, 1, 50, AppPreferenceWarningType::LabelTableMaxTextRowsWrongType,
+                preferences.m_values.labelTableMaxTextRows, 1, 50,
+                AppPreferenceWarningType::LabelTableMaxTextRowsWrongType,
                 AppPreferenceWarningType::LabelTableMaxTextRowsOutOfRange, warnings);
 
             const QJsonValue fontFamilyValue = labelTable.value(QStringLiteral("fontFamily"));
             if (!fontFamilyValue.isUndefined()) {
                 if (fontFamilyValue.isString()) {
-                    preferences.m_labelTableFontFamily = fontFamilyValue.toString().trimmed();
+                    preferences.m_values.labelTableFontFamily = fontFamilyValue.toString().trimmed();
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::LabelTableFontFamilyWrongType,
@@ -700,9 +620,9 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 }
             }
 
-            preferences.m_labelTableFontPointSize = nonNegativeNumberFromJsonValue(
+            preferences.m_values.labelTableFontPointSize = nonNegativeNumberFromJsonValue(
                 labelTable, QStringLiteral("fontPointSize"), QStringLiteral("labelTable.fontPointSize"),
-                preferences.m_labelTableFontPointSize, 256.0,
+                preferences.m_values.labelTableFontPointSize, 256.0,
                 AppPreferenceWarningType::LabelTableFontPointSizeWrongType,
                 AppPreferenceWarningType::LabelTableFontPointSizeOutOfRange, warnings);
         }
@@ -718,7 +638,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             const QJsonValue fontFamilyValue = labelTextEditor.value(QStringLiteral("fontFamily"));
             if (!fontFamilyValue.isUndefined()) {
                 if (fontFamilyValue.isString()) {
-                    preferences.m_labelTextEditorFontFamily = fontFamilyValue.toString().trimmed();
+                    preferences.m_values.labelTextEditorFontFamily = fontFamilyValue.toString().trimmed();
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::LabelTextEditorFontFamilyWrongType,
@@ -726,9 +646,9 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 }
             }
 
-            preferences.m_labelTextEditorFontPointSize = nonNegativeNumberFromJsonValue(
+            preferences.m_values.labelTextEditorFontPointSize = nonNegativeNumberFromJsonValue(
                 labelTextEditor, QStringLiteral("fontPointSize"), QStringLiteral("labelTextEditor.fontPointSize"),
-                preferences.m_labelTextEditorFontPointSize, 256.0,
+                preferences.m_values.labelTextEditorFontPointSize, 256.0,
                 AppPreferenceWarningType::LabelTextEditorFontPointSizeWrongType,
                 AppPreferenceWarningType::LabelTextEditorFontPointSizeOutOfRange, warnings);
         }
@@ -744,7 +664,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             const QJsonValue fontFamilyValue = markerTextBubble.value(QStringLiteral("fontFamily"));
             if (!fontFamilyValue.isUndefined()) {
                 if (fontFamilyValue.isString()) {
-                    preferences.m_markerTextBubbleFontFamily = fontFamilyValue.toString().trimmed();
+                    preferences.m_values.markerTextBubbleFontFamily = fontFamilyValue.toString().trimmed();
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::MarkerTextBubbleFontFamilyWrongType,
@@ -752,20 +672,21 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 }
             }
 
-            preferences.m_markerTextBubbleFontPointSize = nonNegativeNumberFromJsonValue(
+            preferences.m_values.markerTextBubbleFontPointSize = nonNegativeNumberFromJsonValue(
                 markerTextBubble, QStringLiteral("fontPointSize"), QStringLiteral("markerTextBubble.fontPointSize"),
-                preferences.m_markerTextBubbleFontPointSize, 256.0,
+                preferences.m_values.markerTextBubbleFontPointSize, 256.0,
                 AppPreferenceWarningType::MarkerTextBubbleFontPointSizeWrongType,
                 AppPreferenceWarningType::MarkerTextBubbleFontPointSizeOutOfRange, warnings);
-            preferences.m_markerTextBubbleOpacity = boundedNumberFromJsonValue(
+            preferences.m_values.markerTextBubbleOpacity = boundedNumberFromJsonValue(
                 markerTextBubble, QStringLiteral("opacity"), QStringLiteral("markerTextBubble.opacity"),
-                preferences.m_markerTextBubbleOpacity, 0.0, 1.0,
+                preferences.m_values.markerTextBubbleOpacity, 0.0, 1.0,
                 AppPreferenceWarningType::MarkerTextBubbleOpacityWrongType,
                 AppPreferenceWarningType::MarkerTextBubbleOpacityOutOfRange, warnings);
-            preferences.m_markerTextBubbleMaxLineCharacters = positiveIntegerFromJsonValue(
+            preferences.m_values.markerTextBubbleMaxLineCharacters = positiveIntegerFromJsonValue(
                 markerTextBubble, QStringLiteral("maxLineCharacters"),
-                QStringLiteral("markerTextBubble.maxLineCharacters"), preferences.m_markerTextBubbleMaxLineCharacters,
-                1, 200, AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersWrongType,
+                QStringLiteral("markerTextBubble.maxLineCharacters"),
+                preferences.m_values.markerTextBubbleMaxLineCharacters, 1, 200,
+                AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersWrongType,
                 AppPreferenceWarningType::MarkerTextBubbleMaxLineCharactersOutOfRange, warnings);
         }
     }
@@ -777,9 +698,9 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
         }
         else {
             const QJsonObject canvasLabelTextEditor = canvasLabelTextEditorValue.toObject();
-            preferences.m_canvasLabelTextEditorOpacity = boundedNumberFromJsonValue(
+            preferences.m_values.canvasLabelTextEditorOpacity = boundedNumberFromJsonValue(
                 canvasLabelTextEditor, QStringLiteral("opacity"), QStringLiteral("canvasLabelTextEditor.opacity"),
-                preferences.m_canvasLabelTextEditorOpacity, 0.0, 1.0,
+                preferences.m_values.canvasLabelTextEditorOpacity, 0.0, 1.0,
                 AppPreferenceWarningType::CanvasLabelTextEditorOpacityWrongType,
                 AppPreferenceWarningType::CanvasLabelTextEditorOpacityOutOfRange, warnings);
         }
@@ -794,9 +715,10 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             const QJsonValue moveLabelModifierValue = inputValue.toObject().value(QStringLiteral("moveLabelModifier"));
             if (!moveLabelModifierValue.isUndefined()) {
                 if (moveLabelModifierValue.isString()) {
-                    preferences.m_moveLabelModifiers = modifiersFromString(
+                    preferences.m_values.moveLabelModifiers = modifiersFromString(
                         moveLabelModifierValue.toString(), QStringLiteral("input.moveLabelModifier"),
-                        preferences.m_moveLabelModifiers, AppPreferenceWarningType::MoveLabelModifierInvalid, warnings);
+                        preferences.m_values.moveLabelModifiers, AppPreferenceWarningType::MoveLabelModifierInvalid,
+                        warnings);
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::MoveLabelModifierInvalid,
@@ -808,10 +730,10 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
             const QJsonValue previousLabelModifierValue = input.value(QStringLiteral("previousLabelModifier"));
             if (!previousLabelModifierValue.isUndefined()) {
                 if (previousLabelModifierValue.isString()) {
-                    preferences.m_previousLabelModifiers = modifiersFromString(
+                    preferences.m_values.previousLabelModifiers = modifiersFromString(
                         previousLabelModifierValue.toString(), QStringLiteral("input.previousLabelModifier"),
-                        preferences.m_previousLabelModifiers, AppPreferenceWarningType::PreviousLabelModifierInvalid,
-                        warnings);
+                        preferences.m_values.previousLabelModifiers,
+                        AppPreferenceWarningType::PreviousLabelModifierInvalid, warnings);
                 }
                 else {
                     warnings.append(makeWarning(AppPreferenceWarningType::PreviousLabelModifierInvalid,
@@ -819,49 +741,54 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
                 }
             }
 
-            preferences.m_undoShortcut = keySequenceFromJsonValue(
+            preferences.m_values.undoShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("undoShortcut")), QStringLiteral("input.undoShortcut"),
-                preferences.m_undoShortcut, AppPreferenceWarningType::UndoShortcutInvalid, warnings);
-            preferences.m_redoShortcut = keySequenceFromJsonValue(
+                preferences.m_values.undoShortcut, AppPreferenceWarningType::UndoShortcutInvalid, warnings);
+            preferences.m_values.redoShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("redoShortcut")), QStringLiteral("input.redoShortcut"),
-                preferences.m_redoShortcut, AppPreferenceWarningType::RedoShortcutInvalid, warnings);
-            preferences.m_nextLabelShortcut = keySequenceFromJsonValue(
+                preferences.m_values.redoShortcut, AppPreferenceWarningType::RedoShortcutInvalid, warnings);
+            preferences.m_values.nextLabelShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("nextLabelShortcut")), QStringLiteral("input.nextLabelShortcut"),
-                preferences.m_nextLabelShortcut, AppPreferenceWarningType::NextLabelShortcutInvalid, warnings);
-            preferences.m_alternatePreviousLabelShortcut = keySequenceFromJsonValue(
-                input.value(QStringLiteral("alternatePreviousLabelShortcut")),
-                QStringLiteral("input.alternatePreviousLabelShortcut"), preferences.m_alternatePreviousLabelShortcut,
-                AppPreferenceWarningType::AlternatePreviousLabelShortcutInvalid, warnings);
-            preferences.m_alternateNextLabelShortcut = keySequenceFromJsonValue(
+                preferences.m_values.nextLabelShortcut, AppPreferenceWarningType::NextLabelShortcutInvalid, warnings);
+            preferences.m_values.alternatePreviousLabelShortcut =
+                keySequenceFromJsonValue(input.value(QStringLiteral("alternatePreviousLabelShortcut")),
+                                         QStringLiteral("input.alternatePreviousLabelShortcut"),
+                                         preferences.m_values.alternatePreviousLabelShortcut,
+                                         AppPreferenceWarningType::AlternatePreviousLabelShortcutInvalid, warnings);
+            preferences.m_values.alternateNextLabelShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("alternateNextLabelShortcut")),
-                QStringLiteral("input.alternateNextLabelShortcut"), preferences.m_alternateNextLabelShortcut,
+                QStringLiteral("input.alternateNextLabelShortcut"), preferences.m_values.alternateNextLabelShortcut,
                 AppPreferenceWarningType::AlternateNextLabelShortcutInvalid, warnings);
-            preferences.m_previousPageShortcut = keySequenceFromJsonValue(
+            preferences.m_values.previousPageShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("previousPageShortcut")), QStringLiteral("input.previousPageShortcut"),
-                preferences.m_previousPageShortcut, AppPreferenceWarningType::PreviousPageShortcutInvalid, warnings);
-            preferences.m_nextPageShortcut = keySequenceFromJsonValue(
+                preferences.m_values.previousPageShortcut, AppPreferenceWarningType::PreviousPageShortcutInvalid,
+                warnings);
+            preferences.m_values.nextPageShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("nextPageShortcut")), QStringLiteral("input.nextPageShortcut"),
-                preferences.m_nextPageShortcut, AppPreferenceWarningType::NextPageShortcutInvalid, warnings);
-            preferences.m_editLabelTextShortcut = keySequenceFromJsonValue(
+                preferences.m_values.nextPageShortcut, AppPreferenceWarningType::NextPageShortcutInvalid, warnings);
+            preferences.m_values.editLabelTextShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("editLabelTextShortcut")), QStringLiteral("input.editLabelTextShortcut"),
-                preferences.m_editLabelTextShortcut, AppPreferenceWarningType::EditLabelTextShortcutInvalid, warnings);
-            preferences.m_commitLabelTextShortcut = keySequenceFromJsonValue(
+                preferences.m_values.editLabelTextShortcut, AppPreferenceWarningType::EditLabelTextShortcutInvalid,
+                warnings);
+            preferences.m_values.commitLabelTextShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("commitLabelTextShortcut")), QStringLiteral("input.commitLabelTextShortcut"),
-                preferences.m_commitLabelTextShortcut, AppPreferenceWarningType::CommitLabelTextShortcutInvalid,
+                preferences.m_values.commitLabelTextShortcut, AppPreferenceWarningType::CommitLabelTextShortcutInvalid,
                 warnings);
-            preferences.m_deleteLabelShortcut = keySequenceFromJsonValue(
+            preferences.m_values.deleteLabelShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("deleteLabelShortcut")), QStringLiteral("input.deleteLabelShortcut"),
-                preferences.m_deleteLabelShortcut, AppPreferenceWarningType::DeleteLabelShortcutInvalid, warnings);
-            preferences.m_findProjectShortcut = keySequenceFromJsonValue(
-                input.value(QStringLiteral("findProjectShortcut")), QStringLiteral("input.findProjectShortcut"),
-                preferences.m_findProjectShortcut, AppPreferenceWarningType::FindProjectShortcutInvalid, warnings);
-            preferences.m_nextSearchMatchShortcut = keySequenceFromJsonValue(
-                input.value(QStringLiteral("nextSearchMatchShortcut")), QStringLiteral("input.nextSearchMatchShortcut"),
-                preferences.m_nextSearchMatchShortcut, AppPreferenceWarningType::NextSearchMatchShortcutInvalid,
+                preferences.m_values.deleteLabelShortcut, AppPreferenceWarningType::DeleteLabelShortcutInvalid,
                 warnings);
-            preferences.m_previousSearchMatchShortcut = keySequenceFromJsonValue(
+            preferences.m_values.findProjectShortcut = keySequenceFromJsonValue(
+                input.value(QStringLiteral("findProjectShortcut")), QStringLiteral("input.findProjectShortcut"),
+                preferences.m_values.findProjectShortcut, AppPreferenceWarningType::FindProjectShortcutInvalid,
+                warnings);
+            preferences.m_values.nextSearchMatchShortcut = keySequenceFromJsonValue(
+                input.value(QStringLiteral("nextSearchMatchShortcut")), QStringLiteral("input.nextSearchMatchShortcut"),
+                preferences.m_values.nextSearchMatchShortcut, AppPreferenceWarningType::NextSearchMatchShortcutInvalid,
+                warnings);
+            preferences.m_values.previousSearchMatchShortcut = keySequenceFromJsonValue(
                 input.value(QStringLiteral("previousSearchMatchShortcut")),
-                QStringLiteral("input.previousSearchMatchShortcut"), preferences.m_previousSearchMatchShortcut,
+                QStringLiteral("input.previousSearchMatchShortcut"), preferences.m_values.previousSearchMatchShortcut,
                 AppPreferenceWarningType::PreviousSearchMatchShortcutInvalid, warnings);
         }
     }
@@ -871,7 +798,7 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
         if (backupPathValue.isString()) {
             const QString backupPath = backupPathValue.toString().trimmed();
             if (!backupPath.isEmpty()) {
-                preferences.m_backupPath = backupPath;
+                preferences.m_values.backupPath = backupPath;
             }
             else {
                 warnings.append(
@@ -883,21 +810,21 @@ AppPreferencesLoadResult AppPreferences::loadFromDocument(const QJsonDocument& d
         }
     }
 
-    preferences.m_backupIntervalSeconds = positiveIntegerFromJsonValue(
+    preferences.m_values.backupIntervalSeconds = positiveIntegerFromJsonValue(
         root, QStringLiteral("backupIntervalSeconds"), QStringLiteral("backupIntervalSeconds"),
-        preferences.m_backupIntervalSeconds, 1, 86400, AppPreferenceWarningType::BackupIntervalWrongType,
+        preferences.m_values.backupIntervalSeconds, 1, 86400, AppPreferenceWarningType::BackupIntervalWrongType,
         AppPreferenceWarningType::BackupIntervalOutOfRange, warnings);
 
-    preferences.m_backupMaximumCount = positiveIntegerFromJsonValue(
+    preferences.m_values.backupMaximumCount = positiveIntegerFromJsonValue(
         root, QStringLiteral("backupMaximumCount"), QStringLiteral("backupMaximumCount"),
-        preferences.m_backupMaximumCount, 0, 10000, AppPreferenceWarningType::BackupRetentionInvalid,
+        preferences.m_values.backupMaximumCount, 0, 10000, AppPreferenceWarningType::BackupRetentionInvalid,
         AppPreferenceWarningType::BackupRetentionInvalid, warnings);
 
-    std::optional<QVector<LabelGroupStyle>> groupStyles =
-        groupStylesFromJsonValue(root.value(QStringLiteral("groupStyles")), preferences.m_labelMarkerDiameterPixels,
-                                 preferences.m_labelMarkerFontPointSize, warnings);
+    std::optional<QVector<LabelGroupStyle>> groupStyles = groupStylesFromJsonValue(
+        root.value(QStringLiteral("groupStyles")), preferences.m_values.labelMarkerDiameterPixels,
+        preferences.m_values.labelMarkerFontPointSize, warnings);
     if (groupStyles.has_value()) {
-        preferences.m_groupStyles = std::move(groupStyles.value());
+        preferences.m_values.groupStyles = std::move(groupStyles.value());
     }
 
     for (const auto& key : preferences.conflictingSearchShortcuts())
@@ -912,16 +839,16 @@ QStringList AppPreferences::conflictingSearchShortcuts() const
     for (auto it = input.begin(); it != input.end(); ++it)
         if (it.key().endsWith(QStringLiteral("Shortcut")))
             bindings.insert(it.key(), QKeySequence::fromString(it.value().toString(), QKeySequence::PortableText));
-    for (auto it = m_automationShortcuts.begin(); it != m_automationShortcuts.end(); ++it)
+    for (auto it = m_values.automationShortcuts.begin(); it != m_values.automationShortcuts.end(); ++it)
         bindings.insert(QStringLiteral("automation.") + it.key(), it.value());
     for (auto standard : {QKeySequence::New, QKeySequence::Open, QKeySequence::Save, QKeySequence::SaveAs,
                           QKeySequence::Copy, QKeySequence::Cut, QKeySequence::Paste})
         bindings.insert(QStringLiteral("standard.%1").arg(static_cast<int>(standard)), QKeySequence(standard));
-    if (!m_nextLabelShortcut.isEmpty())
-        bindings.insert(
-            QStringLiteral("previousLabel"),
-            QKeySequence(QKeyCombination(m_nextLabelShortcut[0].keyboardModifiers() | m_previousLabelModifiers,
-                                         m_nextLabelShortcut[0].key())));
+    if (!m_values.nextLabelShortcut.isEmpty())
+        bindings.insert(QStringLiteral("previousLabel"),
+                        QKeySequence(QKeyCombination(m_values.nextLabelShortcut[0].keyboardModifiers() |
+                                                         m_values.previousLabelModifiers,
+                                                     m_values.nextLabelShortcut[0].key())));
     QStringList conflicts;
     for (const auto& key : {QStringLiteral("findProjectShortcut"), QStringLiteral("nextSearchMatchShortcut"),
                             QStringLiteral("previousSearchMatchShortcut")}) {
@@ -984,24 +911,24 @@ AppPreferencesLoadResult AppPreferences::loadFromJson(const QByteArray& json)
 QJsonDocument AppPreferences::toJsonDocument() const
 {
     QJsonObject appearance;
-    appearance.insert(QStringLiteral("style"), m_applicationStyle);
-    appearance.insert(QStringLiteral("theme"), m_applicationTheme);
-    appearance.insert(QStringLiteral("language"), m_applicationLanguage);
+    appearance.insert(QStringLiteral("style"), m_values.applicationStyle);
+    appearance.insert(QStringLiteral("theme"), m_values.applicationTheme);
+    appearance.insert(QStringLiteral("language"), m_values.applicationLanguage);
 
     QJsonObject automation;
-    automation.insert(QStringLiteral("showRunLog"), m_showAutomationRunLog);
+    automation.insert(QStringLiteral("showRunLog"), m_values.showAutomationRunLog);
     QJsonObject automationPython;
-    automationPython.insert(QStringLiteral("command"), m_automationPythonCommand);
+    automationPython.insert(QStringLiteral("command"), m_values.automationPythonCommand);
     QJsonArray automationPythonArguments;
-    for (const QString& argument : m_automationPythonArguments) {
+    for (const QString& argument : m_values.automationPythonArguments) {
         automationPythonArguments.append(argument);
     }
     automationPython.insert(QStringLiteral("arguments"), automationPythonArguments);
-    automationPython.insert(QStringLiteral("autoInstallRequirements"), m_automationAutoInstallRequirements);
-    automationPython.insert(QStringLiteral("pipIndexUrl"), m_automationPipIndexUrl);
+    automationPython.insert(QStringLiteral("autoInstallRequirements"), m_values.automationAutoInstallRequirements);
+    automationPython.insert(QStringLiteral("pipIndexUrl"), m_values.automationPipIndexUrl);
     automation.insert(QStringLiteral("python"), automationPython);
     QJsonObject automationShortcuts;
-    for (auto it = m_automationShortcuts.constBegin(); it != m_automationShortcuts.constEnd(); ++it) {
+    for (auto it = m_values.automationShortcuts.constBegin(); it != m_values.automationShortcuts.constEnd(); ++it) {
         if (!it.value().isEmpty()) {
             automationShortcuts.insert(it.key(), it.value().toString(QKeySequence::PortableText));
         }
@@ -1009,61 +936,64 @@ QJsonDocument AppPreferences::toJsonDocument() const
     automation.insert(QStringLiteral("shortcuts"), automationShortcuts);
 
     QJsonObject labelMarker;
-    labelMarker.insert(QStringLiteral("diameter"), m_labelMarkerDiameterPixels);
-    labelMarker.insert(QStringLiteral("fontPointSize"), m_labelMarkerFontPointSize);
+    labelMarker.insert(QStringLiteral("diameter"), m_values.labelMarkerDiameterPixels);
+    labelMarker.insert(QStringLiteral("fontPointSize"), m_values.labelMarkerFontPointSize);
 
     QJsonObject labelTable;
-    labelTable.insert(QStringLiteral("fontFamily"), m_labelTableFontFamily);
-    labelTable.insert(QStringLiteral("fontPointSize"), m_labelTableFontPointSize);
-    labelTable.insert(QStringLiteral("maxTextRows"), m_labelTableMaxTextRows);
+    labelTable.insert(QStringLiteral("fontFamily"), m_values.labelTableFontFamily);
+    labelTable.insert(QStringLiteral("fontPointSize"), m_values.labelTableFontPointSize);
+    labelTable.insert(QStringLiteral("maxTextRows"), m_values.labelTableMaxTextRows);
 
     QJsonObject labelTextEditor;
-    labelTextEditor.insert(QStringLiteral("fontFamily"), m_labelTextEditorFontFamily);
-    labelTextEditor.insert(QStringLiteral("fontPointSize"), m_labelTextEditorFontPointSize);
+    labelTextEditor.insert(QStringLiteral("fontFamily"), m_values.labelTextEditorFontFamily);
+    labelTextEditor.insert(QStringLiteral("fontPointSize"), m_values.labelTextEditorFontPointSize);
 
     QJsonObject markerTextBubble;
-    markerTextBubble.insert(QStringLiteral("fontFamily"), m_markerTextBubbleFontFamily);
-    markerTextBubble.insert(QStringLiteral("fontPointSize"), m_markerTextBubbleFontPointSize);
-    markerTextBubble.insert(QStringLiteral("opacity"), m_markerTextBubbleOpacity);
-    markerTextBubble.insert(QStringLiteral("maxLineCharacters"), m_markerTextBubbleMaxLineCharacters);
+    markerTextBubble.insert(QStringLiteral("fontFamily"), m_values.markerTextBubbleFontFamily);
+    markerTextBubble.insert(QStringLiteral("fontPointSize"), m_values.markerTextBubbleFontPointSize);
+    markerTextBubble.insert(QStringLiteral("opacity"), m_values.markerTextBubbleOpacity);
+    markerTextBubble.insert(QStringLiteral("maxLineCharacters"), m_values.markerTextBubbleMaxLineCharacters);
 
     QJsonObject canvasLabelTextEditor;
-    canvasLabelTextEditor.insert(QStringLiteral("opacity"), m_canvasLabelTextEditorOpacity);
+    canvasLabelTextEditor.insert(QStringLiteral("opacity"), m_values.canvasLabelTextEditorOpacity);
 
     QJsonObject proofreading;
-    proofreading.insert(QStringLiteral("textDiffCleanup"), textDiffCleanupModeToString(m_textDiffCleanupMode));
+    proofreading.insert(QStringLiteral("textDiffCleanup"), textDiffCleanupModeToString(m_values.textDiffCleanupMode));
 
     QJsonObject input;
-    input.insert(QStringLiteral("moveLabelModifier"), modifiersToString(m_moveLabelModifiers));
-    input.insert(QStringLiteral("previousLabelModifier"), modifiersToString(m_previousLabelModifiers));
-    input.insert(QStringLiteral("undoShortcut"), m_undoShortcut.toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("redoShortcut"), m_redoShortcut.toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("nextLabelShortcut"), m_nextLabelShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("moveLabelModifier"), modifiersToString(m_values.moveLabelModifiers));
+    input.insert(QStringLiteral("previousLabelModifier"), modifiersToString(m_values.previousLabelModifiers));
+    input.insert(QStringLiteral("undoShortcut"), m_values.undoShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("redoShortcut"), m_values.redoShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("nextLabelShortcut"), m_values.nextLabelShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("alternatePreviousLabelShortcut"),
-                 m_alternatePreviousLabelShortcut.toString(QKeySequence::PortableText));
+                 m_values.alternatePreviousLabelShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("alternateNextLabelShortcut"),
-                 m_alternateNextLabelShortcut.toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("previousPageShortcut"), m_previousPageShortcut.toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("nextPageShortcut"), m_nextPageShortcut.toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("editLabelTextShortcut"), m_editLabelTextShortcut.toString(QKeySequence::PortableText));
+                 m_values.alternateNextLabelShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("previousPageShortcut"),
+                 m_values.previousPageShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("nextPageShortcut"), m_values.nextPageShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("editLabelTextShortcut"),
+                 m_values.editLabelTextShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("commitLabelTextShortcut"),
-                 m_commitLabelTextShortcut.toString(QKeySequence::PortableText));
+                 m_values.commitLabelTextShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("deleteLabelShortcut"),
-                 m_deleteLabelShortcut.toString(QKeySequence::PortableText));
-    input.insert(QStringLiteral("findProjectShortcut"), m_findProjectShortcut.toString(QKeySequence::PortableText));
+                 m_values.deleteLabelShortcut.toString(QKeySequence::PortableText));
+    input.insert(QStringLiteral("findProjectShortcut"),
+                 m_values.findProjectShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("nextSearchMatchShortcut"),
-                 m_nextSearchMatchShortcut.toString(QKeySequence::PortableText));
+                 m_values.nextSearchMatchShortcut.toString(QKeySequence::PortableText));
     input.insert(QStringLiteral("previousSearchMatchShortcut"),
-                 m_previousSearchMatchShortcut.toString(QKeySequence::PortableText));
+                 m_values.previousSearchMatchShortcut.toString(QKeySequence::PortableText));
 
     QJsonObject root;
     root.insert(QStringLiteral("appearance"), appearance);
     root.insert(QStringLiteral("automation"), automation);
-    root.insert(QStringLiteral("backupIntervalSeconds"), m_backupIntervalSeconds);
-    root.insert(QStringLiteral("backupMaximumCount"), m_backupMaximumCount);
-    root.insert(QStringLiteral("backupPath"), m_backupPath);
+    root.insert(QStringLiteral("backupIntervalSeconds"), m_values.backupIntervalSeconds);
+    root.insert(QStringLiteral("backupMaximumCount"), m_values.backupMaximumCount);
+    root.insert(QStringLiteral("backupPath"), m_values.backupPath);
     root.insert(QStringLiteral("canvasLabelTextEditor"), canvasLabelTextEditor);
-    root.insert(QStringLiteral("groupStyles"), groupStylesToJsonArray(m_groupStyles));
+    root.insert(QStringLiteral("groupStyles"), groupStylesToJsonArray(m_values.groupStyles));
     root.insert(QStringLiteral("input"), input);
     root.insert(QStringLiteral("labelMarker"), labelMarker);
     root.insert(QStringLiteral("labelTable"), labelTable);
@@ -1075,206 +1005,206 @@ QJsonDocument AppPreferences::toJsonDocument() const
 
 double AppPreferences::labelMarkerDiameterPixels() const noexcept
 {
-    return m_labelMarkerDiameterPixels;
+    return m_values.labelMarkerDiameterPixels;
 }
 
 double AppPreferences::labelMarkerFontPointSize() const noexcept
 {
-    return m_labelMarkerFontPointSize;
+    return m_values.labelMarkerFontPointSize;
 }
 
 int AppPreferences::labelTableMaxTextRows() const noexcept
 {
-    return m_labelTableMaxTextRows;
+    return m_values.labelTableMaxTextRows;
 }
 
 QString AppPreferences::labelTableFontFamily() const
 {
-    return m_labelTableFontFamily;
+    return m_values.labelTableFontFamily;
 }
 
 double AppPreferences::labelTableFontPointSize() const noexcept
 {
-    return m_labelTableFontPointSize;
+    return m_values.labelTableFontPointSize;
 }
 
 QString AppPreferences::labelTextEditorFontFamily() const
 {
-    return m_labelTextEditorFontFamily;
+    return m_values.labelTextEditorFontFamily;
 }
 
 double AppPreferences::labelTextEditorFontPointSize() const noexcept
 {
-    return m_labelTextEditorFontPointSize;
+    return m_values.labelTextEditorFontPointSize;
 }
 
 QString AppPreferences::markerTextBubbleFontFamily() const
 {
-    return m_markerTextBubbleFontFamily;
+    return m_values.markerTextBubbleFontFamily;
 }
 
 double AppPreferences::markerTextBubbleFontPointSize() const noexcept
 {
-    return m_markerTextBubbleFontPointSize;
+    return m_values.markerTextBubbleFontPointSize;
 }
 
 double AppPreferences::markerTextBubbleOpacity() const noexcept
 {
-    return m_markerTextBubbleOpacity;
+    return m_values.markerTextBubbleOpacity;
 }
 
 int AppPreferences::markerTextBubbleMaxLineCharacters() const noexcept
 {
-    return m_markerTextBubbleMaxLineCharacters;
+    return m_values.markerTextBubbleMaxLineCharacters;
 }
 
 double AppPreferences::canvasLabelTextEditorOpacity() const noexcept
 {
-    return m_canvasLabelTextEditorOpacity;
+    return m_values.canvasLabelTextEditorOpacity;
 }
 
 QString AppPreferences::applicationStyle() const
 {
-    return m_applicationStyle;
+    return m_values.applicationStyle;
 }
 
 QString AppPreferences::applicationTheme() const
 {
-    return m_applicationTheme;
+    return m_values.applicationTheme;
 }
 
 QString AppPreferences::applicationLanguage() const
 {
-    return m_applicationLanguage;
+    return m_values.applicationLanguage;
 }
 
 TextDiffCleanupMode AppPreferences::textDiffCleanupMode() const noexcept
 {
-    return m_textDiffCleanupMode;
+    return m_values.textDiffCleanupMode;
 }
 
 bool AppPreferences::showAutomationRunLog() const noexcept
 {
-    return m_showAutomationRunLog;
+    return m_values.showAutomationRunLog;
 }
 
 QString AppPreferences::automationPythonCommand() const
 {
-    return m_automationPythonCommand;
+    return m_values.automationPythonCommand;
 }
 
 QStringList AppPreferences::automationPythonArguments() const
 {
-    return m_automationPythonArguments;
+    return m_values.automationPythonArguments;
 }
 
 bool AppPreferences::automationAutoInstallRequirements() const noexcept
 {
-    return m_automationAutoInstallRequirements;
+    return m_values.automationAutoInstallRequirements;
 }
 
 QString AppPreferences::automationPipIndexUrl() const
 {
-    return m_automationPipIndexUrl;
+    return m_values.automationPipIndexUrl;
 }
 
 const QMap<QString, QKeySequence>& AppPreferences::automationShortcuts() const noexcept
 {
-    return m_automationShortcuts;
+    return m_values.automationShortcuts;
 }
 
 Qt::KeyboardModifiers AppPreferences::moveLabelModifiers() const noexcept
 {
-    return m_moveLabelModifiers;
+    return m_values.moveLabelModifiers;
 }
 
 Qt::KeyboardModifiers AppPreferences::previousLabelModifiers() const noexcept
 {
-    return m_previousLabelModifiers;
+    return m_values.previousLabelModifiers;
 }
 
 QKeySequence AppPreferences::undoShortcut() const
 {
-    return m_undoShortcut;
+    return m_values.undoShortcut;
 }
 
 QKeySequence AppPreferences::redoShortcut() const
 {
-    return m_redoShortcut;
+    return m_values.redoShortcut;
 }
 
 QKeySequence AppPreferences::nextLabelShortcut() const
 {
-    return m_nextLabelShortcut;
+    return m_values.nextLabelShortcut;
 }
 
 QKeySequence AppPreferences::alternatePreviousLabelShortcut() const
 {
-    return m_alternatePreviousLabelShortcut;
+    return m_values.alternatePreviousLabelShortcut;
 }
 
 QKeySequence AppPreferences::alternateNextLabelShortcut() const
 {
-    return m_alternateNextLabelShortcut;
+    return m_values.alternateNextLabelShortcut;
 }
 
 QKeySequence AppPreferences::previousPageShortcut() const
 {
-    return m_previousPageShortcut;
+    return m_values.previousPageShortcut;
 }
 
 QKeySequence AppPreferences::nextPageShortcut() const
 {
-    return m_nextPageShortcut;
+    return m_values.nextPageShortcut;
 }
 
 QKeySequence AppPreferences::editLabelTextShortcut() const
 {
-    return m_editLabelTextShortcut;
+    return m_values.editLabelTextShortcut;
 }
 
 QKeySequence AppPreferences::commitLabelTextShortcut() const
 {
-    return m_commitLabelTextShortcut;
+    return m_values.commitLabelTextShortcut;
 }
 
 QKeySequence AppPreferences::deleteLabelShortcut() const
 {
-    return m_deleteLabelShortcut;
+    return m_values.deleteLabelShortcut;
 }
 
 QKeySequence AppPreferences::findProjectShortcut() const
 {
-    return m_findProjectShortcut;
+    return m_values.findProjectShortcut;
 }
 
 QKeySequence AppPreferences::nextSearchMatchShortcut() const
 {
-    return m_nextSearchMatchShortcut;
+    return m_values.nextSearchMatchShortcut;
 }
 
 QKeySequence AppPreferences::previousSearchMatchShortcut() const
 {
-    return m_previousSearchMatchShortcut;
+    return m_values.previousSearchMatchShortcut;
 }
 
 QString AppPreferences::backupPath() const
 {
-    return m_backupPath;
+    return m_values.backupPath;
 }
 
 int AppPreferences::backupIntervalSeconds() const noexcept
 {
-    return m_backupIntervalSeconds;
+    return m_values.backupIntervalSeconds;
 }
 int AppPreferences::backupMaximumCount() const noexcept
 {
-    return m_backupMaximumCount;
+    return m_values.backupMaximumCount;
 }
 
 const QVector<LabelGroupStyle>& AppPreferences::groupStyles() const noexcept
 {
-    return m_groupStyles;
+    return m_values.groupStyles;
 }
 
 } // namespace labelqt::core

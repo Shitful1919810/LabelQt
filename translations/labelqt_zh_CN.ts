@@ -1785,6 +1785,54 @@ Last error: %1</source>
 <context>
     <name>PreferenceDialog</name>
     <message>
+        <source>Advanced</source>
+        <translation>高级</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>应用</translation>
+    </message>
+    <message>
+        <source>Apply pending preference changes?</source>
+        <translation>要应用尚未生效的偏好设置修改吗？</translation>
+    </message>
+    <message>
+        <source>Discard pending changes and reload preferences?</source>
+        <translation>要丢弃尚未应用的修改并重新载入偏好设置吗？</translation>
+    </message>
+    <message>
+        <source>Loaded preferences with warnings; some values use defaults.</source>
+        <translation>已载入偏好设置，但存在警告；部分设置使用默认值。</translation>
+    </message>
+    <message>
+        <source>No matching settings</source>
+        <translation>没有匹配的设置</translation>
+    </message>
+    <message>
+        <source>Preferences (modified)</source>
+        <translation>偏好设置（已修改）</translation>
+    </message>
+    <message>
+        <source>Could not read preference file. Your draft has been kept.</source>
+        <translation>无法读取偏好设置文件。已保留当前草稿。</translation>
+    </message>
+    <message>
+        <source>Preferences are invalid or exceed safety limits. Your draft has been kept.</source>
+        <translation>偏好设置无效或超出安全限制。已保留当前草稿。</translation>
+    </message>
+    <message>
+        <source>Preferences are being saved by another instance. Try applying again shortly.</source>
+        <translation>另一个实例正在保存偏好设置。请稍后重试应用。</translation>
+    </message>
+    <message>
+        <source>Preferences changed on disk. Your draft has been kept. Reload before applying again.</source>
+        <translation>磁盘上的偏好设置已更改。已保留当前草稿。请先重新载入，再尝试应用。</translation>
+    </message>
+    <message>
+        <source>Reload preferences successfully before applying changes.</source>
+        <translation>请先成功重新载入偏好设置，再应用修改。</translation>
+    </message>
+    <message>
         <source>Search shortcuts conflict with other actions: %1</source>
         <translation>查找快捷键与其他操作冲突：%1</translation>
     </message>
@@ -2416,6 +2464,10 @@ Last error: %1</source>
 <context>
     <name>ProjectMergeDialog</name>
     <message>
+        <source>Preview candidate</source>
+        <translation>预览候选来源</translation>
+    </message>
+    <message>
         <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="58"/>
         <source>Merge Projects</source>
         <translation>合并工程</translation>
@@ -2472,6 +2524,18 @@ Last error: %1</source>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
+    <message>
+        <source>Reset filters</source>
+        <translation>重置筛选</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes</source>
+        <translation>显示 %1 / %2 项变更</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes; reviewed: %3</source>
+        <translation>显示 %1 / %2 项变更；已审阅：%3</translation>
+    </message>
     <message>
         <source>; Review: %1</source>
         <translation>；审阅：%1</translation>
@@ -3102,6 +3166,14 @@ Missing images: %2</source>
 </context>
 <context>
     <name>ProjectSearchPanel</name>
+    <message>
+        <source>Filters</source>
+        <translation>筛选</translation>
+    </message>
+    <message>
+        <source>Filters (active)</source>
+        <translation>筛选（已启用）</translation>
+    </message>
     <message>
         <source>After</source>
         <translation>替换后</translation>

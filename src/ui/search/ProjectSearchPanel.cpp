@@ -6,6 +6,7 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -47,7 +48,9 @@ ProjectSearchPanel::ProjectSearchPanel(Callbacks callbacks, QWidget* shortcutOwn
     for (auto* button : {previous, next, close})
         bar->addWidget(button);
     layout->addLayout(bar);
-    auto* filters = new QHBoxLayout;
+    auto* filtersPanel = new QWidget(this);
+    auto* filters = new QGridLayout(filtersPanel);
+    filters->setContentsMargins(0, 0, 0, 0);
     m_scope = new QComboBox(this);
     m_scope->addItems({tr("Whole project"), tr("Current page"), tr("Page range")});
     m_first = new QSpinBox(this);
@@ -61,14 +64,26 @@ ProjectSearchPanel::ProjectSearchPanel(Callbacks callbacks, QWidget* shortcutOwn
     m_groups = new CheckableFilterButton(this);
     m_groups->setTexts(tr("All groups"), tr("No groups"), tr("Groups: %1"));
     m_caseSensitive = new QCheckBox(tr("Match case"), this);
-    filters->addWidget(m_scope);
-    filters->addWidget(m_first);
-    filters->addWidget(m_last);
-    filters->addWidget(m_groups);
-    filters->addWidget(m_caseSensitive);
-    layout->addLayout(filters);
+    filters->addWidget(m_scope, 0, 0);
+    filters->addWidget(m_first, 0, 1);
+    filters->addWidget(m_last, 0, 2);
+    filters->addWidget(m_groups, 1, 0);
+    filters->addWidget(m_caseSensitive, 1, 1, 1, 2);
+    filters->setColumnStretch(0, 1);
+    auto* filtersToggle = new QToolButton(this);
+    filtersToggle->setText(tr("Filters"));
+    filtersToggle->setIcon(
+        QIcon::fromTheme(QStringLiteral("view-filter"), style()->standardIcon(QStyle::SP_FileDialogDetailedView)));
+    filtersToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    filtersToggle->setCheckable(true);
+    auto* resultBar = new QHBoxLayout;
     m_count = new QLabel(this);
-    layout->addWidget(m_count);
+    resultBar->addWidget(m_count, 1);
+    resultBar->addWidget(filtersToggle);
+    layout->addLayout(resultBar);
+    layout->addWidget(filtersPanel);
+    filtersPanel->hide();
+    connect(filtersToggle, &QToolButton::toggled, filtersPanel, &QWidget::setVisible);
     m_model = new ProjectTextSearchModel(this);
     m_table = new QTableView(this);
     m_table->setModel(m_model);
@@ -85,7 +100,7 @@ ProjectSearchPanel::ProjectSearchPanel(Callbacks callbacks, QWidget* shortcutOwn
     auto* expand = new QCheckBox(tr("Replace"), this);
     layout->addWidget(expand);
     auto* replacementPanel = new QWidget(this);
-    auto* replacementLayout = new QHBoxLayout(replacementPanel);
+    auto* replacementLayout = new QVBoxLayout(replacementPanel);
     replacementLayout->setContentsMargins(0, 0, 0, 0);
     m_replacement = new QPlainTextEdit(replacementPanel);
     m_replacement->setPlaceholderText(tr("Replacement text"));
@@ -93,9 +108,12 @@ ProjectSearchPanel::ProjectSearchPanel(Callbacks callbacks, QWidget* shortcutOwn
     m_replacement->setTabChangesFocus(true);
     auto* replaceCurrent = new QPushButton(tr("Replace match"), replacementPanel);
     auto* replaceAll = new QPushButton(tr("Preview replacements..."), replacementPanel);
-    replacementLayout->addWidget(m_replacement, 1);
-    replacementLayout->addWidget(replaceCurrent);
-    replacementLayout->addWidget(replaceAll);
+    replacementLayout->addWidget(m_replacement);
+    auto* replacementActions = new QHBoxLayout;
+    replacementActions->addStretch();
+    replacementActions->addWidget(replaceCurrent);
+    replacementActions->addWidget(replaceAll);
+    replacementLayout->addLayout(replacementActions);
     layout->addWidget(replacementPanel);
     replacementPanel->hide();
     connect(expand, &QCheckBox::toggled, replacementPanel, &QWidget::setVisible);
@@ -106,6 +124,13 @@ ProjectSearchPanel::ProjectSearchPanel(Callbacks callbacks, QWidget* shortcutOwn
     connect(m_query, &QPlainTextEdit::textChanged, this, &ProjectSearchPanel::invalidate);
     connect(m_caseSensitive, &QCheckBox::toggled, this, &ProjectSearchPanel::invalidate);
     connect(m_groups, &CheckableFilterButton::selectionChanged, this, &ProjectSearchPanel::invalidate);
+    const auto updateFilterLabel = [this, filtersToggle] {
+        const bool active = m_scope->currentIndex() != 0 || !m_groups->isAllSelected() || m_caseSensitive->isChecked();
+        filtersToggle->setText(active ? tr("Filters (active)") : tr("Filters"));
+    };
+    connect(m_scope, &QComboBox::currentIndexChanged, this, updateFilterLabel);
+    connect(m_groups, &CheckableFilterButton::selectionChanged, this, updateFilterLabel);
+    connect(m_caseSensitive, &QCheckBox::toggled, this, updateFilterLabel);
     connect(m_first, &QSpinBox::valueChanged, this, &ProjectSearchPanel::invalidate);
     connect(m_last, &QSpinBox::valueChanged, this, &ProjectSearchPanel::invalidate);
     connect(m_scope, &QComboBox::currentIndexChanged, this, [this](int index) {

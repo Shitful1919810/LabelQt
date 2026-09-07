@@ -1785,6 +1785,54 @@ Last error: %1</source>
 <context>
     <name>PreferenceDialog</name>
     <message>
+        <source>Advanced</source>
+        <translation>進階</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>套用</translation>
+    </message>
+    <message>
+        <source>Apply pending preference changes?</source>
+        <translation>要套用尚未生效的偏好設定變更嗎？</translation>
+    </message>
+    <message>
+        <source>Discard pending changes and reload preferences?</source>
+        <translation>要捨棄尚未套用的變更並重新載入偏好設定嗎？</translation>
+    </message>
+    <message>
+        <source>Loaded preferences with warnings; some values use defaults.</source>
+        <translation>已載入偏好設定，但有警告；部分設定使用預設值。</translation>
+    </message>
+    <message>
+        <source>No matching settings</source>
+        <translation>沒有符合的設定</translation>
+    </message>
+    <message>
+        <source>Preferences (modified)</source>
+        <translation>偏好設定（已修改）</translation>
+    </message>
+    <message>
+        <source>Could not read preference file. Your draft has been kept.</source>
+        <translation>無法讀取偏好設定檔。已保留目前的草稿。</translation>
+    </message>
+    <message>
+        <source>Preferences are invalid or exceed safety limits. Your draft has been kept.</source>
+        <translation>偏好設定無效或超出安全限制。已保留目前的草稿。</translation>
+    </message>
+    <message>
+        <source>Preferences are being saved by another instance. Try applying again shortly.</source>
+        <translation>另一個執行個體正在儲存偏好設定。請稍後再次嘗試套用。</translation>
+    </message>
+    <message>
+        <source>Preferences changed on disk. Your draft has been kept. Reload before applying again.</source>
+        <translation>磁碟上的偏好設定已變更。已保留目前的草稿。請先重新載入，再嘗試套用。</translation>
+    </message>
+    <message>
+        <source>Reload preferences successfully before applying changes.</source>
+        <translation>請先成功重新載入偏好設定，再套用變更。</translation>
+    </message>
+    <message>
         <source>Search shortcuts conflict with other actions: %1</source>
         <translation>尋找快捷鍵與其他操作衝突：%1</translation>
     </message>
@@ -2416,6 +2464,10 @@ Last error: %1</source>
 <context>
     <name>ProjectMergeDialog</name>
     <message>
+        <source>Preview candidate</source>
+        <translation>預覽候選來源</translation>
+    </message>
+    <message>
         <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="58"/>
         <source>Merge Projects</source>
         <translation>合併專案</translation>
@@ -2472,6 +2524,18 @@ Last error: %1</source>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
+    <message>
+        <source>Reset filters</source>
+        <translation>重設篩選</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes</source>
+        <translation>顯示 %1 / %2 項變更</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes; reviewed: %3</source>
+        <translation>顯示 %1 / %2 項變更；已審閱：%3</translation>
+    </message>
     <message>
         <source>; Review: %1</source>
         <translation>；審閱：%1</translation>
@@ -3102,6 +3166,14 @@ Missing images: %2</source>
 </context>
 <context>
     <name>ProjectSearchPanel</name>
+    <message>
+        <source>Filters</source>
+        <translation>篩選</translation>
+    </message>
+    <message>
+        <source>Filters (active)</source>
+        <translation>篩選（已啟用）</translation>
+    </message>
     <message>
         <source>After</source>
         <translation>取代後</translation>

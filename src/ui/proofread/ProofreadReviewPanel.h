@@ -5,7 +5,7 @@
 #include <functional>
 
 class QComboBox;
-class QPlainTextEdit;
+class QAction;
 
 class ProofreadReviewPanel final : public QWidget {
     Q_OBJECT
@@ -20,7 +20,8 @@ public:
     void setSession(labelqt::services::ReviewSession session);
     const labelqt::services::ReviewSession& session() const;
     void setCurrentChange(const labelqt::services::ReviewChange* change);
-    void commitNote();
+    void setStatus(const QVector<labelqt::services::ReviewChange>& changes, labelqt::services::ReviewStatus status);
+    void refreshSelection();
 signals:
     void annotationsChanged();
     void pairsChanged();
@@ -36,6 +37,7 @@ private:
     labelqt::services::ReviewSession m_session;
     labelqt::core::UndoStack m_undo;
     QComboBox* m_status;
-    QPlainTextEdit* m_note;
+    QAction* m_pairAction;
+    QAction* m_unpairAction;
     QString m_currentKey;
 };

@@ -475,16 +475,6 @@ void MainWindow::createActions()
     m_redoAction = new QAction(tr("&Redo"), this);
     connect(m_redoAction, &QAction::triggered, this, &MainWindow::redoLastOperation);
 
-    m_previousPageAction = new QAction(tr("Previous page"), this);
-    m_previousPageAction->setShortcutContext(Qt::WindowShortcut);
-    connect(m_previousPageAction, &QAction::triggered, this, &MainWindow::selectPreviousPage);
-    addAction(m_previousPageAction);
-
-    m_nextPageAction = new QAction(tr("Next page"), this);
-    m_nextPageAction->setShortcutContext(Qt::WindowShortcut);
-    connect(m_nextPageAction, &QAction::triggered, this, &MainWindow::selectNextPage);
-    addAction(m_nextPageAction);
-
     m_preferencesAction = new QAction(tr("&Preferences..."), this);
     m_preferencesAction->setShortcut(QKeySequence::Preferences);
     connect(m_preferencesAction, &QAction::triggered, this, &MainWindow::openPreferences);
@@ -679,6 +669,7 @@ void MainWindow::createCentralWidget()
     setCentralWidget(m_rootSplitter);
 
     m_editorStateController->setWidgets(m_textEdit, m_labelView, m_canvasTextEditController);
+    m_shortcutController->setLabelWorkspaceWidgets({m_canvas, m_labelView, m_textEdit});
     m_labelSelectionController->setWidgets(m_labelModel, m_labelView, m_canvas);
     m_labelSelectionController->setCallbacks([this](int labelIndex) { return updateCurrentLabelDetails(labelIndex); },
                                              [this]() {
@@ -1160,6 +1151,13 @@ void MainWindow::openRecentProjectFromAction()
 
 void MainWindow::openPreferences()
 {
+    if (m_preferenceDialog) {
+        if (m_preferenceDialog->isMinimized())
+            m_preferenceDialog->showNormal();
+        m_preferenceDialog->raise();
+        m_preferenceDialog->activateWindow();
+        return;
+    }
     if (m_automationController != nullptr) {
         m_automationController->refreshScripts();
     }
@@ -1170,6 +1168,7 @@ void MainWindow::openPreferences()
                                                                : m_automationController->scripts(),
                              this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
+    m_preferenceDialog = dialog;
     connect(dialog, &PreferenceDialog::preferencesApplied, this, &MainWindow::applyPreferences);
     dialog->show();
     dialog->raise();
@@ -2128,12 +2127,6 @@ void MainWindow::updateEditShortcuts()
     }
     if (m_redoAction != nullptr) {
         m_redoAction->setShortcut(m_preferences.redoShortcut());
-    }
-    if (m_previousPageAction != nullptr) {
-        m_previousPageAction->setShortcut(m_preferences.previousPageShortcut());
-    }
-    if (m_nextPageAction != nullptr) {
-        m_nextPageAction->setShortcut(m_preferences.nextPageShortcut());
     }
 }
 
@@ -3248,12 +3241,6 @@ void MainWindow::setAutomationRunning(bool running)
     }
     if (m_saveProjectAsAction != nullptr) {
         m_saveProjectAsAction->setEnabled(!running && hasProject);
-    }
-    if (m_previousPageAction != nullptr) {
-        m_previousPageAction->setEnabled(hasProject && hasPreviousPage);
-    }
-    if (m_nextPageAction != nullptr) {
-        m_nextPageAction->setEnabled(hasProject && hasNextPage);
     }
     updateProofreadingStatusUi();
 }

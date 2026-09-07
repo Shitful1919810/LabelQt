@@ -1785,6 +1785,54 @@ Last error: %1</source>
 <context>
     <name>PreferenceDialog</name>
     <message>
+        <source>Advanced</source>
+        <translation>詳細</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>適用</translation>
+    </message>
+    <message>
+        <source>Apply pending preference changes?</source>
+        <translation>未適用の設定変更を適用しますか？</translation>
+    </message>
+    <message>
+        <source>Discard pending changes and reload preferences?</source>
+        <translation>未適用の変更を破棄して設定を再読み込みしますか？</translation>
+    </message>
+    <message>
+        <source>Loaded preferences with warnings; some values use defaults.</source>
+        <translation>設定を読み込みましたが、警告があります。一部の設定にはデフォルト値を使用しています。</translation>
+    </message>
+    <message>
+        <source>No matching settings</source>
+        <translation>一致する設定はありません</translation>
+    </message>
+    <message>
+        <source>Preferences (modified)</source>
+        <translation>設定（変更あり）</translation>
+    </message>
+    <message>
+        <source>Could not read preference file. Your draft has been kept.</source>
+        <translation>設定ファイルを読み込めません。編集中の設定は保持されています。</translation>
+    </message>
+    <message>
+        <source>Preferences are invalid or exceed safety limits. Your draft has been kept.</source>
+        <translation>設定が無効か、安全上の制限を超えています。編集中の設定は保持されています。</translation>
+    </message>
+    <message>
+        <source>Preferences are being saved by another instance. Try applying again shortly.</source>
+        <translation>別のインスタンスが設定を保存しています。しばらくしてから再度適用してください。</translation>
+    </message>
+    <message>
+        <source>Preferences changed on disk. Your draft has been kept. Reload before applying again.</source>
+        <translation>ディスク上の設定が変更されました。編集中の設定は保持されています。再読み込みしてから再度適用してください。</translation>
+    </message>
+    <message>
+        <source>Reload preferences successfully before applying changes.</source>
+        <translation>設定の再読み込みに成功してから変更を適用してください。</translation>
+    </message>
+    <message>
         <source>Search shortcuts conflict with other actions: %1</source>
         <translation>検索ショートカットが他の操作と競合しています：%1</translation>
     </message>
@@ -2416,6 +2464,10 @@ Last error: %1</source>
 <context>
     <name>ProjectMergeDialog</name>
     <message>
+        <source>Preview candidate</source>
+        <translation>候補のプレビュー</translation>
+    </message>
+    <message>
         <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="58"/>
         <source>Merge Projects</source>
         <translation>プロジェクトをマージ</translation>
@@ -2472,6 +2524,18 @@ Last error: %1</source>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
+    <message>
+        <source>Reset filters</source>
+        <translation>絞り込みをリセット</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes</source>
+        <translation>%2 件中 %1 件の変更を表示</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes; reviewed: %3</source>
+        <translation>%2 件中 %1 件の変更を表示、確認済み: %3</translation>
+    </message>
     <message>
         <source>; Review: %1</source>
         <translation>、確認状態：%1</translation>
@@ -3102,6 +3166,14 @@ Missing images: %2</source>
 </context>
 <context>
     <name>ProjectSearchPanel</name>
+    <message>
+        <source>Filters</source>
+        <translation>絞り込み</translation>
+    </message>
+    <message>
+        <source>Filters (active)</source>
+        <translation>絞り込み（適用中）</translation>
+    </message>
     <message>
         <source>After</source>
         <translation>置換後</translation>

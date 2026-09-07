@@ -1794,6 +1794,54 @@ Last error: %1</translation>
 <context>
     <name>PreferenceDialog</name>
     <message>
+        <source>Advanced</source>
+        <translation>Advanced</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Apply</translation>
+    </message>
+    <message>
+        <source>Apply pending preference changes?</source>
+        <translation>Apply pending preference changes?</translation>
+    </message>
+    <message>
+        <source>Discard pending changes and reload preferences?</source>
+        <translation>Discard pending changes and reload preferences?</translation>
+    </message>
+    <message>
+        <source>Loaded preferences with warnings; some values use defaults.</source>
+        <translation>Loaded preferences with warnings; some values use defaults.</translation>
+    </message>
+    <message>
+        <source>No matching settings</source>
+        <translation>No matching settings</translation>
+    </message>
+    <message>
+        <source>Preferences (modified)</source>
+        <translation>Preferences (modified)</translation>
+    </message>
+    <message>
+        <source>Could not read preference file. Your draft has been kept.</source>
+        <translation>Could not read preference file. Your draft has been kept.</translation>
+    </message>
+    <message>
+        <source>Preferences are invalid or exceed safety limits. Your draft has been kept.</source>
+        <translation>Preferences are invalid or exceed safety limits. Your draft has been kept.</translation>
+    </message>
+    <message>
+        <source>Preferences are being saved by another instance. Try applying again shortly.</source>
+        <translation>Preferences are being saved by another instance. Try applying again shortly.</translation>
+    </message>
+    <message>
+        <source>Preferences changed on disk. Your draft has been kept. Reload before applying again.</source>
+        <translation>Preferences changed on disk. Your draft has been kept. Reload before applying again.</translation>
+    </message>
+    <message>
+        <source>Reload preferences successfully before applying changes.</source>
+        <translation>Reload preferences successfully before applying changes.</translation>
+    </message>
+    <message>
         <source>Search shortcuts conflict with other actions: %1</source>
         <translation>Search shortcuts conflict with other actions: %1</translation>
     </message>
@@ -2425,6 +2473,10 @@ Last error: %1</translation>
 <context>
     <name>ProjectMergeDialog</name>
     <message>
+        <source>Preview candidate</source>
+        <translation>Preview candidate</translation>
+    </message>
+    <message>
         <location filename="../src/ui/project/ProjectMergeDialog.cpp" line="58"/>
         <source>Merge Projects</source>
         <translation>Merge Projects</translation>
@@ -2484,6 +2536,18 @@ Last error: %1</translation>
 </context>
 <context>
     <name>ProofreadChangesDialog</name>
+    <message>
+        <source>Reset filters</source>
+        <translation>Reset filters</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes</source>
+        <translation>Showing %1 of %2 changes</translation>
+    </message>
+    <message>
+        <source>Showing %1 of %2 changes; reviewed: %3</source>
+        <translation>Showing %1 of %2 changes; reviewed: %3</translation>
+    </message>
     <message>
         <source>; Review: %1</source>
         <translation>; Review: %1</translation>
@@ -3115,6 +3179,14 @@ Missing images: %2</translation>
 </context>
 <context>
     <name>ProjectSearchPanel</name>
+    <message>
+        <source>Filters</source>
+        <translation>Filters</translation>
+    </message>
+    <message>
+        <source>Filters (active)</source>
+        <translation>Filters (active)</translation>
+    </message>
     <message>
         <source>After</source>
         <translation>After</translation>

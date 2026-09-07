@@ -7,6 +7,8 @@
 #include <expected>
 #include <functional>
 
+class QJsonObject;
+
 namespace labelqt::services {
 
 class FileRenameTransaction final {
@@ -14,6 +16,17 @@ public:
     struct Move {
         QString source;
         QString target;
+    };
+    struct RecoveryMove {
+        QString source, target, temporary;
+        QByteArray digest;
+    };
+    struct RecoveryRecord {
+        int version{0};
+        QString projectPath;
+        QByteArray before, after;
+        QVector<RecoveryMove> moves;
+        bool canRecover{false};
     };
     using RenameFile = std::function<bool(const QString&, const QString&)>;
 
@@ -27,6 +40,8 @@ public:
     void commit();
     QString recoveryPath() const;
     static std::expected<void, QString> checkRecoveryDirectory(const QString& directory);
+    static std::expected<RecoveryRecord, QString> readRecoveryRecord(const QString& path);
+    static std::expected<RecoveryRecord, QString> decodeRecoveryRecord(const QJsonObject& object);
     void setProjectCommit(QString path, QByteArray before, QByteArray after);
 
 private:
@@ -46,6 +61,7 @@ private:
     QByteArray m_projectBefore;
     QByteArray m_projectAfter;
     bool m_finished{false};
+    bool m_recordWritten{false};
 };
 
 } // namespace labelqt::services

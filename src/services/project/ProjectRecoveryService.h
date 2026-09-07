@@ -2,6 +2,7 @@
 
 #include "core/AppPreferences.h"
 #include "core/Project.h"
+#include "services/io/FileRenameTransaction.h"
 #include <QDateTime>
 #include <expected>
 
@@ -32,6 +33,7 @@ public:
     static std::expected<void, QString> restoreCopy(const ProjectRecoveryEntry& entry, const QString& target);
     static bool hasNewerRecovery(const QString& projectPath, const labelqt::core::AppPreferences& preferences);
     static std::expected<void, QString> recoverFiles(const QString& recordPath, bool complete);
+    static std::expected<FileRenameTransaction::RecoveryRecord, QString> recoveryDetails(const QString& recordPath);
 };
 
 } // namespace labelqt::services

@@ -21,6 +21,7 @@ public:
     QSet<QString> selectedKeys() const;
     QStringList selectedTexts() const;
     bool isAllSelected() const;
+    void selectAll();
 
 signals:
     void selectionChanged();
@@ -28,7 +29,6 @@ signals:
 private:
     void rebuildMenu();
     void refreshMenuChecks();
-    void selectAll();
     void clearSelection();
     void updateButtonText();
 

@@ -20,6 +20,39 @@ class ProofreadChangeTableModelTests final : public QObject {
     Q_OBJECT
 
 private slots:
+    void reviewStatusesExposeTextAndRemainFilterable()
+    {
+        using labelqt::services::ReviewStatus;
+        ProofreadChangeTableModel model({change("page.png", 0, labelqt::services::ReviewChangeKind::Modified),
+                                         change("page.png", 1, labelqt::services::ReviewChangeKind::Modified),
+                                         change("page.png", 2, labelqt::services::ReviewChangeKind::Modified)},
+                                        {});
+        QAbstractItemModelTester modelTester(&model, QAbstractItemModelTester::FailureReportingMode::QtTest);
+        const QStringList names{"Unseen", "Reviewed", "Needs confirmation"};
+        model.setReviewAnnotations({{ReviewStatus::Unseen, {}},
+                                    {ReviewStatus::Reviewed, "legacy note"},
+                                    {ReviewStatus::NeedsConfirmation, {}}},
+                                   names, "Manual pair");
+        for (int row = 0; row < 3; ++row) {
+            const auto index = model.index(row, ProofreadChangeTableModel::ReviewColumn);
+            QCOMPARE(index.data().toString(), names[row]);
+            QCOMPARE(index.data(Qt::AccessibleTextRole).toString(), names[row]);
+            QCOMPARE(index.data(ProofreadChangeTableModel::ReviewStatusRole).toInt(), row);
+        }
+        QVERIFY(model.index(1, ProofreadChangeTableModel::ReviewColumn)
+                    .data(Qt::ToolTipRole)
+                    .toString()
+                    .contains("legacy note"));
+        ProofreadChangeFilterModel filter;
+        filter.setSourceModel(&model);
+        QAbstractItemModelTester filterTester(&filter, QAbstractItemModelTester::FailureReportingMode::QtTest);
+        filter.setFilters({"page.png"}, {"modified"}, {}, true);
+        filter.setReviewStatusFilter(static_cast<int>(ReviewStatus::Reviewed));
+        QCOMPARE(filter.rowCount(), 1);
+        model.setReviewAnnotations({}, names, "Manual pair");
+        QCOMPARE(filter.rowCount(), 0);
+    }
+
     void modelAndCombinedFiltersRemainConsistent()
     {
         QVector<labelqt::services::ReviewChange> changes{

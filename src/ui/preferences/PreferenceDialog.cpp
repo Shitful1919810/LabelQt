@@ -1,6 +1,5 @@
 #include "ui/preferences/PreferenceDialog.h"
 
-#include "core/AtomicFileWriter.h"
 #include "core/CommandLineUtils.h"
 #include "core/TranslationManager.h"
 #include "ui/automation/AutomationShortcutEditorWidget.h"
@@ -13,9 +12,7 @@
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
-#include <QDir>
 #include <QFileDialog>
-#include <QFileInfo>
 #include <QFontDialog>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -26,15 +23,20 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QMenu>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QProcess>
 #include <QPushButton>
-#include <QScrollBar>
+#include <QScopedValueRollback>
 #include <QScrollArea>
+#include <QSlider>
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStyle>
 #include <QStyleFactory>
+#include <QTableWidget>
+#include <QToolButton>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -107,12 +109,56 @@ QWidget* createScrolledFormPage(QWidget* parent, QFormLayout*& formLayout)
 
 PreferenceDialog::PreferenceDialog(QString preferencePath, labelqt::core::AppPreferences currentPreferences,
                                    QVector<labelqt::services::AutomationScript> automationScripts, QWidget* parent)
-    : QDialog(parent), m_preferencePath(std::move(preferencePath)), m_currentPreferences(std::move(currentPreferences)),
+    : QDialog(parent), m_store(std::move(preferencePath)), m_draftBasePreferences(std::move(currentPreferences)),
       m_automationScripts(std::move(automationScripts))
 {
+    m_appliedDocument = m_draftBasePreferences.toJsonDocument();
     createUi();
-    loadPreferences(m_currentPreferences);
-    setMessage(tr("Showing current preferences."));
+    loadPreferences(m_draftBasePreferences);
+    m_cleanDiskDocument = documentFromUi();
+    // The draft and its revision must come from the same disk read, not stale application state.
+    readDraftFromDisk();
+}
+
+PreferenceDialog::~PreferenceDialog()
+{
+    for (QObject* child : findChildren<QObject*>()) {
+        QObject::disconnect(child, nullptr, this, nullptr);
+    }
+    m_jsonPreview.clear();
+    m_jsonDialog.clear();
+}
+
+bool PreferenceDialog::hasUnsavedChanges() const
+{
+    return documentFromUi() != m_cleanDiskDocument;
+}
+
+bool PreferenceDialog::hasUnappliedChanges() const
+{
+    return documentFromUi() != m_appliedDocument;
+}
+
+void PreferenceDialog::done(int result)
+{
+    if (m_promptActive)
+        return;
+    if (hasUnsavedChanges() || hasUnappliedChanges()) {
+        QScopedValueRollback guard(m_promptActive, true);
+        QMessageBox prompt(QMessageBox::Question, tr("Preferences"), tr("Apply pending preference changes?"),
+                           QMessageBox::Discard | QMessageBox::Cancel, this);
+        auto* applyButton = prompt.addButton(tr("Apply"), QMessageBox::AcceptRole);
+        prompt.setDefaultButton(QMessageBox::Cancel);
+        prompt.exec();
+        if (prompt.clickedButton() == applyButton) {
+            if (!savePreferences())
+                return;
+        }
+        else if (prompt.standardButton(prompt.clickedButton()) != QMessageBox::Discard) {
+            return;
+        }
+    }
+    QDialog::done(result);
 }
 
 void PreferenceDialog::createUi()
@@ -121,10 +167,6 @@ void PreferenceDialog::createUi()
     resize(980, 680);
 
     auto* rootLayout = new QVBoxLayout(this);
-
-    auto* pathLabel = new QLabel(tr("Preference file: %1").arg(m_preferencePath), this);
-    pathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    rootLayout->addWidget(pathLabel);
 
     auto* contentLayout = new QHBoxLayout;
     contentLayout->setSpacing(0);
@@ -176,7 +218,6 @@ void PreferenceDialog::createUi()
                       createGroupStylesPage(m_pageStack));
     addPreferencePage(tr("Proofreading"), style()->standardIcon(QStyle::SP_FileDialogInfoView),
                       createProofreadingPage(m_pageStack));
-    addPreferencePage(tr("JSON preview"), style()->standardIcon(QStyle::SP_FileIcon), createJsonPage(m_pageStack));
 
     connect(searchEdit, &QLineEdit::textChanged, this, &PreferenceDialog::filterPreferencePages);
     connect(m_categoryList, &QListWidget::currentItemChanged, this, [this](QListWidgetItem* current) {
@@ -191,19 +232,31 @@ void PreferenceDialog::createUi()
 
     m_messageLabel = new QLabel(this);
     m_messageLabel->setTextFormat(Qt::PlainText);
+    m_messageLabel->setWordWrap(true);
     m_messageLabel->setVisible(false);
     rootLayout->addWidget(m_messageLabel);
 
+    auto* footerLayout = new QHBoxLayout;
+    auto* advancedButton = new QToolButton(this);
+    advancedButton->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    advancedButton->setToolTip(tr("Advanced"));
+    advancedButton->setAccessibleName(tr("Advanced"));
+    advancedButton->setPopupMode(QToolButton::InstantPopup);
+    auto* advancedMenu = new QMenu(advancedButton);
+    advancedMenu->addAction(tr("Reload"), this, &PreferenceDialog::loadFromDisk);
+    advancedMenu->addAction(tr("JSON preview"), this, &PreferenceDialog::showJsonPreview);
+    advancedMenu->addAction(tr("Open in Text Editor"), this, &PreferenceDialog::openPreferenceFile);
+    advancedButton->setMenu(advancedMenu);
     auto* buttonBox = new QDialogButtonBox(this);
-    auto* reloadButton = buttonBox->addButton(tr("Reload"), QDialogButtonBox::ResetRole);
-    auto* openButton = buttonBox->addButton(tr("Open in Text Editor"), QDialogButtonBox::ActionRole);
-    m_saveButton = buttonBox->addButton(tr("Save"), QDialogButtonBox::AcceptRole);
+    m_applyButton = buttonBox->addButton(tr("Apply"), QDialogButtonBox::ApplyRole);
+    m_applyButton->setAutoDefault(false);
     auto* closeButton = buttonBox->addButton(tr("Close"), QDialogButtonBox::RejectRole);
-    rootLayout->addWidget(buttonBox);
+    footerLayout->addWidget(advancedButton);
+    footerLayout->addStretch();
+    footerLayout->addWidget(buttonBox);
+    rootLayout->addLayout(footerLayout);
 
-    connect(reloadButton, &QPushButton::clicked, this, &PreferenceDialog::loadFromDisk);
-    connect(openButton, &QPushButton::clicked, this, &PreferenceDialog::openPreferenceFile);
-    connect(m_saveButton, &QPushButton::clicked, this, &PreferenceDialog::savePreferences);
+    connect(m_applyButton, &QPushButton::clicked, this, &PreferenceDialog::savePreferences);
     connect(closeButton, &QPushButton::clicked, this, &QDialog::reject);
 
     connectPreferenceChangeSignals();
@@ -223,8 +276,28 @@ void PreferenceDialog::filterPreferencePages(const QString& filterText)
     QListWidgetItem* firstVisibleItem = nullptr;
     for (int row = 0; row < m_categoryList->count(); ++row) {
         QListWidgetItem* item = m_categoryList->item(row);
-        const bool visible =
-            normalizedFilter.isEmpty() || item->text().contains(normalizedFilter, Qt::CaseInsensitive);
+        QStringList searchText{item->text()};
+        QWidget* page = m_pageStack->widget(item->data(Qt::UserRole).toInt());
+        for (const auto* label : page->findChildren<QLabel*>())
+            searchText.append(label->text());
+        for (const auto* button : page->findChildren<QAbstractButton*>())
+            searchText.append(button->text());
+        for (const auto* combo : page->findChildren<QComboBox*>()) {
+            for (int index = 0; index < combo->count(); ++index)
+                searchText.append(combo->itemText(index));
+        }
+        for (const auto* table : page->findChildren<QTableWidget*>()) {
+            for (int column = 0; column < table->columnCount(); ++column) {
+                if (const auto* header = table->horizontalHeaderItem(column))
+                    searchText.append(header->text());
+                for (int tableRow = 0; tableRow < table->rowCount(); ++tableRow) {
+                    if (const auto* cell = table->item(tableRow, column))
+                        searchText.append(cell->text());
+                }
+            }
+        }
+        const bool visible = normalizedFilter.isEmpty() ||
+                             searchText.join(QLatin1Char('\n')).contains(normalizedFilter, Qt::CaseInsensitive);
         item->setHidden(!visible);
         if (visible && firstVisibleItem == nullptr) {
             firstVisibleItem = item;
@@ -234,6 +307,11 @@ void PreferenceDialog::filterPreferencePages(const QString& filterText)
     if (m_categoryList->currentItem() == nullptr || m_categoryList->currentItem()->isHidden()) {
         m_categoryList->setCurrentItem(firstVisibleItem);
     }
+    m_pageStack->setVisible(firstVisibleItem != nullptr);
+    if (firstVisibleItem == nullptr)
+        m_pageTitleLabel->setText(tr("No matching settings"));
+    else
+        updateCurrentPageTitle(m_categoryList->currentItem());
 }
 
 void PreferenceDialog::updateCurrentPageTitle(QListWidgetItem* currentItem)
@@ -305,21 +383,20 @@ QWidget* PreferenceDialog::createLabelDisplayPage(QWidget* parent)
     m_tableMaxRowsSpinBox->setRange(1, 50);
     m_tableMaxRowsSpinBox->setValue(defaultPreferences().labelTableMaxTextRows());
 
-    auto* labelTableFontWidget = makeFontSelectorWidget(labelPage, m_labelTableFontLabel,
-                                                        m_chooseLabelTableFontButton, m_resetLabelTableFontButton);
-    auto* textEditorFontWidget = makeFontSelectorWidget(labelPage, m_textEditorFontLabel,
-                                                        m_chooseTextEditorFontButton, m_resetTextEditorFontButton);
-    auto* markerTextBubbleFontWidget =
-        makeFontSelectorWidget(labelPage, m_markerTextBubbleFontLabel, m_chooseMarkerTextBubbleFontButton,
-                               m_resetMarkerTextBubbleFontButton);
+    auto* labelTableFontWidget = makeFontSelectorWidget(labelPage, m_labelTableFontLabel, m_chooseLabelTableFontButton,
+                                                        m_resetLabelTableFontButton);
+    auto* textEditorFontWidget = makeFontSelectorWidget(labelPage, m_textEditorFontLabel, m_chooseTextEditorFontButton,
+                                                        m_resetTextEditorFontButton);
+    auto* markerTextBubbleFontWidget = makeFontSelectorWidget(
+        labelPage, m_markerTextBubbleFontLabel, m_chooseMarkerTextBubbleFontButton, m_resetMarkerTextBubbleFontButton);
     m_markerTextBubbleMaxLineCharactersSpinBox = new QSpinBox(labelPage);
     m_markerTextBubbleMaxLineCharactersSpinBox->setRange(1, 200);
     m_markerTextBubbleMaxLineCharactersSpinBox->setValue(defaultPreferences().markerTextBubbleMaxLineCharacters());
-    auto* markerTextBubbleOpacityWidget = makePercentScrollBarWidget(
-        labelPage, m_markerTextBubbleOpacityScrollBar, m_markerTextBubbleOpacityLabel,
-        static_cast<int>(std::round(defaultPreferences().markerTextBubbleOpacity() * 100.0)));
-    auto* canvasLabelTextEditorOpacityWidget = makePercentScrollBarWidget(
-        labelPage, m_canvasLabelTextEditorOpacityScrollBar, m_canvasLabelTextEditorOpacityLabel,
+    auto* markerTextBubbleOpacityWidget =
+        makePercentSliderWidget(labelPage, m_markerTextBubbleOpacitySlider, m_markerTextBubbleOpacityLabel,
+                                static_cast<int>(std::round(defaultPreferences().markerTextBubbleOpacity() * 100.0)));
+    auto* canvasLabelTextEditorOpacityWidget = makePercentSliderWidget(
+        labelPage, m_canvasLabelTextEditorOpacitySlider, m_canvasLabelTextEditorOpacityLabel,
         static_cast<int>(std::round(defaultPreferences().canvasLabelTextEditorOpacity() * 100.0)));
 
     labelLayout->addRow(tr("Default marker diameter"), m_markerDiameterSpinBox);
@@ -455,14 +532,30 @@ QWidget* PreferenceDialog::createGroupStylesPage(QWidget* parent)
     return groupPage;
 }
 
-QWidget* PreferenceDialog::createJsonPage(QWidget* parent)
+void PreferenceDialog::showJsonPreview()
 {
-    auto* jsonPage = new QWidget(parent);
-    auto* jsonLayout = new QVBoxLayout(jsonPage);
-    m_jsonPreview = new QPlainTextEdit(jsonPage);
-    m_jsonPreview->setReadOnly(true);
-    jsonLayout->addWidget(m_jsonPreview);
-    return jsonPage;
+    if (!m_jsonDialog) {
+        m_jsonDialog = new QDialog(this);
+        m_jsonDialog->setAttribute(Qt::WA_DeleteOnClose);
+        m_jsonDialog->setWindowTitle(tr("JSON preview"));
+        m_jsonDialog->resize(680, 520);
+        auto* layout = new QVBoxLayout(m_jsonDialog);
+        auto* pathLabel = new QLabel(tr("Preference file: %1").arg(m_store.path()), m_jsonDialog);
+        pathLabel->setTextFormat(Qt::PlainText);
+        pathLabel->setWordWrap(true);
+        pathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        layout->addWidget(pathLabel);
+        m_jsonPreview = new QPlainTextEdit(m_jsonDialog);
+        m_jsonPreview->setReadOnly(true);
+        layout->addWidget(m_jsonPreview);
+        auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, m_jsonDialog);
+        connect(buttons, &QDialogButtonBox::rejected, m_jsonDialog, &QDialog::reject);
+        layout->addWidget(buttons);
+    }
+    updateJsonPreview();
+    m_jsonDialog->show();
+    m_jsonDialog->raise();
+    m_jsonDialog->activateWindow();
 }
 
 void PreferenceDialog::connectPreferenceChangeSignals()
@@ -492,11 +585,11 @@ void PreferenceDialog::connectPreferenceChangeSignals()
             &PreferenceDialog::resetMarkerTextBubbleFont);
     connect(m_markerTextBubbleMaxLineCharactersSpinBox, &QSpinBox::valueChanged, this,
             &PreferenceDialog::updateJsonPreview);
-    connect(m_markerTextBubbleOpacityScrollBar, &QScrollBar::valueChanged, this, [this](int value) {
+    connect(m_markerTextBubbleOpacitySlider, &QSlider::valueChanged, this, [this](int value) {
         m_markerTextBubbleOpacityLabel->setText(tr("%1%").arg(value));
         updateJsonPreview();
     });
-    connect(m_canvasLabelTextEditorOpacityScrollBar, &QScrollBar::valueChanged, this, [this](int value) {
+    connect(m_canvasLabelTextEditorOpacitySlider, &QSlider::valueChanged, this, [this](int value) {
         m_canvasLabelTextEditorOpacityLabel->setText(tr("%1%").arg(value));
         updateJsonPreview();
     });
@@ -532,17 +625,41 @@ void PreferenceDialog::connectPreferenceChangeSignals()
 
 void PreferenceDialog::loadFromDisk()
 {
-    const labelqt::core::AppPreferencesLoadResult result =
-        labelqt::core::AppPreferences::loadFromFile(m_preferencePath);
-    m_currentPreferences = result.preferences;
-    loadPreferences(m_currentPreferences);
+    if (m_promptActive)
+        return;
+    if (hasUnsavedChanges()) {
+        QScopedValueRollback guard(m_promptActive, true);
+        if (QMessageBox::question(this, tr("Preferences"), tr("Discard pending changes and reload preferences?"),
+                                  QMessageBox::Discard | QMessageBox::Cancel,
+                                  QMessageBox::Cancel) != QMessageBox::Discard)
+            return;
+    }
+    readDraftFromDisk();
+}
+
+void PreferenceDialog::readDraftFromDisk()
+{
+    const auto snapshot = m_store.load();
+    if (!snapshot) {
+        showStoreError(snapshot.error());
+        updateJsonPreview();
+        return;
+    }
+    const auto result = snapshot->exists ? labelqt::core::AppPreferences::loadFromJson(snapshot->document.toJson())
+                                         : labelqt::core::AppPreferencesLoadResult{m_draftBasePreferences, {}};
+    m_draftBasePreferences = result.preferences;
+    loadPreferences(m_draftBasePreferences);
+    // Reload accepts a disk draft, but does not change the last-applied runtime document.
+    m_cleanDiskDocument = documentFromUi();
+    updateJsonPreview();
     setMessage(result.warnings.isEmpty() ? tr("Loaded preference file.")
-                                         : tr("Preference file is invalid; showing defaults."),
+                                         : tr("Loaded preferences with warnings; some values use defaults."),
                !result.warnings.isEmpty());
 }
 
 void PreferenceDialog::loadPreferences(const labelqt::core::AppPreferences& preferences)
 {
+    m_loadingPreferences = true;
     m_markerDiameterSpinBox->setValue(preferences.labelMarkerDiameterPixels());
     m_markerFontSpinBox->setValue(preferences.labelMarkerFontPointSize());
     const QString applicationStyle = preferences.applicationStyle();
@@ -558,11 +675,10 @@ void PreferenceDialog::loadPreferences(const labelqt::core::AppPreferences& pref
     const QString applicationLanguage = preferences.applicationLanguage();
     const int languageIndex = m_applicationLanguageComboBox->findData(applicationLanguage);
     m_applicationLanguageComboBox->setCurrentIndex(languageIndex >= 0 ? languageIndex : 0);
-    const QString textDiffCleanup = preferences.textDiffCleanupMode() == labelqt::core::TextDiffCleanupMode::Semantic
-                                        ? QStringLiteral("semantic")
-                                    : preferences.textDiffCleanupMode() == labelqt::core::TextDiffCleanupMode::Raw
-                                        ? QStringLiteral("raw")
-                                        : QStringLiteral("auto");
+    const QString textDiffCleanup =
+        preferences.textDiffCleanupMode() == labelqt::core::TextDiffCleanupMode::Semantic ? QStringLiteral("semantic")
+        : preferences.textDiffCleanupMode() == labelqt::core::TextDiffCleanupMode::Raw    ? QStringLiteral("raw")
+                                                                                          : QStringLiteral("auto");
     const int textDiffCleanupIndex = m_textDiffCleanupComboBox->findData(textDiffCleanup);
     m_textDiffCleanupComboBox->setCurrentIndex(textDiffCleanupIndex >= 0 ? textDiffCleanupIndex : 0);
     m_showAutomationRunLogCheckBox->setChecked(preferences.showAutomationRunLog());
@@ -615,12 +731,12 @@ void PreferenceDialog::loadPreferences(const labelqt::core::AppPreferences& pref
     m_markerTextBubbleMaxLineCharactersSpinBox->setValue(preferences.markerTextBubbleMaxLineCharacters());
     const int markerTextBubbleOpacity =
         std::clamp(static_cast<int>(std::round(preferences.markerTextBubbleOpacity() * 100.0)), 0, 100);
-    m_markerTextBubbleOpacityScrollBar->setValue(markerTextBubbleOpacity);
+    m_markerTextBubbleOpacitySlider->setValue(markerTextBubbleOpacity);
     m_markerTextBubbleOpacityLabel->setText(tr("%1%").arg(markerTextBubbleOpacity));
 
     const int canvasLabelTextEditorOpacity =
         std::clamp(static_cast<int>(std::round(preferences.canvasLabelTextEditorOpacity() * 100.0)), 0, 100);
-    m_canvasLabelTextEditorOpacityScrollBar->setValue(canvasLabelTextEditorOpacity);
+    m_canvasLabelTextEditorOpacitySlider->setValue(canvasLabelTextEditorOpacity);
     m_canvasLabelTextEditorOpacityLabel->setText(tr("%1%").arg(canvasLabelTextEditorOpacity));
 
     auto modifierText = [](Qt::KeyboardModifiers modifiers) {
@@ -628,10 +744,14 @@ void PreferenceDialog::loadPreferences(const labelqt::core::AppPreferences& pref
             return QStringLiteral("none");
         }
         QStringList parts;
-        if (modifiers.testFlag(Qt::ControlModifier)) parts.append(QStringLiteral("ctrl"));
-        if (modifiers.testFlag(Qt::ShiftModifier)) parts.append(QStringLiteral("shift"));
-        if (modifiers.testFlag(Qt::AltModifier)) parts.append(QStringLiteral("alt"));
-        if (modifiers.testFlag(Qt::MetaModifier)) parts.append(QStringLiteral("meta"));
+        if (modifiers.testFlag(Qt::ControlModifier))
+            parts.append(QStringLiteral("ctrl"));
+        if (modifiers.testFlag(Qt::ShiftModifier))
+            parts.append(QStringLiteral("shift"));
+        if (modifiers.testFlag(Qt::AltModifier))
+            parts.append(QStringLiteral("alt"));
+        if (modifiers.testFlag(Qt::MetaModifier))
+            parts.append(QStringLiteral("meta"));
         return parts.join(QLatin1Char('+'));
     };
     m_moveModifierComboBox->setCurrentText(modifierText(preferences.moveLabelModifiers()));
@@ -656,12 +776,12 @@ void PreferenceDialog::loadPreferences(const labelqt::core::AppPreferences& pref
     m_groupStyleEditor->setMarkerDefaults(m_markerDiameterSpinBox->value(), m_markerFontSpinBox->value());
     m_groupStyleEditor->loadStyles(preferences.groupStyles());
 
-    updateJsonPreview();
+    m_loadingPreferences = false;
 }
 
 labelqt::core::AppPreferences PreferenceDialog::preferencesFromUi() const
 {
-    labelqt::core::AppPreferencesValues values = m_currentPreferences.values();
+    labelqt::core::AppPreferencesValues values = m_draftBasePreferences.values();
     values.labelMarkerDiameterPixels = m_markerDiameterSpinBox->value();
     values.labelMarkerFontPointSize = m_markerFontSpinBox->value();
     values.labelTableMaxTextRows = m_tableMaxRowsSpinBox->value();
@@ -669,20 +789,19 @@ labelqt::core::AppPreferences PreferenceDialog::preferencesFromUi() const
     values.labelTableFontPointSize = m_usesDefaultLabelTableFont ? 0.0 : m_labelTableFont.pointSizeF();
     values.labelTextEditorFontFamily = m_usesDefaultTextEditorFont ? QString() : m_textEditorFont.family();
     values.labelTextEditorFontPointSize = m_usesDefaultTextEditorFont ? 0.0 : m_textEditorFont.pointSizeF();
-    values.markerTextBubbleFontFamily =
-        m_usesDefaultMarkerTextBubbleFont ? QString() : m_markerTextBubbleFont.family();
+    values.markerTextBubbleFontFamily = m_usesDefaultMarkerTextBubbleFont ? QString() : m_markerTextBubbleFont.family();
     values.markerTextBubbleFontPointSize =
         m_usesDefaultMarkerTextBubbleFont ? 0.0 : m_markerTextBubbleFont.pointSizeF();
     values.markerTextBubbleMaxLineCharacters = m_markerTextBubbleMaxLineCharactersSpinBox->value();
-    values.markerTextBubbleOpacity = m_markerTextBubbleOpacityScrollBar->value() / 100.0;
-    values.canvasLabelTextEditorOpacity = m_canvasLabelTextEditorOpacityScrollBar->value() / 100.0;
+    values.markerTextBubbleOpacity = m_markerTextBubbleOpacitySlider->value() / 100.0;
+    values.canvasLabelTextEditorOpacity = m_canvasLabelTextEditorOpacitySlider->value() / 100.0;
     values.applicationStyle = comboBoxDataOrText(m_applicationStyleComboBox);
     values.applicationTheme = comboBoxDataOrText(m_applicationThemeComboBox);
     values.applicationLanguage = comboBoxDataOrText(m_applicationLanguageComboBox);
     const QString cleanup = comboBoxDataOrText(m_textDiffCleanupComboBox);
     values.textDiffCleanupMode = cleanup == QStringLiteral("semantic") ? labelqt::core::TextDiffCleanupMode::Semantic
-                               : cleanup == QStringLiteral("raw")      ? labelqt::core::TextDiffCleanupMode::Raw
-                                                                        : labelqt::core::TextDiffCleanupMode::Auto;
+                                 : cleanup == QStringLiteral("raw")    ? labelqt::core::TextDiffCleanupMode::Raw
+                                                                       : labelqt::core::TextDiffCleanupMode::Auto;
     values.showAutomationRunLog = m_showAutomationRunLogCheckBox->isChecked();
     values.automationPythonCommand = m_automationPythonCommandEdit->text().trimmed();
     values.automationPythonArguments = QProcess::splitCommand(m_automationPythonArgumentsEdit->text());
@@ -691,16 +810,20 @@ labelqt::core::AppPreferences PreferenceDialog::preferencesFromUi() const
     values.automationShortcuts.clear();
     const QJsonObject shortcutObject = m_automationShortcutEditor->shortcuts();
     for (auto it = shortcutObject.begin(); it != shortcutObject.end(); ++it) {
-        values.automationShortcuts.insert(
-            it.key(), QKeySequence::fromString(it.value().toString(), QKeySequence::PortableText));
+        values.automationShortcuts.insert(it.key(),
+                                          QKeySequence::fromString(it.value().toString(), QKeySequence::PortableText));
     }
     const auto parseModifiers = [](const QString& text) {
         Qt::KeyboardModifiers modifiers;
         for (const QString& part : text.toLower().split(QLatin1Char('+'), Qt::SkipEmptyParts)) {
-            if (part.trimmed() == QStringLiteral("ctrl")) modifiers |= Qt::ControlModifier;
-            else if (part.trimmed() == QStringLiteral("shift")) modifiers |= Qt::ShiftModifier;
-            else if (part.trimmed() == QStringLiteral("alt")) modifiers |= Qt::AltModifier;
-            else if (part.trimmed() == QStringLiteral("meta")) modifiers |= Qt::MetaModifier;
+            if (part.trimmed() == QStringLiteral("ctrl"))
+                modifiers |= Qt::ControlModifier;
+            else if (part.trimmed() == QStringLiteral("shift"))
+                modifiers |= Qt::ShiftModifier;
+            else if (part.trimmed() == QStringLiteral("alt"))
+                modifiers |= Qt::AltModifier;
+            else if (part.trimmed() == QStringLiteral("meta"))
+                modifiers |= Qt::MetaModifier;
         }
         return modifiers;
     };
@@ -733,7 +856,43 @@ QJsonDocument PreferenceDialog::documentFromUi() const
 
 void PreferenceDialog::updateJsonPreview()
 {
-    m_jsonPreview->setPlainText(QString::fromUtf8(documentFromUi().toJson(QJsonDocument::Indented)));
+    if (m_loadingPreferences)
+        return;
+    const auto document = documentFromUi();
+    if (m_jsonPreview)
+        m_jsonPreview->setPlainText(QString::fromUtf8(document.toJson(QJsonDocument::Indented)));
+    const bool pending = document != m_cleanDiskDocument || document != m_appliedDocument;
+    m_applyButton->setEnabled(pending && m_store.hasBaseline());
+    setWindowTitle(pending ? tr("Preferences (modified)") : tr("Preferences"));
+}
+
+void PreferenceDialog::showStoreError(const labelqt::services::PreferenceStore::Error& error)
+{
+    using ErrorCode = labelqt::services::PreferenceStore::ErrorCode;
+    QString message;
+    switch (error.code) {
+    case ErrorCode::ExternalChanges:
+        message = tr("Preferences changed on disk. Your draft has been kept. Reload before applying again.");
+        break;
+    case ErrorCode::Locked:
+        message = tr("Preferences are being saved by another instance. Try applying again shortly.");
+        break;
+    case ErrorCode::MissingBaseline:
+        message = tr("Reload preferences successfully before applying changes.");
+        break;
+    case ErrorCode::InvalidDocument:
+        message = tr("Preferences are invalid or exceed safety limits. Your draft has been kept.");
+        break;
+    case ErrorCode::ReadFailed:
+        message = tr("Could not read preference file. Your draft has been kept.");
+        break;
+    case ErrorCode::WriteFailed:
+        message = tr("Could not save preference file.");
+        break;
+    }
+    if (!error.detail.isEmpty())
+        message += QLatin1Char('\n') + error.detail;
+    setMessage(message, true);
 }
 
 void PreferenceDialog::setMessage(const QString& message, bool warning)
@@ -856,48 +1015,45 @@ void PreferenceDialog::chooseAutomationPythonCommand()
     updateJsonPreview();
 }
 
-void PreferenceDialog::savePreferences()
+bool PreferenceDialog::savePreferences()
 {
     const QString shortcutConflict = m_automationShortcutEditor->conflictText();
     if (!shortcutConflict.isEmpty()) {
         setMessage(shortcutConflict, true);
-        return;
+        return false;
     }
 
-    const QJsonDocument document = documentFromUi();
-    const auto validation = labelqt::core::AppPreferences::loadFromJson(document.toJson());
-    const auto conflicts = validation.preferences.conflictingSearchShortcuts();
+    const auto draft = preferencesFromUi();
+    const QJsonDocument document = draft.toJsonDocument();
+    const auto conflicts = draft.conflictingSearchShortcuts();
     if (!conflicts.isEmpty()) {
         setMessage(tr("Search shortcuts conflict with other actions: %1").arg(conflicts.join(QStringLiteral(", "))),
                    true);
-        return;
+        return false;
     }
-    const QDir preferenceDirectory = QFileInfo(m_preferencePath).absoluteDir();
-    if (!preferenceDirectory.exists() && !preferenceDirectory.mkpath(QStringLiteral("."))) {
-        setMessage(tr("Could not save preference file."), true);
-        return;
-    }
-
-    const auto saved =
-        labelqt::core::AtomicFileWriter::write(m_preferencePath, document.toJson(QJsonDocument::Indented));
+    const auto saved = m_store.save(document);
     if (!saved) {
-        setMessage(tr("Could not save preference file.") + QLatin1Char('\n') + saved.error(), true);
-        return;
+        showStoreError(saved.error());
+        return false;
     }
 
     labelqt::core::AppPreferencesLoadResult result =
         labelqt::core::AppPreferences::loadFromJson(document.toJson(QJsonDocument::Compact));
-    m_currentPreferences = result.preferences;
-    emit preferencesApplied(result);
+    m_draftBasePreferences = result.preferences;
+    m_cleanDiskDocument = document;
+    m_appliedDocument = result.preferences.toJsonDocument();
+    updateJsonPreview();
     setMessage(result.warnings.isEmpty()
                    ? tr("Preferences saved and applied.")
                    : tr("Preferences saved and applied with warnings; see the main window status bar."),
                !result.warnings.isEmpty());
+    emit preferencesApplied(result);
+    return true;
 }
 
 void PreferenceDialog::openPreferenceFile()
 {
-    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(m_preferencePath))) {
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(m_store.path()))) {
         setMessage(tr("Could not open preference file in the system text editor."), true);
     }
 }

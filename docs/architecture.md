@@ -1,6 +1,6 @@
 # 架构说明
 
-LabelQt 是一个独立的 C++/Qt 6 Widgets 应用。它的核心目标是编辑经典 LabelPlus `.txt` 工程，同时支持合并、页序调整、自动化脚本、OCR 与 AI 翻译等扩展工作流。
+LabelQt 是一个独立的 C++/Qt 6 Widgets 应用。它的核心目标是编辑经典 LabelPlus `.txt` 工程，同时支持合并、页面管理、校对与自动化 v2 批处理。基于新 API 的 OCR 与 AI 翻译提供者尚待实现，不内置旧版脚本。
 
 这份文档记录当前代码的职责边界。新增功能前请先确认它应该放在哪一层，避免把新的状态机、文件格式处理或业务规则继续塞回 `MainWindow`。
 
@@ -26,6 +26,7 @@ tests          Qt Test 测试
 
 ```text
 src/services/automation   自动化脚本发现、运行、Python 解析、密钥和操作应用
+src/services/preferences  偏好文件的版本基线、写锁与原子保存
 src/services/io           图片异步缓存等输入输出设施
 src/services/label        标签编辑、导航、复制剪切粘贴规划
 src/services/project      工程打开保存、合并、页序调整、来源信息、会话状态
@@ -56,7 +57,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `Project` / `ImageEntry`：当前工程的内存模型。`Project` 持有页面列表、分组、工程路径、注释区等信息；`ImageEntry` 持有图片名、图片路径和该页标签。
 - `LabelPlusDocument`：经典 LabelPlus `.txt` 工程格式的解析和保存。格式兼容逻辑应集中在这里，不要在 UI 中拼接工程文本。
 - `AtomicFileWriter`：可靠的原子字节写入入口，不负责具体文件格式。工程、HTML 和偏好保存必须校验最终提交成功。
-- `AppPreferences`：`preference.json` 的类型化读取、默认值、序列化和诊断警告。偏好缺失、JSON 损坏或类型错误时应回退到内置默认值并返回警告。
+- `AppPreferences`：`preference.json` 的类型化读取、默认值、序列化和诊断警告。`AppPreferencesValues` 是唯一内置默认值来源，随附 JSON 由测试校验一致。偏好缺失、JSON 损坏或类型错误时应回退到内置默认值并返回警告。
 - `ApplicationTheme`：内置 Breeze 样式表主题注册。
 - `TranslationManager`：发现和加载 `labelqt_*.qm` 翻译资源。
 - `UndoStack`：对 Qt `QUndoStack` / `QUndoCommand` 的薄包装，项目内可逆编辑都应通过它进入撤销/重做系统。
@@ -65,7 +66,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 
 - `Label` / `Project`
 - `LabelPlusDocument`
-- `AutomationService` 导出的 JSON 快照
+- `ProjectTaskService` 的作用域快照与 `AutomationProtocol` 的 v2 JSON 编解码
 - 相关 UI 模型和委托
 - `tests/LabelTests.cpp`
 
@@ -81,7 +82,9 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `ProjectRecoveryService`：版本化备份索引、保留策略、恢复副本与文件事务回放。`ProjectRecoveryController/Dialog` 只编排入口、确认和只读预览。
 - `PageManagementDraft`：独立工程快照上的页面顺序与 pending 计划；移除页同步剪裁 pending。表格只派生候选效果，局部撤销不改真实工程。
 - `ProjectTextSearchService`：范围与分组搜索、原文区间、工程指纹及批量替换规划。`ProjectSearchPanel` 不直接改标签，统一调用 `LabelEditController::replaceTexts`。
-- `ReviewSessionService`：审阅状态、批注、人工配对、变更指纹与版本化持久化。`ProofreadReviewPanel` 管局部编辑与撤销，人工对应约束交给 `ProjectComparisonService` 重新计算，不让 renderer 修改业务状态。
+- `ReviewSessionService`：审阅状态、兼容旧批注、人工配对、变更指纹与版本化持久化。`ProofreadReviewPanel` 管局部状态 / 配对编辑与撤销，修改前使用与持久化相同的预算校验；不再提供批注编辑。人工对应约束交给 `ProjectComparisonService` 重新计算。`ReviewStatusDelegate` 只负责彩色图标和状态文字，不让 renderer 修改业务状态。
+- `PreferenceStore`：设置文件基线、协作写锁、外改检测和原子提交，独立于工程恢复事务。窗口只管理草稿、显示错误和发出生效通知。
+- `BoundedJsonIo`：恢复、重命名、审阅及偏好记录共用的有界 JSON 读写和结构校验。各服务负责语义、上限和事务，不在 UI 直接解析持久化记录。
 - `FileRenameTransaction`：文件系统两阶段移动与两阶段回滚，保留无法恢复的文件及恢复映射；不操作工程模型或撤销栈。
 - `ProjectWorkflowController`：承接合并工程、保存合并结果、页面顺序调整与对应撤销命令的项目级工作流。`MainWindow` 只负责弹出对话框和刷新 UI。
 - `ProjectMergeService`：读取多个 LabelPlus 工程，按页生成合并计划，生成最终合并工程，并写入合并来源元数据。
@@ -125,7 +128,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `ProjectViewController`：页码下拉框、来源显示、翻页控件刷新。
 - `LabelSelectionController`：右侧表格、左侧标签标记和当前标签之间的选择同步。`Ctrl` 多选、`Shift` 连续选择，以及“用户点表格”“程序同步选择”“修订模式下悬停标记”等选择来源语义应集中在这里。新增选择路径时，应通过 `selectSingle()`、`selectIndexes()` 或 `clearSelection()` 传入正确来源，不要在 `MainWindow` 里手写表格/画布双向同步状态。
 - `EditorStateController`：检测、提交和恢复当前活动文本编辑器。快捷键切换标签时保持编辑状态的逻辑放这里。
-- `MainWindowShortcutController`：主窗口快捷键路由，只匹配按键并调用回调，不直接改工程数据。
+- `MainWindowShortcutController`：显式注册标签工作区后处理标签 / 翻页快捷键，只匹配按键并调用回调，不直接改工程数据；查找与其他表单保持原生键盘行为。翻页不再另设窗口级 QAction 重复截获。
 - `AutomationController`：自动化菜单构建、脚本发现、脚本运行、日志窗口、取消运行和结果派发。不要再把自动化菜单和进程生命周期散落回 `MainWindow`。
 - `ProofreadingController`：校对基线启停、外部工程选择与异步比较、校对结果对话框启动和校对状态动作更新。`MainWindow` 只提供当前工程、偏好、选择跳转等回调。
 - `ProofreadChangeTableModel` / `ProofreadChangeFilterModel`：校对变更表唯一的数据与筛选/排序入口。对话框不得另存一份“过滤后行号”或用 `QTableWidgetItem` 复制业务状态。
@@ -133,13 +136,16 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 跨目录工程比较使用图片指纹补充页面匹配。指纹缓存是进程内、线程安全且有容量上限的 LRU 缓存；
 新增类似缓存时必须同时定义失效 key 和容量策略，不能使用无界静态 `QHash`。
 - `AutomationShortcutController`：自动化脚本快捷键匹配和失效脚本处理。
-- `AutomationRunDialog` / `AutomationParameterDialog`：自动化日志与运行前参数输入。
+- `AutomationRunDialog` / `AutomationParameterDialog`：自动化日志与运行前参数输入。日志呈现独立限制为 262,144 个 UTF-16 单元、5,000 个块，每行至多 4,096 个单元；只在用户位于末尾时跟随滚动。
 - `LabelTableModel` / `CurrentPageLabelContext`：右侧表格通过只读 provider 获取当前页标签，维护可见行映射，
   发出编辑/重排请求，但不直接修改标签。不缓存 `ImageEntry` 内部容器地址；工程快照的写时复制不会留下悬空绑定。
   provider 的宿主必须比模型活得久，宿主析构和工程切换时清空绑定。数据结构变化仍须按模型协议刷新可见行。
 - `LabelEditDelegates`：表格文本列和类别列的原地编辑控件。
 - `PageOrderDialog` / `PageOrderListModel`：页面管理界面与对应模型，负责页面排序、移除页面，以及展示按当前顺序生成的图片文件重命名或缺失页引用修复预览；真正的文件系统重命名和项目引用更新仍交给 `ProjectImageRenameService`。
-- `ProjectMergeDialog`：合并工程冲突解决窗口，复用只读 `ImageCanvas` 预览候选页。
+- `ProjectMergeDialog`：合并工程来源选择及当前冲突导航。仅使用两个 `MergeCandidatePreview`，后者复用 `ImagePageViewController` 和有界图片缓存，候选切换合并为最新请求，每个预览最多一个解码任务；不为隐藏冲突创建画布或解码图片。保留每页的来源选择和视口状态。
+
+合并预览通过 `ImagePageCache::previewLoader` 选择受限解码策略，输出不超过 1600×1600，源图最多 33,554,432 像素；
+源尺寸未知或超限只拒绝预览，不删除候选或禁止选择来源。主界面仍使用默认全分辨率加载，两种策略共用解码和文件版本验证，UI 不自行读取 / 解码图片。
 - `GroupFilterComboBox`：右上角分组多选筛选。
 - `PreferenceDialog`：偏好设置窗口，负责左侧分类导航、右侧页面栈和偏好 JSON 读写协调。复杂子页的表格逻辑应放到 `GroupStyleEditorWidget`、`AutomationShortcutEditorWidget` 或 `PreferenceDialogWidgets`。
 - `ThemeManager`：加载和应用内置 Breeze 样式表。
@@ -294,7 +300,7 @@ label、移动 marker 和调整顺序。校对功能只提供一层透明记录�
 - `backupMaximumCount`：每工程自动备份保留上限，0 为全部保留；只清理经核实的自动记录。
 - `input.findProjectShortcut`、`nextSearchMatchShortcut`、`previousSearchMatchShortcut`：查找导航键位；冲突检查统一由 AppPreferences 提供，避免 UI 和运行时各自定义优先级。
 
-偏好设置窗口现在只有“保存”语义：保存到 `preference.json` 后立即应用。`Reload` 用于从磁盘重新读取。打开窗口时显示的是当前运行时 `AppPreferences`，而不是另写一套 UI 默认值。界面采用左侧分类导航和右侧页面栈；新增偏好时应先判断属于常规、外观、标签显示、快捷键、自动化、分组样式、校对或高级/预览类页面，不要把不同职责重新堆回单个页面。
+偏好设置窗口使用“应用 / 关闭”：先通过 `PreferenceStore` 保存成功再应用；关闭未应用草稿时确认，失败不关闭。每个主窗口只保留一个偏好窗口，重复打开激活原窗口。高级菜单提供重新载入、JSON 预览和外部编辑；外改冲突拒绝覆盖。左侧搜索匹配分类和设置项文字，右侧仍使用职责分明的子页，不把不同配置堆回单个页面。
 
 新增偏好项时通常要同步：
 
