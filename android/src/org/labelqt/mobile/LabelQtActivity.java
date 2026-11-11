@@ -37,10 +37,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
- * Platform transport only; ZIP/TXT validation and workspace publication belong to C++ services.
+ * Platform transport only; archive/TXT validation and workspace publication belong to C++ services.
  *
  * Packaging contract (owned by the Android build integration):
- * - Activity: org.labelqt.mobile.LabelQtActivity, singleTop, narrow ZIP/TXT VIEW/SEND filters.
+ * - Activity: org.labelqt.mobile.LabelQtActivity, singleTop, narrow archive/TXT VIEW/SEND filters.
  * - Provider: org.labelqt.mobile.LabelQtActivity$ShareProvider, authority ${applicationId}.files,
  *   exported=false, grantUriPermissions=true, android.support.FILE_PROVIDER_PATHS=@xml/file_paths.
  * - Gradle: implementation("androidx.core:core:<toolchain-compatible pinned version>").
@@ -55,7 +55,24 @@ public class LabelQtActivity extends QtActivity {
     private static final int MAX_PENDING = 3;
     private static final long MAX_BYTES = 2L * 1024 * 1024 * 1024;
     private static final Pattern STAGED_NAME = Pattern.compile(
-            "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(zip|txt|part)");
+            "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(zip|7z|rar|tar|gz|tgz|txt|part)");
+    private static final String[][] INPUT_TYPES = {
+            {"zip", "application/zip"}, {"zip", "application/x-zip-compressed"},
+            {"zip", "application/x-zip"}, {"7z", "application/x-7z-compressed"},
+            {"rar", "application/vnd.rar"}, {"rar", "application/x-rar-compressed"},
+            {"rar", "application/x-rar"}, {"tar", "application/x-tar"},
+            {"gz", "application/gzip"}, {"gz", "application/x-gzip"},
+            {"tgz", "application/x-compressed-tar"}, {"txt", "text/plain"}
+    };
+
+    private static String[] inputMimeTypes() {
+        String[] result = new String[INPUT_TYPES.length + 1];
+        for (int i = 0; i < INPUT_TYPES.length; ++i)
+            result[i] = INPUT_TYPES[i][1];
+        // Some providers only identify archives as generic binary data. C++ validates content.
+        result[INPUT_TYPES.length] = "application/octet-stream";
+        return result;
+    }
 
     // Keep in sync with AndroidFileBridge.cpp. Never send provider messages/URIs to UI or logs.
     private static final int UNAVAILABLE = 1;
@@ -240,8 +257,7 @@ public class LabelQtActivity extends QtActivity {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
-            intent.putExtra(Intent.EXTRA_MIME_TYPES,
-                    new String[]{"application/zip", "application/x-zip-compressed", "text/plain"});
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, inputMimeTypes());
             intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             try {
@@ -567,7 +583,10 @@ public class LabelQtActivity extends QtActivity {
         if (dot <= 0)
             return null;
         String extension = name.substring(dot + 1).toLowerCase(Locale.ROOT);
-        return "zip".equals(extension) || "txt".equals(extension) ? extension : null;
+        for (String[] type : INPUT_TYPES)
+            if (type[0].equals(extension))
+                return extension;
+        return null;
     }
 
     private static String inputName(ContentResolver resolver, Uri uri) throws IOException {
@@ -581,11 +600,9 @@ public class LabelQtActivity extends QtActivity {
             }
         }
         String mime = resolver.getType(uri);
-        if ("application/zip".equalsIgnoreCase(mime) || "application/x-zip-compressed".equalsIgnoreCase(mime)
-                || "application/x-zip".equalsIgnoreCase(mime))
-            return "project.zip";
-        if ("text/plain".equalsIgnoreCase(mime))
-            return "project.txt";
+        for (String[] type : INPUT_TYPES)
+            if (type[1].equalsIgnoreCase(mime))
+                return "project." + type[0];
         throw new BridgeException(UNSUPPORTED_TYPE);
     }
 

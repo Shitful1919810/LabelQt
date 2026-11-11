@@ -51,7 +51,8 @@ Qt 支持 Android，Qt Quick/Controls 更适合触控；Java/Kotlin 仅用于必
 | 鼠标、键盘、触控笔 | 基础支持 | 不依赖 hover；不做手写识别，笔尖按指针处理 |
 | Python/OCR/AI 自动化 | 不纳入 | 不内嵌解释器，不引入替代云服务 |
 | 外部目录原地写入、双向同步、多人实时协作 | 延后 | 另行设计授权、能力检查与冲突协议 |
-| RAR/7z、加密 ZIP、分卷包、嵌套压缩包自动展开 | 不纳入 | 明确报错，要求用户转换为普通 ZIP |
+| 7z、RAR/RAR5、tar/tar.gz 导入、原图包新建 | 已纳入技术预览 | 按内容识别，单 TXT 导入，无 TXT 按图片自然排序新建，分享仍为 ZIP |
+| 加密包、分卷包、自解压程序、嵌套压缩包自动展开 | 不纳入 | 明确报错，要求用户转换为普通单卷归档 |
 | 跨进程恢复整个撤销栈、多轮校对历史 | 不纳入 | 恢复已落盘内容；校对沿用当前单轮模型 |
 
 桌面专属设置如 QWidget 风格、hover 参数、Python 参数在移动端隐藏，不显示无效开关。
@@ -185,7 +186,9 @@ QQ 传递的临时读授权可能不能持久化：授权有效期间尽快有�
 ### 4.3 ZIP 安全与编码
 
 复用一个跨平台归档服务，不让 Java 和 C++ 各写一套解压规则。优先验证裁剪后的 libarchive ZIP 读写，
-只开放 ZIP 与需要的压缩方法，不因库能处理多种格式就全部开放。当前仓库未链接 libarchive。
+当前白名单为 ZIP、7z、RAR/RAR5、POSIX tar、gzip 包装的 tar，不启用全格式自动探测。
+Android 已链接 libarchive 3.8.11 与 liblzma 5.8.4；ZIP 继续保留独立结构预检，
+各格式共用路径、链接、碰撞及输出预算检查。RAR 主头额外拒绝分卷，不发布可能缺页的工程。
 上游支持 ZIP 读写且提供 BSD 许可；实施时锁定版本、审计可选依赖并记录许可，而非追踪 master。
 依据：[libarchive](https://www.libarchive.org/)、[上游许可证](https://github.com/libarchive/libarchive/blob/master/COPYING)。
 

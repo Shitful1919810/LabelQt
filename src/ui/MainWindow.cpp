@@ -5,6 +5,7 @@
 #include "services/label/LabelClipboardService.h"
 #include "services/label/LabelNavigator.h"
 #include "services/label/LabelPastePlanner.h"
+#include "services/project/ProjectCreationService.h"
 #include "services/project/ProjectImageValidator.h"
 #include "services/project/SaveChangesDecision.h"
 #include "services/project/SessionStateStore.h"
@@ -3046,7 +3047,7 @@ QString MainWindow::preferenceWarningText(const labelqt::core::AppPreferenceWarn
 
 QStringList MainWindow::defaultProjectGroups() const
 {
-    return {tr("Dialogue"), tr("Outside text")};
+    return labelqt::services::ProjectCreationService::defaultGroups();
 }
 
 bool MainWindow::isProofreadingModeActive() const

@@ -3705,8 +3705,8 @@ Missing images: %2</source>
         <translation>画像</translation>
     </message>
     <message>
-        <source>Import ZIP or TXT</source>
-        <translation>ZIP または TXT をインポート</translation>
+        <source>Import archive or TXT</source>
+        <translation>アーカイブまたは TXT を読み込む</translation>
     </message>
     <message>
         <source>Labels</source>
@@ -3745,8 +3745,8 @@ Missing images: %2</source>
         <translation>プロジェクトの操作</translation>
     </message>
     <message>
-        <source>Project files (*.zip *.txt)</source>
-        <translation>プロジェクトファイル (*.zip *.txt)</translation>
+        <source>Project files (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</source>
+        <translation>プロジェクトファイル (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</translation>
     </message>
     <message>
         <source>Projects</source>
@@ -3878,6 +3878,18 @@ Missing images: %2</source>
 <context>
     <name>ProjectTransferService</name>
     <message>
+        <source>Invalid or unsupported archive. Use an unencrypted, single-volume ZIP, 7z, RAR, tar or tar.gz.</source>
+        <translation>無効または未対応のアーカイブです。暗号化・分割されていない ZIP、7z、RAR、tar、tar.gz を使用してください。</translation>
+    </message>
+    <message>
+        <source>Cannot read an image in the archive: %1</source>
+        <translation>アーカイブ内の画像を読み取れません：%1</translation>
+    </message>
+    <message>
+        <source>Unsupported file content. Select a project TXT or a supported archive.</source>
+        <translation>未対応のファイル内容です。プロジェクト TXT または対応するアーカイブを選択してください。</translation>
+    </message>
+    <message>
         <source>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</source>
         <translation>共有キャッシュが上限（2 GiB）に達しました。エクスポートは7日間保持されます。期限後の削除を待って再試行してください。</translation>
     </message>
@@ -3946,12 +3958,12 @@ Missing images: %2</source>
         <translation>アーカイブ内のアーカイブには対応していません。</translation>
     </message>
     <message>
-        <source>The ZIP contains multiple TXT files. Select a single project before importing.</source>
-        <translation>ZIP に複数の TXT ファイルが含まれています。インポートする前に、プロジェクトを一つ選択してください。</translation>
+        <source>The archive contains multiple TXT files. Select a single project before importing.</source>
+        <translation>アーカイブ内に複数の TXT ファイルがあります。1つのプロジェクトに整理してから読み込んでください。</translation>
     </message>
     <message>
-        <source>The ZIP contains no project TXT.</source>
-        <translation>ZIP にプロジェクトの TXT ファイルがありません。</translation>
+        <source>The archive contains neither a project TXT nor supported images.</source>
+        <translation>アーカイブ内にプロジェクト TXT も対応画像もありません。</translation>
     </message>
     <message>
         <source>The transfer root is unavailable.</source>
@@ -4016,8 +4028,8 @@ Missing images: %2</source>
         <translation>プロジェクトをインポートしました。選択すると開きます。</translation>
     </message>
     <message>
-        <source>Select a local ZIP or TXT file.</source>
-        <translation>ローカルの ZIP または TXT ファイルを選択してください。</translation>
+        <source>Select a local archive or TXT file.</source>
+        <translation>ローカルのアーカイブまたは TXT ファイルを選択してください。</translation>
     </message>
     <message>
         <source>The file operation failed. Existing workspaces were kept.</source>
@@ -4043,16 +4055,16 @@ Missing images: %2</source>
         <translation>この環境では Android のファイルアクセス機能を利用できません。</translation>
     </message>
     <message>
-        <source>Only ZIP and TXT files are accepted by this file bridge.</source>
-        <translation>このファイル連携機能で受け付けるのは ZIP と TXT ファイルのみです。</translation>
+        <source>Select a ZIP, 7z, RAR, tar, tar.gz or TXT file.</source>
+        <translation>ZIP、7z、RAR、tar、tar.gz または TXT ファイルを選択してください。</translation>
     </message>
     <message>
         <source>Permission to read the selected file was lost. Select the file again.</source>
         <translation>選択したファイルの読み取り権限が失われました。ファイルを選び直してください。</translation>
     </message>
     <message>
-        <source>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</source>
-        <translation>ZIP または TXT ファイルの content URI を一つ選択してください。競合する URI やローカルファイルの URI は受け付けません。</translation>
+        <source>Select one content URI for an archive or TXT file. Conflicting or local file URIs are not accepted.</source>
+        <translation>アーカイブまたは TXT ファイルの content URI を1つ選択してください。競合する URI やローカルファイル URI は受け付けません。</translation>
     </message>
     <message>
         <source>The Android file bridge is not configured correctly.</source>

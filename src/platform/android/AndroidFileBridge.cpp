@@ -218,7 +218,7 @@ QString AndroidFileBridge::errorMessage(int error)
     case Busy:
         return tr("The file inbox or system file chooser is busy. Finish a pending import and try again.");
     case InvalidInput:
-        return tr("Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.");
+        return tr("Select one content URI for an archive or TXT file. Conflicting or local file URIs are not accepted.");
     case TooLarge:
         return tr("The file or pending inbox exceeds the 2 GiB limit.");
     case PermissionDenied:
@@ -230,7 +230,7 @@ QString AndroidFileBridge::errorMessage(int error)
     case ShareFailed:
         return tr("The Android share chooser could not be opened. The exported file has been kept.");
     case UnsupportedType:
-        return tr("Only ZIP and TXT files are accepted by this file bridge.");
+        return tr("Select a ZIP, 7z, RAR, tar, tar.gz or TXT file.");
     case Interrupted:
         return tr("An interrupted file import was discarded. Select the source file again.");
     default:

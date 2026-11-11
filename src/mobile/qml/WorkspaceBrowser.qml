@@ -22,7 +22,7 @@ ColumnLayout {
     }
     Button {
         objectName: "importWorkspaceButton"
-        text: qsTranslate("Main", "Import ZIP or TXT")
+        text: qsTranslate("Main", "Import archive or TXT")
         Layout.fillWidth: true
         enabled: !root.busy
         onClicked: root.importRequested()

@@ -348,7 +348,7 @@ ApplicationWindow {
             Label { text: qsTr("Edits are saved to a local copy. Export a ZIP to send your changes."); Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: 12 }
         }
     }
-    FileDialog { id: localFile; nameFilters: [qsTr("Project files (*.zip *.txt)")]; onAccepted: workspaceController.importLocal(selectedFile) }
+    FileDialog { id: localFile; nameFilters: [qsTr("Project files (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)")]; onAccepted: workspaceController.importLocal(selectedFile) }
     SubmitDialog {
         id: shareDialog
         objectName: "shareZipDialog"

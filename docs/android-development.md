@@ -23,11 +23,12 @@
 | 层或模块 | 应负责 | 不应负责 |
 | --- | --- | --- |
 | `src/core`、共享编辑/校对/持久化服务 | 格式、稳定身份、版本、命令、撤销、保存与校对规则 | Widgets/QML 布局、Android URI |
+| `ProjectCreationService` | 按显式图片列表构建未保存工程、共享默认分组与自然排序规则 | 解包、活动文档切换、写盘 |
 | `MobileDocument` | 活动文档的移动适配、选择、编辑草稿、自动保存调度 | 第二套编辑命令、ZIP 解析、平台授权 |
 | `MobileLabelModel` | 标签展示角色、分组样式映射、稳定增量刷新 | 直接修改正文或保存文件 |
 | `MobileReviewController` | 校对命令适配、异步差异展示与过期检查 | 独立实现轮次、批注或文本 diff 算法 |
 | `MobileWorkspaceController` / `MobileWorkspaceModel` | 工作区操作编排、任务串行、列表数据 | 归档格式与文件安全规则 |
-| `ProjectTransferService` / `TransferSupport` | 有界导入导出、路径验证、快照打包、暂存发布 | 操作活动文档、接受 URI、UI 状态 |
+| `ProjectTransferService` / `TransferArchive` / `TransferSupport` | 导入编排、白名单归档解码、共用路径/IO 校验、快照打包与暂存发布 | 操作活动文档、接受 URI、UI 状态 |
 | `WorkspaceStorageService` | 工作区清单、显示名、分享文件名校验、删除与清理策略 | 关闭编辑器、清理撤销栈 |
 | `src/mobile/qml` | 呈现、手势、坐标转换、发出命令 | 工程结构修改、业务撤销、磁盘事务 |
 | `src/platform/android`、`android/` | Intent、授权流、JNI、FileProvider | 工程解析、编辑、校对或归档规则 |
@@ -84,9 +85,19 @@ Android 不构建 Python runner/QtKeychain，但不得破坏桌面自动化及�
 
 **三种名称不可混为一谈。** 工作区 ID 决定身份，`workspace.json` 中的 `title` 是显示名，
 `archiveName` 是默认分享名称。重命名显示名不改图片/TXT 或原始分享名。
-导入标题取来源显示名的 `completeBaseName()`，只去掉最后一个扩展名，保留主体中的点和 Unicode；
+导入标题取来源显示名的 `completeBaseName()`，去掉最后一个扩展名（`.tar.gz` 作为整体），保留主体中的点和 Unicode；
 例如 `chapter.zip` 得到 `chapter`，`chapter..zip` 得到 `chapter.`。
 名称异常需检查原文件名、provider 显示名、清单和 UI，不用全局删点或静默迁移旧标题掩盖问题。
+非 ZIP 来源的默认分享名使用标题加 `.zip`，不得生成 `.7z.zip` 等误导性名称。
+
+**格式识别与工程选择分开。** 文件头选择唯一归档 reader，不能把“非 ZIP”直接当作 TXT。
+一个 TXT 按既有工程导入，多个 TXT 拒绝；零 TXT 才能按支持的图片构建新工程。
+工程发现阶段排除 `__MACOSX` 目录和 `._` 资源文件，但不得绕过此前的路径、链接、碰撞及大小校验。
+tar.gz 先用 zlib 流式检查完整 gzip 的 CRC/ISIZE，再交给 libarchive 解析 tar；后者本身不校验 gzip 尾部 CRC，
+且可能在 tar 结束时提前停止。该预检增加一次解压计算、不增加解压临时文件，展开预算为文件总预算加
+每条目 64 KiB 及全局 1 MiB 的容器开销；允许尾部零填充，拒绝拼接 gzip 数据流及非零尾随内容。
+图片头部无效时拒绝整次新建，不静默丢页；排序不能依赖 Android 未编入的 ICU。
+图片子目录与稳定身份经既有 materialize/序列化流程发布，不能在 QML 中拼 TXT。
 
 **发布与清理分开。** 导入在暂存目录验证完成后发布；同名分享各自使用唯一输出目录，不覆盖旧快照。
 清理只针对服务定义的暂存、接收副本、过期分享及已确认删除目录，不涉及工作区、恢复证据或普通备份。

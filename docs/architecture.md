@@ -19,7 +19,9 @@ Android 技术预览已引入独立 Qt Quick 前端；完整范围与验收基�
 
 - `LabelQtShared` 编译 Core 与平台无关服务；`LabelQtDesktop` 编译 Widgets、Python runner 与 QtKeychain。
   桌面测试链接生产目标，不再各自维护一份服务源文件清单。Android 不链接 Widgets、Python runner 或 QtKeychain。
-- `ProjectTransferService` / `TransferSupport` 负责有界 ZIP、路径验证、元数据所有权验证、图源重定位和暂存发布。
+- `ProjectTransferService` 负责导入/导出编排、元数据所有权验证、图源重定位和暂存发布；
+  `TransferArchive` 负责格式识别、白名单解码和 ZIP/RAR 预检，`TransferSupport` 负责共用路径、名称与 IO 校验。
+  无 TXT 的原图包复用 `ProjectCreationService` 构建新工程；桌面目录新建也复用该服务，不复制工程初始化规则。
   它们只接受本地文件和工程值快照，不接受 URI、不修改活动工程；libarchive 是移动目标的独立依赖。
 - `MobileDocument` 是活动工程的命令与呈现适配器：稳定 ID 选择、文本提交、自动保存、只读列表模型；
   标签变更委托 `LabelEditController`，持久化委托 `ProjectController`，撤销使用同一个 `UndoStack`。

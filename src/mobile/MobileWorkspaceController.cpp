@@ -67,7 +67,7 @@ void MobileWorkspaceController::clearMessage()
 void MobileWorkspaceController::importLocal(const QUrl& url)
 {
     if (!url.isLocalFile()) {
-        showMessage(tr("Select a local ZIP or TXT file."));
+        showMessage(tr("Select a local archive or TXT file."));
         return;
     }
     import({url.toLocalFile(), true, false, {}});

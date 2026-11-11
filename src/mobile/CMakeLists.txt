@@ -5,20 +5,39 @@ qt_policy(SET QTP0002 NEW)
 if(ANDROID)
     enable_language(C)
     include(FetchContent)
-    # Android ships zlib; the transfer format only needs ZIP store/deflate.
-    foreach(feature IN ITEMS WERROR OPENSSL MD LIBB2 LZ4 LZO LZMA ZSTD BZip2 LIBXML2
+    set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_TESTING OFF)
+    foreach(tool IN ITEMS XZ XZDEC LZMADEC LZMAINFO SCRIPTS SYMLINKS SYMLINKS_LZMA)
+        set(XZ_TOOL_${tool} OFF CACHE BOOL "Only build the liblzma dependency" FORCE)
+    endforeach()
+    set(XZ_NLS OFF CACHE BOOL "No command-line translations" FORCE)
+    set(XZ_DOC OFF CACHE BOOL "No command-line documentation" FORCE)
+    FetchContent_Declare(labelqt_xz
+        URL https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz
+        URL_HASH SHA256=4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(labelqt_xz)
+    set_target_properties(liblzma PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    # Android ships zlib; liblzma adds LZMA/LZMA2 decoding for ordinary 7z files.
+    foreach(feature IN ITEMS WERROR OPENSSL MD LIBB2 LZ4 LZO ZSTD BZip2 LIBXML2
             BSDXML EXPAT WIN32_XMLLITE PCREPOSIX PCRE2POSIX CNG TAR CPIO CAT UNZIP
             XATTR ACL ICONV TEST INSTALL)
         set(ENABLE_${feature} OFF CACHE BOOL "libarchive mobile configuration" FORCE)
     endforeach()
     set(ENABLE_ZLIB ON CACHE BOOL "ZIP compression" FORCE)
-    set(BUILD_SHARED_LIBS OFF)
+    set(ENABLE_LZMA ON CACHE BOOL "7z decompression" FORCE)
     FetchContent_Declare(labelqt_archive
         URL https://github.com/libarchive/libarchive/releases/download/v3.8.11/libarchive-3.8.11.tar.xz
         URL_HASH SHA256=a3dc0872b1b39da34dc18ef1b944f0f11ffd37425d70ae04be679279f1cf43d2
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
+    # libarchive resets CMAKE_MODULE_PATH; use a scoped config package instead.
+    set(_labelqt_prefer_config "${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+    set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+    set(LibLZMA_DIR "${PROJECT_SOURCE_DIR}/cmake/android")
     FetchContent_MakeAvailable(labelqt_archive)
+    set(CMAKE_FIND_PACKAGE_PREFER_CONFIG "${_labelqt_prefer_config}")
     set_target_properties(archive_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
     set(LABELQT_ARCHIVE_TARGET archive_static)
 else()
@@ -29,6 +48,7 @@ endif()
 add_library(LabelQtTransfer STATIC
     ../services/transfer/ProjectTransferService.cpp
     ../services/transfer/TransferSupport.cpp
+    ../services/transfer/TransferArchive.cpp
     ../services/transfer/WorkspaceStorageService.cpp
 )
 target_link_libraries(LabelQtTransfer PUBLIC LabelQtShared PRIVATE ${LABELQT_ARCHIVE_TARGET})

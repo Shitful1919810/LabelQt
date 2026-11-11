@@ -3718,8 +3718,8 @@ Missing images: %2</translation>
         <translation>Image</translation>
     </message>
     <message>
-        <source>Import ZIP or TXT</source>
-        <translation>Import ZIP or TXT</translation>
+        <source>Import archive or TXT</source>
+        <translation>Import archive or TXT</translation>
     </message>
     <message>
         <source>Labels</source>
@@ -3758,8 +3758,8 @@ Missing images: %2</translation>
         <translation>Project actions</translation>
     </message>
     <message>
-        <source>Project files (*.zip *.txt)</source>
-        <translation>Project files (*.zip *.txt)</translation>
+        <source>Project files (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</source>
+        <translation>Project files (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</translation>
     </message>
     <message>
         <source>Projects</source>
@@ -3891,6 +3891,18 @@ Missing images: %2</translation>
 <context>
     <name>ProjectTransferService</name>
     <message>
+        <source>Invalid or unsupported archive. Use an unencrypted, single-volume ZIP, 7z, RAR, tar or tar.gz.</source>
+        <translation>Invalid or unsupported archive. Use an unencrypted, single-volume ZIP, 7z, RAR, tar or tar.gz.</translation>
+    </message>
+    <message>
+        <source>Cannot read an image in the archive: %1</source>
+        <translation>Cannot read an image in the archive: %1</translation>
+    </message>
+    <message>
+        <source>Unsupported file content. Select a project TXT or a supported archive.</source>
+        <translation>Unsupported file content. Select a project TXT or a supported archive.</translation>
+    </message>
+    <message>
         <source>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</source>
         <translation>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</translation>
     </message>
@@ -3959,12 +3971,12 @@ Missing images: %2</translation>
         <translation>Nested archives are not supported.</translation>
     </message>
     <message>
-        <source>The ZIP contains multiple TXT files. Select a single project before importing.</source>
-        <translation>The ZIP contains multiple TXT files. Select a single project before importing.</translation>
+        <source>The archive contains multiple TXT files. Select a single project before importing.</source>
+        <translation>The archive contains multiple TXT files. Select a single project before importing.</translation>
     </message>
     <message>
-        <source>The ZIP contains no project TXT.</source>
-        <translation>The ZIP contains no project TXT.</translation>
+        <source>The archive contains neither a project TXT nor supported images.</source>
+        <translation>The archive contains neither a project TXT nor supported images.</translation>
     </message>
     <message>
         <source>The transfer root is unavailable.</source>
@@ -4029,8 +4041,8 @@ Missing images: %2</translation>
         <translation>Project imported. Select it to open.</translation>
     </message>
     <message>
-        <source>Select a local ZIP or TXT file.</source>
-        <translation>Select a local ZIP or TXT file.</translation>
+        <source>Select a local archive or TXT file.</source>
+        <translation>Select a local archive or TXT file.</translation>
     </message>
     <message>
         <source>The file operation failed. Existing workspaces were kept.</source>
@@ -4056,16 +4068,16 @@ Missing images: %2</translation>
         <translation>Android file access is not available here.</translation>
     </message>
     <message>
-        <source>Only ZIP and TXT files are accepted by this file bridge.</source>
-        <translation>Only ZIP and TXT files are accepted by this file bridge.</translation>
+        <source>Select a ZIP, 7z, RAR, tar, tar.gz or TXT file.</source>
+        <translation>Select a ZIP, 7z, RAR, tar, tar.gz or TXT file.</translation>
     </message>
     <message>
         <source>Permission to read the selected file was lost. Select the file again.</source>
         <translation>Permission to read the selected file was lost. Select the file again.</translation>
     </message>
     <message>
-        <source>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</source>
-        <translation>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</translation>
+        <source>Select one content URI for an archive or TXT file. Conflicting or local file URIs are not accepted.</source>
+        <translation>Select one content URI for an archive or TXT file. Conflicting or local file URIs are not accepted.</translation>
     </message>
     <message>
         <source>The Android file bridge is not configured correctly.</source>

@@ -3705,8 +3705,8 @@ Missing images: %2</source>
         <translation>图片</translation>
     </message>
     <message>
-        <source>Import ZIP or TXT</source>
-        <translation>导入 ZIP 或 TXT</translation>
+        <source>Import archive or TXT</source>
+        <translation>导入压缩包或 TXT</translation>
     </message>
     <message>
         <source>Labels</source>
@@ -3745,8 +3745,8 @@ Missing images: %2</source>
         <translation>工程操作</translation>
     </message>
     <message>
-        <source>Project files (*.zip *.txt)</source>
-        <translation>工程文件 (*.zip *.txt)</translation>
+        <source>Project files (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</source>
+        <translation>工程文件 (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</translation>
     </message>
     <message>
         <source>Projects</source>
@@ -3878,6 +3878,18 @@ Missing images: %2</source>
 <context>
     <name>ProjectTransferService</name>
     <message>
+        <source>Invalid or unsupported archive. Use an unencrypted, single-volume ZIP, 7z, RAR, tar or tar.gz.</source>
+        <translation>压缩包无效或不受支持。请使用未加密、未分卷的 ZIP、7z、RAR、tar 或 tar.gz。</translation>
+    </message>
+    <message>
+        <source>Cannot read an image in the archive: %1</source>
+        <translation>无法读取压缩包中的图片：%1</translation>
+    </message>
+    <message>
+        <source>Unsupported file content. Select a project TXT or a supported archive.</source>
+        <translation>不支持此文件内容。请选择工程 TXT 或支持的压缩包。</translation>
+    </message>
+    <message>
         <source>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</source>
         <translation>分享缓存已满（2 GiB）。导出文件保留七天，请在过期清理后重试。</translation>
     </message>
@@ -3946,12 +3958,12 @@ Missing images: %2</source>
         <translation>不支持嵌套压缩包。</translation>
     </message>
     <message>
-        <source>The ZIP contains multiple TXT files. Select a single project before importing.</source>
-        <translation>ZIP 中包含多个 TXT 文件，请选择单个工程后再导入。</translation>
+        <source>The archive contains multiple TXT files. Select a single project before importing.</source>
+        <translation>压缩包内有多个 TXT 文件。请整理为单个工程后再导入。</translation>
     </message>
     <message>
-        <source>The ZIP contains no project TXT.</source>
-        <translation>ZIP 中没有工程 TXT 文件。</translation>
+        <source>The archive contains neither a project TXT nor supported images.</source>
+        <translation>压缩包内没有工程 TXT 或支持的图片。</translation>
     </message>
     <message>
         <source>The transfer root is unavailable.</source>
@@ -4016,8 +4028,8 @@ Missing images: %2</source>
         <translation>工程已导入，选择后即可打开。</translation>
     </message>
     <message>
-        <source>Select a local ZIP or TXT file.</source>
-        <translation>请选择本地 ZIP 或 TXT 文件。</translation>
+        <source>Select a local archive or TXT file.</source>
+        <translation>请选择本地压缩包或 TXT 文件。</translation>
     </message>
     <message>
         <source>The file operation failed. Existing workspaces were kept.</source>
@@ -4043,16 +4055,16 @@ Missing images: %2</source>
         <translation>当前环境无法使用 Android 文件访问功能。</translation>
     </message>
     <message>
-        <source>Only ZIP and TXT files are accepted by this file bridge.</source>
-        <translation>此文件桥接仅接受 ZIP 和 TXT 文件。</translation>
+        <source>Select a ZIP, 7z, RAR, tar, tar.gz or TXT file.</source>
+        <translation>请选择 ZIP、7z、RAR、tar、tar.gz 或 TXT 文件。</translation>
     </message>
     <message>
         <source>Permission to read the selected file was lost. Select the file again.</source>
         <translation>已失去所选文件的读取权限，请重新选择该文件。</translation>
     </message>
     <message>
-        <source>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</source>
-        <translation>请选择一个 ZIP 或 TXT 文件的 content URI。不接受相互冲突的 URI 或本地文件 URI。</translation>
+        <source>Select one content URI for an archive or TXT file. Conflicting or local file URIs are not accepted.</source>
+        <translation>请选择一个压缩包或 TXT 文件的 content URI。不接受冲突的 URI 或本地文件 URI。</translation>
     </message>
     <message>
         <source>The Android file bridge is not configured correctly.</source>

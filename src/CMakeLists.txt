@@ -39,6 +39,7 @@ set(LABELQT_SERVICE_SOURCES
     services/preferences/PreferenceStore.cpp
     services/project/PageSourceInfoService.cpp
     services/project/ProjectController.cpp
+    services/project/ProjectCreationService.cpp
     services/project/ProjectRevisionTracker.cpp
     services/project/ProjectLocationService.cpp
     services/project/PageManagementDraft.cpp

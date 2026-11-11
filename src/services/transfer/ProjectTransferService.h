@@ -31,8 +31,14 @@ struct TransferLimits {
 // No JNI, URI access, active-document save, source rename, recovery, or outgoing cleanup is performed.
 // Source files must remain stable during transfer; observable changes are rejected, but hostile concurrent
 // filesystem writers are outside this boundary. Callers must coordinate file mutations with the worker.
-// Only ordinary single-volume ZIP (store/deflate, UTF-8 names, no ZIP64/encryption) is supported.
-// Self-extracting prefixes, trailing payloads, and alternate-name Unicode ZIP extras are rejected.
+// Import accepts ordinary single-volume ZIP, 7z, RAR/RAR5, POSIX tar and tar.gz (no encryption).
+// Content signatures, not extensions, select the decoder. ZIP remains store/deflate, UTF-8, non-ZIP64;
+// its strict envelope rejects prefixes, trailing payloads and alternate-name Unicode extras.
+// One TXT imports an existing project. No TXT creates a new project from supported image files,
+// naturally ordered by relative path, preserving subdirectories. Multiple/invalid TXT files fail closed.
+// Finder resource files are excluded from discovery, not from archive safety checks. Gzip CRC/ISIZE are
+// independently checked with bounded streaming expansion; concatenated gzip members are unsupported.
+// Output is always ZIP. Decoder dictionary/solid-block allocations are not bounded by output byte limits.
 // Unsafe references and unknown metadata are rejected, not stripped. Missing images may be imported;
 // export requires every nonempty current/historical image reference to exist. Empty historical paths stay empty.
 // References must remain below the TXT's own directory (not a sibling ZIP directory). Image payloads are

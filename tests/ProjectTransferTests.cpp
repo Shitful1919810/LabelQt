@@ -2,20 +2,28 @@
 #include "core/ProjectIdentityService.h"
 #include "core/ProjectMetadataService.h"
 #include "services/project/PageSourceInfoService.h"
+#include "services/project/ProjectCreationService.h"
 #include "services/proofread/ReviewRoundService.h"
 #include "services/transfer/ProjectTransferService.h"
+#include "services/transfer/TransferSupport.h"
 
+#include <QBuffer>
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QRandomGenerator>
 #include <QStringEncoder>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QtEndian>
+#include <archive.h>
+#include <archive_entry.h>
 #include <filesystem>
+#include <memory>
 #include <utility>
 #include <zlib.h>
 
@@ -121,6 +129,42 @@ Project fixture(const QString& directory)
     return project;
 }
 
+QByteArray imageBytes()
+{
+    QImage image(32, 48, QImage::Format_RGB32);
+    image.fill(Qt::white);
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    if (!buffer.open(QIODevice::WriteOnly) || !image.save(&buffer, "PNG"))
+        qFatal("Cannot generate image fixture");
+    return bytes;
+}
+
+void writeFixtureArchive(const QString& path, const QVector<Entry>& entries, bool sevenZip, bool gzip = false)
+{
+    std::unique_ptr<archive, decltype(&archive_write_free)> writer(archive_write_new(), archive_write_free);
+    const auto format =
+        sevenZip ? archive_write_set_format_7zip(writer.get()) : archive_write_set_format_pax_restricted(writer.get());
+    if (format != ARCHIVE_OK || (gzip && archive_write_add_filter_gzip(writer.get()) != ARCHIVE_OK) ||
+        archive_write_set_bytes_per_block(writer.get(), 0) != ARCHIVE_OK ||
+        archive_write_open_filename(writer.get(), QFile::encodeName(path).constData()) != ARCHIVE_OK)
+        qFatal("Cannot open archive fixture");
+    for (const auto& item : entries) {
+        std::unique_ptr<archive_entry, decltype(&archive_entry_free)> entry(archive_entry_new(), archive_entry_free);
+        archive_entry_set_pathname_utf8(entry.get(), item.name.constData());
+        archive_entry_set_mode(entry.get(), item.mode);
+        if ((item.mode & AE_IFMT) == AE_IFLNK)
+            archive_entry_set_symlink(entry.get(), "../outside");
+        archive_entry_set_size(entry.get(), item.bytes.size());
+        if (archive_write_header(writer.get(), entry.get()) != ARCHIVE_OK ||
+            (!item.bytes.isEmpty() && archive_write_data(writer.get(), item.bytes.data(),
+                                                         static_cast<size_t>(item.bytes.size())) != item.bytes.size()))
+            qFatal("Cannot write archive fixture");
+    }
+    if (archive_write_close(writer.get()) != ARCHIVE_OK)
+        qFatal("Cannot close archive fixture");
+}
+
 Project withLabelCounts(Project project, const QList<int>& counts)
 {
     const auto imagePath = project.images().first().path;
@@ -167,6 +211,295 @@ void noPublication(const ProjectTransferService& service, const QString& root)
 class ProjectTransferTests final : public QObject {
     Q_OBJECT
 private slots:
+    void macMetadataIsNotProjectContent()
+    {
+        QTemporaryDir directory;
+        const auto input = directory.filePath("pages.zip");
+        for (bool existingProject : {false, true}) {
+            QVector<Entry> entries{{"book/page.png", imageBytes()},
+                                   {"__MACOSX/book/._page.png", "resource fork"},
+                                   {"book/._page.png", "resource fork"},
+                                   {"__MACOSX/book/._work.txt", "resource fork"},
+                                   {"book/.DS_Store", "finder metadata"}};
+            if (existingProject)
+                entries.append({"book/work.txt", document()});
+            put(input, zip(entries));
+            const auto imported = ProjectTransferService(directory.filePath("app")).importFile(input);
+            QVERIFY2(imported.has_value(), qPrintable(imported ? QString{} : imported.error()));
+            const auto project = LabelPlusDocument::loadFromFile(imported->projectPath);
+            QCOMPARE(project.images().size(), 1);
+            QVERIFY(QFileInfo::exists(project.images().first().path));
+            QVERIFY(project.images().first().name.endsWith("page.png"));
+        }
+        // Ignoring metadata for page discovery must not bypass archive security checks.
+        put(input, zip({{"page.png", imageBytes()}, {"__MACOSX/../escape.png", "unsafe"}}));
+        ProjectTransferService unsafeService(directory.filePath("unsafe"));
+        QVERIFY(!unsafeService.importFile(input));
+        noPublication(unsafeService, directory.filePath("unsafe"));
+    }
+
+    void gzipIntegrityIsChecked_data()
+    {
+        QTest::addColumn<int>("extraBytes");
+        QTest::newRow("small") << 0;
+        QTest::newRow("multiple-read-buffers") << 200000;
+    }
+
+    void gzipIntegrityIsChecked()
+    {
+        QFETCH(int, extraBytes);
+        QTemporaryDir directory;
+        const auto input = directory.filePath("pages.tgz");
+        QByteArray payload(extraBytes, Qt::Uninitialized);
+        QRandomGenerator random(12345);
+        for (auto& byte : payload)
+            byte = static_cast<char>(random.generate() & 0xff);
+        writeFixtureArchive(input, {{"page.png", imageBytes()}, {"extra.bin", payload}}, false, true);
+        const auto valid = get(input);
+        for (int corruption = 0; corruption < 5; ++corruption) {
+            auto bytes = valid;
+            if (corruption == 0)
+                bytes[bytes.size() - 8] ^= 1; // Payload CRC.
+            else if (corruption == 1)
+                bytes[bytes.size() - 4] ^= 1; // Uncompressed size.
+            else if (corruption == 2)
+                bytes.chop(8); // Missing trailer.
+            else if (corruption == 3)
+                bytes.append("unexpected trailing bytes");
+            else
+                bytes.append(valid); // A second gzip member must not be silently ignored by tar.
+            put(input, bytes);
+            ProjectTransferService service(directory.filePath("app"));
+            QVERIFY2(!service.importFile(input), qPrintable(QString::number(corruption)));
+            noPublication(service, directory.filePath("app"));
+        }
+        put(input, valid + QByteArray(1024, '\0'));
+        const auto padded = ProjectTransferService(directory.filePath("app")).importFile(input);
+        QVERIFY2(padded.has_value(), qPrintable(padded ? QString{} : padded.error()));
+    }
+
+    void rarReadersAndVolumeGate()
+    {
+        const auto fixtureDir = QStringLiteral(LABELQT_SOURCE_DIR "/tests/fixtures/archives/");
+        for (const auto& version : {QStringLiteral("rar4"), QStringLiteral("rar5")}) {
+            auto bytes = QByteArray::fromBase64(get(fixtureDir + version + ".base64"));
+            const bool rar5 = version == "rar5";
+            // Keep only the first regular file and the end marker from the RAR4 link fixture.
+            if (!rar5)
+                bytes = bytes.first(90) + bytes.last(7);
+            QTemporaryDir directory;
+            const auto input = directory.filePath("renamed.zip");
+            put(input, bytes);
+            QFile probe(input);
+            QVERIFY(probe.open(QIODevice::ReadOnly));
+            const auto format = transfer::detectArchive(probe);
+            QCOMPARE(format, rar5 ? transfer::ArchiveFormat::Rar5 : transfer::ArchiveFormat::Rar);
+            probe.close();
+            const auto extracted = directory.filePath("extracted");
+            QVERIFY(QDir().mkpath(extracted));
+            const auto files = transfer::extractArchive(input, extracted, *format, {});
+            QCOMPARE(files, QStringList{rar5 ? "helloworld.txt" : "test.txt"});
+            QCOMPARE(get(QDir(extracted).filePath(files.first())),
+                     rar5 ? QByteArray("hello libarchive test suite!\n") : QByteArray("test text document\r\n"));
+            // These flags describe a volume even when its first file is complete.
+            if (rar5) {
+                bytes[16] = char(static_cast<quint8>(bytes[16]) | 1);
+                qToLittleEndian<quint32>(
+                    static_cast<quint32>(crc32(0, reinterpret_cast<const Bytef*>(bytes.constData() + 12), 11)),
+                    bytes.data() + 8);
+            }
+            else {
+                bytes[10] = char(static_cast<quint8>(bytes[10]) | 1);
+                qToLittleEndian<quint16>(
+                    static_cast<quint16>(crc32(0, reinterpret_cast<const Bytef*>(bytes.constData() + 9), 11)),
+                    bytes.data() + 7);
+            }
+            put(input, bytes);
+            QVERIFY_EXCEPTION_THROWN(transfer::extractArchive(input, directory.filePath("volume"), *format, {}),
+                                     std::runtime_error);
+        }
+    }
+
+    void archiveCreationFailureIsAtomic()
+    {
+        QTemporaryDir directory;
+        const auto input = directory.filePath("input.7z");
+        ProjectTransferService service(directory.filePath("app"));
+        writeFixtureArchive(input, {{"page.png", "broken image"}}, true);
+        const auto broken = service.importFile(input);
+        QVERIFY(!broken);
+        QVERIFY(broken.error().contains("Cannot read an image"));
+        writeFixtureArchive(input, {{"work.txt", "broken project"}, {"page.png", imageBytes()}}, true);
+        QVERIFY(!service.importFile(input)); // A malformed TXT must not silently become a new image project.
+        noPublication(service, directory.filePath("app"));
+        writeFixtureArchive(input, {{"page.png", imageBytes()}, {"extra.png", imageBytes()}}, true);
+        const auto valid = get(input);
+        for (int option = 0; option < 3; ++option) {
+            TransferLimits limits;
+            if (option == 0)
+                limits.fileBytes = 16;
+            if (option == 1)
+                limits.totalBytes = 16;
+            if (option == 2)
+                limits.entries = 1;
+            QVERIFY(!ProjectTransferService(directory.filePath("app"), limits).importFile(input));
+        }
+        put(input, valid.first(valid.size() / 2));
+        QVERIFY(!service.importFile(input));
+        noPublication(service, directory.filePath("app"));
+    }
+
+    void tarRootDirectoryIsNotAnUnsafePage()
+    {
+        QTemporaryDir directory;
+        const auto input = directory.filePath("pages.tgz");
+        writeFixtureArchive(input, {{"./", {}, 0040700}, {"./pages/", {}, 0040700}, {"./pages/2.png", imageBytes()}},
+                            false, true);
+        const auto imported = ProjectTransferService(directory.filePath("app")).importFile(input);
+        QVERIFY2(imported.has_value(), qPrintable(imported ? QString{} : imported.error()));
+        QCOMPARE(LabelPlusDocument::loadFromFile(imported->projectPath).images().first().name, "pages/2.png");
+    }
+
+    void imageArchivesCreateIndependentProjects_data()
+    {
+        QTest::addColumn<QString>("kind");
+        for (const auto& kind : {"zip", "7z", "tar", "tar.gz"})
+            QTest::newRow(kind) << QString::fromLatin1(kind);
+    }
+
+    void imageArchivesCreateIndependentProjects()
+    {
+        QFETCH(QString, kind);
+        QTemporaryDir directory;
+        const auto input = directory.filePath("transport.zip"); // Extension is deliberately wrong for non-ZIP.
+        const auto pixels = imageBytes();
+        const QVector<Entry> entries{{"book/10.png", pixels},
+                                     {"book/2.png", pixels},
+                                     {"book/1.png", pixels},
+                                     {"other/1.png", pixels},
+                                     {"ignored.json", "{}"}};
+        if (kind == "zip")
+            put(input, zip(entries));
+        else
+            writeFixtureArchive(input, entries, kind == "7z", kind == "tar.gz");
+        const auto original = get(input);
+        ProjectTransferService service(directory.filePath("app"));
+        const auto first = service.importFile(input, false, "chapter." + kind);
+        QVERIFY2(first.has_value(), qPrintable(first ? QString{} : first.error()));
+        QCOMPARE(first->title, "chapter");
+        QCOMPARE(first->archiveName, "chapter.zip");
+        const auto project = LabelPlusDocument::loadFromFile(first->projectPath);
+        QCOMPARE(project.groups(), ProjectCreationService::defaultGroups());
+        QCOMPARE(project.images().size(), 4);
+        QCOMPARE(project.images()[0].name, "book/1.png");
+        QCOMPARE(project.images()[1].name, "book/2.png");
+        QCOMPARE(project.images()[2].name, "book/10.png");
+        QCOMPARE(project.images()[3].name, "other/1.png");
+        for (const auto& page : project.images()) {
+            QVERIFY(page.labels.isEmpty());
+            QVERIFY(!page.id.isNull());
+            QCOMPARE(get(page.path), pixels);
+        }
+        QVERIFY(!QFileInfo::exists(QFileInfo(first->projectPath).dir().filePath("ignored.json")));
+        const auto second = service.importFile(input, false, "chapter." + kind);
+        QVERIFY(second.has_value());
+        const auto another = LabelPlusDocument::loadFromFile(second->projectPath);
+        QVERIFY(second->id != first->id);
+        QVERIFY(another.id() != project.id());
+        QVERIFY(another.images()[0].id != project.images()[0].id);
+        const auto exported = service.exportZip(project);
+        QVERIFY2(exported.has_value(), qPrintable(exported ? QString{} : exported.error()));
+        const auto roundtrip = service.importFile(*exported);
+        QVERIFY(roundtrip.has_value());
+        QCOMPARE(LabelPlusDocument::loadFromFile(roundtrip->projectPath).images()[0].id, project.images()[0].id);
+        QCOMPARE(get(input), original);
+    }
+
+    void otherArchivesPreserveExistingProject_data()
+    {
+        imageArchivesCreateIndependentProjects_data();
+    }
+
+    void otherArchivesPreserveExistingProject()
+    {
+        QFETCH(QString, kind);
+        QTemporaryDir directory;
+        const auto source = fixture(directory.filePath("original"));
+        const QVector<Entry> entries{{"book/work.txt", get(source.filePath())},
+                                     {"book/page.png", get(source.images()[0].path)},
+                                     {"unused.png", imageBytes()}};
+        const auto input = directory.filePath("renamed.zip");
+        if (kind == "zip")
+            put(input, zip(entries));
+        else
+            writeFixtureArchive(input, entries, kind == "7z", kind == "tar.gz");
+        const auto result = ProjectTransferService(directory.filePath("app")).importFile(input);
+        QVERIFY2(result.has_value(), qPrintable(result ? QString{} : result.error()));
+        const auto project = LabelPlusDocument::loadFromFile(result->projectPath);
+        QCOMPARE(project.images().size(), 1);
+        QCOMPARE(project.images()[0].labels[0].text(), "hello\n");
+        QCOMPARE(project.id(), source.id());
+    }
+
+    void otherArchivesRejectUnsafeMembers_data()
+    {
+        QTest::addColumn<bool>("sevenZip");
+        QTest::addColumn<QByteArray>("name");
+        QTest::addColumn<bool>("link");
+        for (bool sevenZip : {false, true}) {
+            const auto prefix = sevenZip ? QByteArray("7z-") : QByteArray("tar-");
+            QTest::newRow((prefix + "traversal").constData()) << sevenZip << QByteArray("../outside") << false;
+            QTest::newRow((prefix + "duplicate").constData()) << sevenZip << QByteArray("page.png") << false;
+            QTest::newRow((prefix + "case").constData()) << sevenZip << QByteArray("PAGE.png") << false;
+            QTest::newRow((prefix + "link").constData()) << sevenZip << QByteArray("link") << true;
+        }
+    }
+
+    void otherArchivesRejectUnsafeMembers()
+    {
+        QFETCH(bool, sevenZip);
+        QFETCH(QByteArray, name);
+        QFETCH(bool, link);
+        QTemporaryDir directory;
+        const auto input = directory.filePath("input.zip");
+        writeFixtureArchive(input, {{"page.png", imageBytes()}, {name, {}, link ? 0120777U : 0100600U}}, sevenZip);
+        ProjectTransferService service(directory.filePath("app"));
+        QVERIFY(!service.importFile(input));
+        noPublication(service, directory.filePath("app"));
+        QVERIFY(!QFileInfo::exists(directory.filePath("outside")));
+    }
+
+    void naturalImageOrderIsDeterministic()
+    {
+        QStringList names{"p10.png",
+                          "p2.png",
+                          "p01.png",
+                          "p1.png",
+                          "p000.png",
+                          "p0.png",
+                          "p99999999999999999999.png",
+                          "p100000000000000000000.png"};
+        ProjectCreationService::sortImageNames(names);
+        QCOMPARE(names, (QStringList{"p0.png", "p000.png", "p01.png", "p1.png", "p2.png", "p10.png",
+                                     "p99999999999999999999.png", "p100000000000000000000.png"}));
+    }
+
+    void optionalLocalArchiveRegression()
+    {
+        const auto path = qEnvironmentVariable("LABELQT_TEST_IMPORT_ARCHIVE");
+        if (path.isEmpty())
+            QSKIP("Set LABELQT_TEST_IMPORT_ARCHIVE to check a private sample without committing it.");
+        QTemporaryDir directory;
+        ProjectTransferService service(directory.filePath("app"));
+        const auto result = service.importFile(path);
+        QVERIFY2(result.has_value(), qPrintable(result ? QString{} : result.error()));
+        const auto project = LabelPlusDocument::loadFromFile(result->projectPath);
+        QVERIFY(!project.images().isEmpty());
+        const auto exported = service.exportZip(project);
+        QVERIFY2(exported.has_value(), qPrintable(exported ? QString{} : exported.error()));
+        qInfo() << "Imported pages:" << project.images().size() << "; re-export verified";
+    }
+
     void workspaceManagementAndRetention()
     {
         QTemporaryDir directory;
@@ -335,10 +668,10 @@ private slots:
         const auto multiple = service.importFile(input);
         QVERIFY(!multiple);
         QVERIFY(multiple.error().contains("multiple TXT"));
-        put(input, zip({{"page.png", "pixels"}}));
+        put(input, zip({{"unknown.bin", "pixels"}}));
         const auto none = service.importFile(input);
         QVERIFY(!none);
-        QVERIFY(none.error().contains("no project TXT"));
+        QVERIFY(none.error().contains("neither a project TXT"));
         noPublication(service, directory.filePath("app"));
     }
 

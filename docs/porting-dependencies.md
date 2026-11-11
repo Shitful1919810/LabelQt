@@ -9,9 +9,11 @@ Android 构建说明见 [android-build.md](android-build.md)，完整目标见 [
 但保留共用身份、版本和提交机制。系统输入法不需要额外引入 Qt Virtual Keyboard。
 
 QQ 收发使用 Android 标准 Intent、文档选择器和受限 FileProvider，不计划引入 QQ SDK。
-移动目标 ZIP 读写使用 libarchive：Android 固定 3.8.11 源码与 SHA256，仅启用 zlib 压缩依赖，
-关闭命令行工具、XML、密码学和额外压缩依赖；主机移动测试使用系统 libarchive >= 3.6。
-具体运行时只注册 ZIP 读取器，拒绝加密/分卷/ZIP64、链接、路径逃逸和资源预算超限。
+移动目标归档导入及 ZIP 导出使用 libarchive：Android 固定 3.8.11 源码与 SHA256，启用 zlib 和
+固定版本 XZ/liblzma 5.8.4（0BSD，支持 7z 的 LZMA/LZMA2）；关闭命令行工具、XML、密码学和其他压缩依赖。
+主机移动测试使用带 LZMA 支持的系统 libarchive >= 3.6。
+运行时只注册对应文件头的 ZIP/7z/RAR/RAR5/tar 读取器及必要的 gzip filter，
+拒绝加密/分卷/ZIP64、链接、路径逃逸和输出预算超限，不启用外部解压程序。
 Android 用 NDK 自带 zlib，不能误链接主机 `/usr/lib`；不引入 Qt Virtual Keyboard 或 QQ SDK。
 工具链为 Qt 6.10.2、NDK r27c、SDK 36、JDK 17、Qt 模板的 Gradle 8.14.3/AGP 8.10.1，最低 API 28。
 真机与 16 KiB 验收仍是正式发布门槛。

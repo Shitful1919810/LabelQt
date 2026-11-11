@@ -4,6 +4,7 @@
 #include "core/LabelPlusDocument.h"
 #include "core/ProjectIdentityService.h"
 #include "services/io/FileRenameTransaction.h"
+#include "services/project/ProjectCreationService.h"
 #include "services/project/ProjectLocationService.h"
 #include "services/project/ProjectRecoveryService.h"
 
@@ -12,7 +13,6 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
-#include <QImageReader>
 #include <QUuid>
 
 #include <exception>
@@ -29,21 +29,6 @@ FileRevision writeProject(const labelqt::core::Project& project, ProjectFileTran
 {
     const QByteArray bytes = labelqt::core::LabelPlusDocument::serialize(project).toUtf8();
     return transaction.write(bytes, expected);
-}
-
-QStringList supportedImageNameFilters()
-{
-    QStringList filters;
-    const QList<QByteArray> formats = QImageReader::supportedImageFormats();
-    filters.reserve(formats.size());
-    for (const QByteArray& format : formats) {
-        const QString suffix = QString::fromLatin1(format);
-        filters.append(QStringLiteral("*.%1").arg(suffix.toLower()));
-        filters.append(QStringLiteral("*.%1").arg(suffix.toUpper()));
-    }
-    filters.removeDuplicates();
-    filters.sort(Qt::CaseInsensitive);
-    return filters;
 }
 
 QString availableProjectPath(const QDir& directory, const QString& baseName)
@@ -231,20 +216,15 @@ ProjectController::tryCreateProjectFromImageDirectory(const QString& directoryPa
 {
     QDir directory(directoryPath);
     const QFileInfoList imageFiles =
-        directory.entryInfoList(supportedImageNameFilters(), QDir::Files | QDir::Readable, QDir::Name);
+        directory.entryInfoList(ProjectCreationService::supportedImageNameFilters(), QDir::Files | QDir::Readable,
+                                QDir::Name);
     if (imageFiles.isEmpty()) {
         return std::unexpected(NewProjectError{NewProjectError::Code::NoImages, {}, {}});
     }
 
-    labelqt::core::Project newProject;
-    newProject.setGroups(defaultGroups);
-    newProject.setSourceName(directory.dirName());
-    for (const QFileInfo& imageFile : imageFiles) {
-        labelqt::core::ImageEntry image;
-        image.name = imageFile.fileName();
-        image.path = imageFile.absoluteFilePath();
-        newProject.images().append(std::move(image));
-    }
+    QStringList names;
+    for (const auto& imageFile : imageFiles)
+        names.append(imageFile.fileName());
 
     const QString defaultProjectPath = directory.filePath(QStringLiteral("%1.txt").arg(projectBaseName));
     QString projectPath = defaultProjectPath;
@@ -255,7 +235,7 @@ ProjectController::tryCreateProjectFromImageDirectory(const QString& directoryPa
         }
         projectPath = availableProjectPath(directory, projectBaseName);
     }
-    newProject.setFilePath(projectPath);
+    const auto newProject = ProjectCreationService::fromImages(projectPath, names, defaultGroups, directory.dirName());
 
     try {
         ProjectFileTransaction transaction(projectPath);

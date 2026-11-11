@@ -3705,8 +3705,8 @@ Missing images: %2</source>
         <translation>圖片</translation>
     </message>
     <message>
-        <source>Import ZIP or TXT</source>
-        <translation>匯入 ZIP 或 TXT</translation>
+        <source>Import archive or TXT</source>
+        <translation>匯入壓縮檔或 TXT</translation>
     </message>
     <message>
         <source>Labels</source>
@@ -3745,8 +3745,8 @@ Missing images: %2</source>
         <translation>工程操作</translation>
     </message>
     <message>
-        <source>Project files (*.zip *.txt)</source>
-        <translation>工程檔案 (*.zip *.txt)</translation>
+        <source>Project files (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</source>
+        <translation>工程檔案 (*.zip *.7z *.rar *.tar *.tar.gz *.tgz *.txt)</translation>
     </message>
     <message>
         <source>Projects</source>
@@ -3878,6 +3878,18 @@ Missing images: %2</source>
 <context>
     <name>ProjectTransferService</name>
     <message>
+        <source>Invalid or unsupported archive. Use an unencrypted, single-volume ZIP, 7z, RAR, tar or tar.gz.</source>
+        <translation>壓縮檔無效或不受支援。請使用未加密、未分卷的 ZIP、7z、RAR、tar 或 tar.gz。</translation>
+    </message>
+    <message>
+        <source>Cannot read an image in the archive: %1</source>
+        <translation>無法讀取壓縮檔中的圖片：%1</translation>
+    </message>
+    <message>
+        <source>Unsupported file content. Select a project TXT or a supported archive.</source>
+        <translation>不支援此檔案內容。請選擇工程 TXT 或支援的壓縮檔。</translation>
+    </message>
+    <message>
         <source>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</source>
         <translation>分享快取已滿（2 GiB）。匯出檔案保留七天，請在到期清理後重試。</translation>
     </message>
@@ -3946,12 +3958,12 @@ Missing images: %2</source>
         <translation>不支援巢狀壓縮檔。</translation>
     </message>
     <message>
-        <source>The ZIP contains multiple TXT files. Select a single project before importing.</source>
-        <translation>ZIP 中包含多個 TXT 檔案，請選擇單一工程後再匯入。</translation>
+        <source>The archive contains multiple TXT files. Select a single project before importing.</source>
+        <translation>壓縮檔內有多個 TXT 檔案。請整理為單個工程後再匯入。</translation>
     </message>
     <message>
-        <source>The ZIP contains no project TXT.</source>
-        <translation>ZIP 中沒有工程 TXT 檔案。</translation>
+        <source>The archive contains neither a project TXT nor supported images.</source>
+        <translation>壓縮檔內沒有工程 TXT 或支援的圖片。</translation>
     </message>
     <message>
         <source>The transfer root is unavailable.</source>
@@ -4016,8 +4028,8 @@ Missing images: %2</source>
         <translation>工程已匯入，選取後即可開啟。</translation>
     </message>
     <message>
-        <source>Select a local ZIP or TXT file.</source>
-        <translation>請選擇本機 ZIP 或 TXT 檔案。</translation>
+        <source>Select a local archive or TXT file.</source>
+        <translation>請選擇本機壓縮檔或 TXT 檔案。</translation>
     </message>
     <message>
         <source>The file operation failed. Existing workspaces were kept.</source>
@@ -4043,16 +4055,16 @@ Missing images: %2</source>
         <translation>目前環境無法使用 Android 檔案存取功能。</translation>
     </message>
     <message>
-        <source>Only ZIP and TXT files are accepted by this file bridge.</source>
-        <translation>此檔案橋接僅接受 ZIP 和 TXT 檔案。</translation>
+        <source>Select a ZIP, 7z, RAR, tar, tar.gz or TXT file.</source>
+        <translation>請選擇 ZIP、7z、RAR、tar、tar.gz 或 TXT 檔案。</translation>
     </message>
     <message>
         <source>Permission to read the selected file was lost. Select the file again.</source>
         <translation>已失去所選檔案的讀取權限，請重新選擇該檔案。</translation>
     </message>
     <message>
-        <source>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</source>
-        <translation>請選擇一個 ZIP 或 TXT 檔案的 content URI。不接受互相衝突的 URI 或本機檔案 URI。</translation>
+        <source>Select one content URI for an archive or TXT file. Conflicting or local file URIs are not accepted.</source>
+        <translation>請選擇一個壓縮檔或 TXT 檔案的 content URI。不接受衝突的 URI 或本機檔案 URI。</translation>
     </message>
     <message>
         <source>The Android file bridge is not configured correctly.</source>

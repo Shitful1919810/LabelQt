@@ -32,12 +32,24 @@ QtKeychain and the Python runner are desktop-only; they are not linked into the 
 ## libarchive (Mobile Transfer)
 
 - Source: <https://github.com/libarchive/libarchive/releases/tag/v3.8.11>
-- Usage: bounded ZIP workspace import/export in `src/services/transfer`; not linked by the desktop-only target.
+- Usage: ZIP/7z/RAR/tar workspace import and ZIP export in `src/services/transfer`; not linked by the desktop-only target.
 - Android: source release 3.8.11, SHA256 `a3dc0872b1b39da34dc18ef1b944f0f11ffd37425d70ae04be679279f1cf43d2`,
-  fetched by CMake and statically linked. Only the zlib compression dependency is enabled; tools, XML,
-  cryptography and optional compression dependencies are disabled. Host mobile tests use system libarchive >= 3.6.
+  fetched by CMake and statically linked. zlib and liblzma are enabled; tools, XML,
+  cryptography and other compression dependencies are disabled. Host mobile tests use system libarchive >= 3.6 with LZMA.
 - License: upstream COPYING describes the BSD-family licenses of the component sources. Ship that exact COPYING
   and applicable source notices with a binary distribution; no libarchive SDK/source is committed here.
+
+Test-only RAR fixtures from libarchive 3.8.11 are retained under `tests/fixtures/archives/` with provenance
+and the corresponding BSD notices. They contain public upstream test data, not user projects.
+
+## liblzma (Android 7z Import)
+
+- Source: <https://github.com/tukaani-project/xz/releases/tag/v5.8.4>
+- Android uses XZ Utils 5.8.4, SHA256 `4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b`
+  for `xz-5.8.4.tar.xz`; CMake builds and statically links only liblzma, not the XZ command-line tools or scripts.
+- License: liblzma is BSD Zero Clause (0BSD), as described in that release's `COPYING` / `COPYING.0BSD`.
+  Preserve the exact source/version and license materials with Android distributions. No SDK/source is vendored.
+- Some other XZ distribution components have different licenses; they are not automatically part of this application.
 
 ## Android Runtime Dependencies
 

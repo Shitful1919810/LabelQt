@@ -1,5 +1,6 @@
 #include "core/LabelPlusDocument.h"
 #include "mobile/MobileWorkspaceController.h"
+#include "services/transfer/TransferSupport.h"
 
 #include <QAbstractItemModelTester>
 #include <QFile>
@@ -39,6 +40,41 @@ class MobileWorkspaceTests : public QObject {
     }
 
 private slots:
+    void imageArchiveCreatesEditableWorkspace()
+    {
+        QTemporaryDir root;
+        const auto source = root.filePath("source");
+        QVERIFY(QDir().mkpath(source));
+        QImage image(100, 150, QImage::Format_RGB32);
+        image.fill(Qt::white);
+        QVERIFY(image.save(QDir(source).filePath("page.png")));
+        const auto input = root.filePath("raw-images.zip");
+        transfer::writeZip(source, {"page.png"}, input, {});
+        MobileDocument document;
+        MobileWorkspaceController workspace(document, root.filePath("app"));
+        workspace.importLocal(QUrl::fromLocalFile(input));
+        QTRY_COMPARE_WITH_TIMEOUT(workspace.workspaces()->rowCount(), 1, 10000);
+        QTRY_VERIFY(!workspace.busy());
+        QVERIFY(workspace.openWorkspace(workspace.workspaces()->entries().first().id));
+        QCOMPARE(document.title(), "raw-images");
+        QVERIFY(!document.groups().isEmpty());
+        document.addLabel(0.5, 0.5);
+        QVERIFY(!document.selectedLabel().isEmpty());
+        document.updateText("New translation");
+        QVERIFY(document.save());
+        document.undo();
+        QCOMPARE(document.controller().project().images()[0].labels[0].text(), QString{});
+        document.redo();
+        QCOMPARE(document.controller().project().images()[0].labels[0].text(), "New translation");
+        QVERIFY(workspace.exportProject(workspace.suggestedShareName()));
+        QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 10000);
+        QVERIFY2(!workspace.lastExport().isEmpty(), qPrintable(workspace.message()));
+        const auto copy = ProjectTransferService(root.filePath("recipient")).importFile(workspace.lastExport());
+        QVERIFY(copy.has_value());
+        QCOMPARE(labelqt::core::LabelPlusDocument::loadFromFile(copy->projectPath).images()[0].labels[0].text(),
+                 "New translation");
+    }
+
     void queuedImportsAreIndependentAndNeverOverwriteSource()
     {
         QTemporaryDir root;

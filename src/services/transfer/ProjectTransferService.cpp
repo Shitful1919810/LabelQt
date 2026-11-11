@@ -3,6 +3,7 @@
 #include "core/LabelPlusDocument.h"
 #include "core/ProjectIdentityService.h"
 #include "core/ProjectMetadataService.h"
+#include "services/project/ProjectCreationService.h"
 #include "services/project/ProjectLocationService.h"
 #include "services/proofread/ReviewRoundService.h"
 #include "services/transfer/TransferSupport.h"
@@ -10,6 +11,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QHash>
+#include <QImageReader>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QTemporaryDir>
@@ -351,6 +353,40 @@ WorkspaceInfo readWorkspace(const QString& directory, const TransferLimits& limi
     validateProject(readProject(info.projectPath, limits), limits);
     return info;
 }
+
+Project archiveProject(const QString& directory, const QStringList& files, const QString& title,
+                       const TransferLimits& limits)
+{
+    QStringList projects, images;
+    const auto filters = ProjectCreationService::supportedImageNameFilters();
+    for (const auto& file : files) {
+        // Finder resource forks are transport metadata, not images or LabelPlus documents.
+        // This runs after extraction, so these entries still undergo all archive safety checks.
+        const auto components = file.split('/');
+        if (components.contains("__MACOSX") || components.last().startsWith("._"))
+            continue;
+        if (QFileInfo(file).suffix().compare("txt", Qt::CaseInsensitive) == 0)
+            projects.append(file);
+        else if (QDir::match(filters, QFileInfo(file).fileName()))
+            images.append(file);
+    }
+    require(projects.size() <= 1,
+            ProjectTransferService::tr(
+                "The archive contains multiple TXT files. Select a single project before importing."));
+    if (!projects.isEmpty())
+        return readProject(QDir(directory).filePath(projects.first()), limits);
+    require(!images.isEmpty(),
+            ProjectTransferService::tr("The archive contains neither a project TXT nor supported images."));
+    // Validate headers without decoding full images. Never silently omit a damaged page.
+    for (const auto& image : images) {
+        QImageReader reader(QDir(directory).filePath(image));
+        require(reader.canRead() && !reader.size().isEmpty(),
+                ProjectTransferService::tr("Cannot read an image in the archive: %1").arg(image));
+    }
+    ProjectCreationService::sortImageNames(images);
+    return ProjectCreationService::fromImages(QDir(directory).filePath("project.txt"), images,
+                                              ProjectCreationService::defaultGroups(), title);
+}
 } // namespace
 
 ProjectTransferService::ProjectTransferService(QString root, TransferLimits limits)
@@ -405,25 +441,22 @@ std::expected<WorkspaceInfo, QString> ProjectTransferService::importFile(QString
         copyFile(path, input, m_limits.inputBytes, remaining);
         QFile probe(input);
         require(probe.open(QIODevice::ReadOnly), tr("Cannot inspect transfer input."));
-        const bool zip = probe.peek(4).startsWith("PK");
+        const auto format = detectArchive(probe);
         probe.close();
-        QString title = QFileInfo(displayName.isEmpty() ? path : displayName).completeBaseName();
+        const auto sourceName = QFileInfo(displayName.isEmpty() ? path : displayName).fileName();
+        QString title = QFileInfo(sourceName).completeBaseName();
+        if (sourceName.endsWith(".tar.gz", Qt::CaseInsensitive))
+            title.chop(4);
         Project project;
-        if (zip) {
+        if (format) {
             const auto extracted = stage.filePath("extracted");
             makeDirectory(extracted);
-            const auto files = extractZip(input, extracted, m_limits);
-            QStringList projects;
-            for (const auto& file : files)
-                if (QFileInfo(file).suffix().compare("txt", Qt::CaseInsensitive) == 0)
-                    projects.append(file);
-            require(projects.size() == 1,
-                    projects.isEmpty()
-                        ? tr("The ZIP contains no project TXT.")
-                        : tr("The ZIP contains multiple TXT files. Select a single project before importing."));
-            project = readProject(QDir(extracted).filePath(projects.first()), m_limits);
+            const auto files = extractArchive(input, extracted, *format, m_limits);
+            project = archiveProject(extracted, files, title, m_limits);
         }
         else {
+            require(QFileInfo(sourceName).suffix().compare("txt", Qt::CaseInsensitive) == 0,
+                    tr("Unsupported file content. Select a project TXT or a supported archive."));
             project = readProject(input, m_limits);
             // The staged bytes belong logically to the original TXT directory. Validate raw metadata
             // before relocating the loaded paths; do not serialize/reparse or rebase relative comments
@@ -437,12 +470,12 @@ std::expected<WorkspaceInfo, QString> ProjectTransferService::importFile(QString
         const auto candidate = stage.filePath("candidate");
         const auto projectDir = QDir(candidate).filePath("project");
         makeDirectory(projectDir);
-        materialize(project, projectDir, zip || copyAdjacentImages, false, m_limits);
+        materialize(project, projectDir, format.has_value() || copyAdjacentImages, false, m_limits);
         const auto id = QUuid::createUuid().toString(QUuid::WithoutBraces);
         if (title.isEmpty())
             title = "project";
         const auto archiveName = WorkspaceStorageService::suggestedArchiveName(
-            zip ? (displayName.isEmpty() ? QFileInfo(path).fileName() : displayName) : title + ".zip");
+            sourceName.endsWith(".zip", Qt::CaseInsensitive) ? sourceName : title + ".zip");
         const auto manifest = workspaceManifest({id, title, {}, archiveName, {}});
         writeFile(QDir(candidate).filePath("workspace.json"), manifest);
         const auto published = QDir(workspaces).filePath(id);
