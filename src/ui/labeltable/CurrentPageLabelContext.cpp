@@ -1,4 +1,5 @@
 #include "ui/labeltable/CurrentPageLabelContext.h"
+#include "services/label/LabelVisibility.h"
 
 #include <algorithm>
 #include <utility>
@@ -112,10 +113,5 @@ void CurrentPageLabelContext::rebuildVisibleRows()
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(labels->size()); ++i) {
-        const labelqt::core::Label& label = labels->at(i);
-        if (!label.isDeleted() && m_groupFilter.contains(label.group())) {
-            m_visibleRows.append(i);
-        }
-    }
+    m_visibleRows = labelqt::services::LabelVisibility::sourceIndexes(*labels, m_groupFilter);
 }

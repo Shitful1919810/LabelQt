@@ -64,6 +64,21 @@ private slots:
         QVERIFY(window);
         auto* home = window->findChild<QQuickItem*>(QStringLiteral("homeProjects"));
         QVERIFY(home && home->isVisible());
+        auto* aboutAction = window->findChild<QObject*>(QStringLiteral("aboutAction"));
+        auto* aboutDialog = window->findChild<QObject*>(QStringLiteral("aboutDialog"));
+        auto* aboutVersion = window->findChild<QQuickItem*>(QStringLiteral("aboutVersion"));
+        QVERIFY(aboutAction && aboutDialog && aboutVersion);
+        QVERIFY(QMetaObject::invokeMethod(aboutAction, "triggered"));
+        QTRY_VERIFY(aboutDialog->property("opened").toBool());
+        QVERIFY(aboutVersion->property("text").toString().contains(QCoreApplication::applicationVersion()));
+        const auto aboutScreenshots = qEnvironmentVariable("LABELQT_SCREENSHOT_DIR");
+        if (!aboutScreenshots.isEmpty()) {
+            QVERIFY(QDir().mkpath(aboutScreenshots));
+            QTest::qWait(100);
+            QVERIFY(window->grabWindow().save(QDir(aboutScreenshots).filePath("about.png")));
+        }
+        QVERIFY(QMetaObject::invokeMethod(aboutDialog, "close"));
+        QTRY_VERIFY(!aboutDialog->property("visible").toBool());
         workspace.importLocal(QUrl::fromLocalFile(project.filePath()));
         QTRY_COMPARE(workspace.workspaces()->rowCount(), 1);
         QTRY_VERIFY(!workspace.busy());
@@ -171,6 +186,9 @@ private slots:
         QVERIFY(shareAction && shareDialog && shareName);
         QVERIFY(QMetaObject::invokeMethod(shareAction, "triggered"));
         QTRY_VERIFY(shareDialog->property("opened").toBool());
+        auto* footer = shareDialog->property("footer").value<QObject*>();
+        QVERIFY(footer);
+        QCOMPARE(footer->property("count").toInt(), 2);
         QCOMPARE(shareName->property("text").toString(), workspace.suggestedShareName());
         window->resize({360, 800});
         QTest::qWait(100);
@@ -185,6 +203,17 @@ private slots:
         QVERIFY(shareDialog->property("visible").toBool());
         QVERIFY(!workspace.busy());
         QVERIFY(!workspace.message().isEmpty());
+        for (const auto size : {QSize(320, 480), QSize(800, 320)}) {
+            window->resize(size);
+            QTest::qWait(100);
+            const auto bounds = submit->mapRectToScene(submit->boundingRect());
+            QVERIFY(bounds.top() >= 0 && bounds.bottom() <= size.height());
+            QVERIFY(bounds.left() >= 0 && bounds.right() <= size.width());
+            if (!screenshotDirectory.isEmpty())
+                QVERIFY(window->grabWindow().save(
+                    QDir(screenshotDirectory)
+                        .filePath(QString("share-%1x%2.png").arg(size.width()).arg(size.height()))));
+        }
         QVERIFY(QMetaObject::invokeMethod(shareDialog, "close"));
         QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join('\n')));
     }
@@ -193,6 +222,7 @@ private slots:
 int main(int argc, char** argv)
 {
     QGuiApplication app(argc, argv);
+    app.setApplicationVersion(QStringLiteral("0.1.0-test"));
     QQuickStyle::setStyle(QStringLiteral("Material"));
     MobileShellTests tests;
     return QTest::qExec(&tests, argc, argv);

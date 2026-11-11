@@ -90,14 +90,14 @@ ApplicationWindow {
             IconButton {
                 iconName: "ellipsis"
                 text: qsTr("Project actions")
-                visible: mobileDocument.opened
                 onClicked: actions.open()
                 Menu {
                     id: actions
-                    MenuItem { text: qsTr("Save"); enabled: mobileDocument.opened; onTriggered: if (window.finishEditing()) mobileDocument.save() }
+                    MenuItem { text: qsTr("Save"); visible: mobileDocument.opened; enabled: mobileDocument.opened; onTriggered: if (window.finishEditing()) mobileDocument.save() }
                     MenuItem {
                         objectName: "shareZipAction"
                         text: qsTr("Share ZIP")
+                        visible: mobileDocument.opened
                         enabled: mobileDocument.opened && !workspaceController.busy
                         onTriggered: {
                             if (window.finishEditing()) {
@@ -107,7 +107,8 @@ ApplicationWindow {
                             }
                         }
                     }
-                    MenuItem { text: qsTr("Groups"); enabled: mobileDocument.opened; onTriggered: groupsDialog.open() }
+                    MenuItem { text: qsTr("Groups"); visible: mobileDocument.opened; enabled: mobileDocument.opened; onTriggered: groupsDialog.open() }
+                    MenuItem { objectName: "aboutAction"; text: qsTr("About"); onTriggered: aboutDialog.open() }
                 }
             }
         }
@@ -361,6 +362,7 @@ ApplicationWindow {
             width: parent.width
             Label { text: qsTr("ZIP file name"); Layout.fillWidth: true }
             TextField { id: shareName; objectName: "shareZipName"; Layout.fillWidth: true; selectByMouse: true }
+            Label { text: qsTr("The ZIP excludes comments and proofreading records. They remain in the local project."); Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label { text: mobileDocument.error || workspaceController.message; textFormat: Text.PlainText; visible: text.length > 0; wrapMode: Text.Wrap; Layout.fillWidth: true }
         }
     }
@@ -400,7 +402,7 @@ ApplicationWindow {
             Label { text: mobileDocument.error || workspaceController.message; textFormat: Text.PlainText; visible: text.length > 0; wrapMode: Text.Wrap; Layout.fillWidth: true }
         }
     }
-    Dialog {
+    ScrollDialog {
         id: newRoundDialog
         modal: true
         anchors.centerIn: parent
@@ -408,12 +410,20 @@ ApplicationWindow {
         title: qsTr("Start a new review?")
         standardButtons: Dialog.Ok | Dialog.Cancel
         onAccepted: if (window.finishEditing()) mobileReview.startRound(true)
-        Label { width: parent.width; wrapMode: Text.Wrap; text: qsTr("The previous round will be replaced. Export a ZIP first to keep it.") }
+        ColumnLayout {
+            Layout.fillWidth: true
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                text: qsTr("The previous round and its notes will be replaced. Shared ZIPs do not retain this information.")
+            }
+        }
     }
-    Dialog {
+    ScrollDialog {
         id: deleteDialog
         modal: true
         anchors.centerIn: parent
+        width: Math.min(window.width - 32, 440)
         title: qsTr("Delete selected label?")
         standardButtons: Dialog.Ok | Dialog.Cancel
         onAccepted: if (window.finishEditing()) mobileDocument.deleteSelected()
@@ -436,7 +446,7 @@ ApplicationWindow {
         onRejected: noteText.clear()
         ColumnLayout {
             width: parent.width
-            TextArea { id: noteText; Layout.fillWidth: true; Layout.preferredHeight: 160; wrapMode: TextEdit.Wrap; placeholderText: qsTr("Note for the selected label or current page") }
+            TextArea { id: noteText; Layout.fillWidth: true; Layout.minimumHeight: 120; wrapMode: TextEdit.Wrap; placeholderText: qsTr("Note for the selected label or current page") }
             Label { text: mobileReview.error; textFormat: Text.PlainText; visible: text.length > 0; wrapMode: Text.Wrap; Layout.fillWidth: true }
         }
     }
@@ -470,8 +480,10 @@ ApplicationWindow {
             }
             RowLayout {
                 TextField { id: newGroup; Layout.fillWidth: true; placeholderText: qsTr("New group") }
-                Button { text: qsTr("Add"); onClicked: { if (window.finishEditing()) mobileDocument.addGroup(newGroup.text); newGroup.clear() } }
+                Button { text: qsTr("Add"); onClicked: { if (window.finishEditing() && mobileDocument.addGroup(newGroup.text)) newGroup.clear() } }
             }
+            Label { text: mobileDocument.error; textFormat: Text.PlainText; visible: text.length > 0; wrapMode: Text.Wrap; Layout.fillWidth: true }
         }
     }
+    AboutDialog { id: aboutDialog }
 }

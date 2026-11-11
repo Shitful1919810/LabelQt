@@ -3638,6 +3638,10 @@ Missing images: %2</translation>
 <context>
     <name>Main</name>
     <message>
+        <source>About</source>
+        <translation>About</translation>
+    </message>
+    <message>
         <source>Edited %1</source>
         <translation>Edited %1</translation>
     </message>
@@ -3656,6 +3660,10 @@ Missing images: %2</translation>
     <message>
         <source>ZIP file name</source>
         <translation>ZIP file name</translation>
+    </message>
+    <message>
+        <source>The ZIP excludes comments and proofreading records. They remain in the local project.</source>
+        <translation>The ZIP excludes comments and proofreading records. They remain in the local project.</translation>
     </message>
     <message>
         <source>Delete the local copy of &quot;%1&quot; and its images? This cannot be undone. The original imported file and shared ZIPs will be kept.</source>
@@ -3794,8 +3802,8 @@ Missing images: %2</translation>
         <translation>Start a new review?</translation>
     </message>
     <message>
-        <source>The previous round will be replaced. Export a ZIP first to keep it.</source>
-        <translation>The previous round will be replaced. Export a ZIP first to keep it.</translation>
+        <source>The previous round and its notes will be replaced. Shared ZIPs do not retain this information.</source>
+        <translation>The previous round and its notes will be replaced. Shared ZIPs do not retain this information.</translation>
     </message>
     <message>
         <source>Undo</source>
@@ -4018,6 +4026,10 @@ Missing images: %2</translation>
 <context>
     <name>labelqt::mobile::MobileDocument</name>
     <message>
+        <source>Use a unique, nonempty group name without line breaks or the reserved name '-'.</source>
+        <translation>Use a unique, nonempty group name without line breaks or the reserved name '-'.</translation>
+    </message>
+    <message>
         <source>The edited label changed. Your text has been kept in the editor.</source>
         <translation>The edited label changed. Your text has been kept in the editor.</translation>
     </message>
@@ -4143,6 +4155,21 @@ Missing images: %2</translation>
     <message>
         <source>No local projects</source>
         <translation>No local projects</translation>
+    </message>
+</context>
+<context>
+    <name>AboutDialog</name>
+    <message>
+        <source>About LabelQt</source>
+        <translation>About LabelQt</translation>
+    </message>
+    <message>
+        <source>Version: %1</source>
+        <translation>Version: %1</translation>
+    </message>
+    <message>
+        <source>Author: %1</source>
+        <translation>Author: %1</translation>
     </message>
 </context>
 </TS>

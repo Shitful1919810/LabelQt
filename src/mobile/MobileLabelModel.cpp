@@ -1,4 +1,5 @@
 #include "MobileLabelModel.h"
+#include "services/label/LabelVisibility.h"
 #include <algorithm>
 #include <utility>
 
@@ -14,8 +15,9 @@ QVariant MobileLabelModel::data(const QModelIndex& index, int role) const
         index.row() >= m_rows.size())
         return {};
     const auto& row = m_rows.at(index.row());
-    const auto style =
-        row.groupIndex >= 0 && row.groupIndex < m_styles.size() ? m_styles.at(row.groupIndex) : core::LabelGroupStyle{};
+    static const core::LabelGroupStyle defaultStyle;
+    const auto& style =
+        row.groupIndex >= 0 && row.groupIndex < m_styles.size() ? m_styles.at(row.groupIndex) : defaultStyle;
     switch (role) {
     case Key:
         return row.label.id().toString(QUuid::WithoutBraces);
@@ -24,7 +26,7 @@ QVariant MobileLabelModel::data(const QModelIndex& index, int role) const
     case Group:
         return row.label.group();
     case Number:
-        return row.number;
+        return index.row() + 1;
     case PositionX:
         return row.label.position().x();
     case PositionY:
@@ -61,9 +63,16 @@ void MobileLabelModel::refresh(const QVector<core::Label>& labels, const QString
                                const QStringList& allGroups)
 {
     QVector<Row> rows;
-    for (int i = 0; i < labels.size(); ++i) {
-        if (!labels.at(i).isDeleted() && visibleGroups.contains(labels.at(i).group()))
-            rows.append({labels.at(i), i + 1, static_cast<int>(allGroups.indexOf(labels.at(i).group()))});
+    const auto indexes =
+        services::LabelVisibility::sourceIndexes(labels, {visibleGroups.cbegin(), visibleGroups.cend()});
+    rows.reserve(indexes.size());
+    QHash<QString, int> groupIndexes;
+    groupIndexes.reserve(allGroups.size());
+    for (int i = 0; i < allGroups.size(); ++i)
+        groupIndexes.insert(allGroups.at(i), i);
+    for (int index : indexes) {
+        const auto& label = labels.at(index);
+        rows.append({label, groupIndexes.value(label.group(), -1)});
     }
     const bool sameIdentities = rows.size() == m_rows.size() &&
                                 std::equal(rows.begin(), rows.end(), m_rows.begin(),
@@ -82,8 +91,6 @@ void MobileLabelModel::refresh(const QVector<core::Label>& labels, const QString
             changed.append(Text);
         if (before.label.group() != after.label.group())
             changed.append(Group);
-        if (before.number != after.number)
-            changed.append(Number);
         if (before.label.position().x() != after.label.position().x())
             changed.append(PositionX);
         if (before.label.position().y() != after.label.position().y())

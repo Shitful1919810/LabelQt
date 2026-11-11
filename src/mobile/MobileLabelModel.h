@@ -22,7 +22,6 @@ public:
 private:
     struct Row {
         core::Label label;
-        int number;
         int groupIndex;
     };
     QVector<Row> m_rows;

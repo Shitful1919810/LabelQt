@@ -1,4 +1,5 @@
 #include "services/label/LabelNavigator.h"
+#include "services/label/LabelVisibility.h"
 
 #include "core/Label.h"
 
@@ -6,21 +7,9 @@
 
 namespace labelqt::services {
 namespace {
-bool isVisibleLabel(const labelqt::core::Label& label, const QStringList& visibleGroups)
-{
-    return !label.isDeleted() && visibleGroups.contains(label.group());
-}
-
 QVector<int> visibleLabelIndexes(const labelqt::core::ImageEntry& image, const QStringList& visibleGroups)
 {
-    QVector<int> indexes;
-    indexes.reserve(image.labels.size());
-    for (int labelIndex = 0; labelIndex < image.labels.size(); ++labelIndex) {
-        if (isVisibleLabel(image.labels.at(labelIndex), visibleGroups)) {
-            indexes.append(labelIndex);
-        }
-    }
-    return indexes;
+    return LabelVisibility::sourceIndexes(image.labels, {visibleGroups.cbegin(), visibleGroups.cend()});
 }
 
 LabelNavigationTarget firstVisibleLabelInImage(const labelqt::core::Project& project, int imageIndex,

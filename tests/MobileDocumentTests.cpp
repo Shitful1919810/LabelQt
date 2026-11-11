@@ -72,6 +72,46 @@ struct Host {
 class MobileDocumentTests final : public QObject {
     Q_OBJECT
 private slots:
+    void openArgumentsSurviveSaveCallbacks()
+    {
+        Host host;
+        QVERIFY(host.document.openProject(host.writeProject("first")));
+        QString path = host.writeProject("second");
+        const auto expectedPath = path;
+        QString title = "Second project";
+        host.document.selectLabel(key(host.label().id()));
+        host.document.updateText("save before switching");
+        connect(&host.document.controller(), &ProjectController::storageChanged, this, [&] {
+            path.clear();
+            title.clear();
+        });
+        QVERIFY(host.document.openProject(path, title));
+        QVERIFY(path.isEmpty());
+        QCOMPARE(host.project().filePath(), expectedPath);
+        QCOMPARE(host.document.title(), "Second project");
+    }
+
+    void invalidGroupNamesCannotMakeProjectUnsavable()
+    {
+        Host host;
+        const auto path = host.writeProject();
+        QVERIFY(host.document.openProject(path));
+        const auto before = LabelPlusDocument::serialize(host.project());
+        for (const auto& name : QStringList{"-", "   ", "a\nb", "a\rb", QString("a") + QChar::Null + "b", "sound"}) {
+            QVERIFY(!host.document.addGroup(name));
+            QVERIFY(!host.document.error().isEmpty());
+            QCOMPARE(LabelPlusDocument::serialize(host.project()), before);
+            QVERIFY(!host.document.canUndo());
+        }
+        QVERIFY(host.document.addGroup("  new group  "));
+        QVERIFY(host.document.error().isEmpty());
+        QVERIFY(host.document.save());
+        QVERIFY(LabelPlusDocument::loadFromFile(path).groups().contains("new group"));
+        host.document.undo();
+        QVERIFY(host.document.save());
+        QVERIFY(!LabelPlusDocument::loadFromFile(path).groups().contains("new group"));
+    }
+
     void groupStylesSurviveFilteringAndSelectionDoesNotResetModel()
     {
         Host host;
@@ -191,7 +231,7 @@ private slots:
         QVERIFY(!host.document.canRedo());
     }
 
-    void modelFilteringIsReadOnlyAndKeepsSourceNumbers()
+    void modelFilteringIsReadOnlyAndNumbersVisibleRows()
     {
         Host host;
         QVERIFY(host.document.openProject(host.writeProject()));
@@ -216,7 +256,7 @@ private slots:
         QVERIFY(host.document.textDraft().isEmpty());
         QCOMPARE(model->rowCount(), 2);
         QCOMPARE(model->index(0).data(MobileLabelModel::Number).toInt(), 1);
-        QCOMPARE(model->index(1).data(MobileLabelModel::Number).toInt(), 3);
+        QCOMPARE(model->index(1).data(MobileLabelModel::Number).toInt(), 2);
         QCOMPARE(model->index(1).data(MobileLabelModel::Key).toString(), key(host.label(0, 2).id()));
         QCOMPARE(model->index(1).data(MobileLabelModel::PositionX).toDouble(), 0.6);
         QVERIFY(!model->setData(model->index(0), "bypass", MobileLabelModel::Text));
@@ -245,13 +285,68 @@ private slots:
         source[1].setDeleted(true);
         model.refresh(source, {"dialogue"}, {"dialogue"});
         QCOMPARE(model.rowCount(), 2);
-        QCOMPARE(model.index(1).data(MobileLabelModel::Number).toInt(), 3);
+        QCOMPARE(model.index(1).data(MobileLabelModel::Number).toInt(), 2);
         source[0].setText("changed detached source");
         QCOMPARE(model.index(0).data(MobileLabelModel::Text).toString(), "first");
         model.refresh(source, {"dialogue"}, {"dialogue"});
         QCOMPARE(model.index(0).data(MobileLabelModel::Text).toString(), "changed detached source");
         model.refresh({}, {}, {});
         QCOMPARE(model.rowCount(), 0);
+    }
+
+    void deletionRenumbersWithoutChangingIdentityOrSavedContent()
+    {
+        Host host;
+        const auto path = host.writeProject();
+        QVERIFY(host.document.openProject(path));
+        auto* model = host.model();
+        QAbstractItemModelTester tester(model, QAbstractItemModelTester::FailureReportingMode::QtTest);
+        const auto first = host.label().id(), second = host.label(0, 1).id(), third = host.label(0, 2).id();
+        host.review.startRound();
+        QVERIFY(host.review.addNote(key(host.project().images().first().id), key(third), "Keep with third label"));
+        host.document.selectLabel(key(second));
+        host.document.deleteSelected();
+        QCOMPARE(model->rowCount(), 2);
+        QCOMPARE(model->index(1).data(MobileLabelModel::Number).toInt(), 2);
+        QCOMPARE(model->index(1).data(MobileLabelModel::Key).toString(), key(third));
+        QVERIFY(host.label(0, 1).isDeleted()); // Undo tombstones stay in storage, not in displayed numbering.
+        host.document.selectLabel(key(third));
+        host.document.updateText("third edited\nexact trailing line\n");
+        QVERIFY(host.document.save());
+        QCOMPARE(host.label(0, 2).text(), "third edited\nexact trailing line\n");
+        host.document.undo(); // Text.
+        host.document.undo(); // Deletion.
+        QCOMPARE(model->rowCount(), 3);
+        QCOMPARE(model->index(2).data(MobileLabelModel::Number).toInt(), 3);
+        QCOMPARE(host.label(0, 1).id(), second);
+        host.document.redo();
+        QCOMPARE(model->index(1).data(MobileLabelModel::Number).toInt(), 2);
+        host.document.redo();
+        host.document.addLabel(0.8, 0.9);
+        const auto added = QUuid(host.document.selectedLabel());
+        QCOMPARE(model->index(2).data(MobileLabelModel::Number).toInt(), 3);
+        host.document.setGroup("sound");
+        host.document.setVisibleGroups({"sound"});
+        QCOMPARE(model->rowCount(), 1);
+        QCOMPARE(model->index(0).data(MobileLabelModel::Number).toInt(), 1);
+        QVERIFY(host.document.save());
+
+        const auto saved = LabelPlusDocument::loadFromFile(path);
+        const auto& labels = saved.images().first().labels;
+        QCOMPARE(labels.size(), 3); // Saving a filtered view must still include the hidden live labels.
+        QCOMPARE(labels[0].id(), first);
+        QCOMPARE(labels[1].id(), third);
+        QCOMPARE(labels[2].id(), added);
+        QCOMPARE(labels[1].text(), "third edited\nexact trailing line\n");
+        const auto round = ReviewRoundService::read(saved);
+        QVERIFY(round && round->has_value());
+        QCOMPARE((**round).notes.first().labelId, third);
+        QCOMPARE(ReviewRoundService::locateNote(saved, (**round).notes.first()), qMakePair(0, 1));
+        QVERIFY(host.document.openProject(path));
+        QCOMPARE(model->rowCount(), 3);
+        for (int row = 0; row < model->rowCount(); ++row)
+            QCOMPARE(model->index(row).data(MobileLabelModel::Number).toInt(), row + 1);
+        QCOMPARE(model->index(1).data(MobileLabelModel::Key).toString(), key(third));
     }
 
     void selectionAndMoveFollowIdentityAfterSharedReorder()

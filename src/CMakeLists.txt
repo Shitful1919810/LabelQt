@@ -34,6 +34,8 @@ set(LABELQT_SERVICE_SOURCES
     services/label/LabelEditControllerBatch.cpp
     services/label/ProjectTextSearchService.cpp
     services/label/LabelNavigator.cpp
+    services/label/LabelVisibility.cpp
+    services/label/LabelVisibility.h
     services/label/LabelPastePlanner.cpp
     services/label/LabelPastePlanner.h
     services/preferences/PreferenceStore.cpp

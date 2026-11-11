@@ -53,6 +53,10 @@ if(TARGET Qt6::Svg)
 endif()
 
 qt_add_executable(LabelQtTests LabelTests.cpp)
+target_sources(LabelQtTests PRIVATE
+    ../src/mobile/MobileLabelModel.cpp
+    ../src/mobile/MobileLabelModel.h
+)
 target_link_libraries(LabelQtTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(LabelQtTests)
 

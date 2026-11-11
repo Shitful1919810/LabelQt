@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     QGuiApplication app(argc, argv);
     app.setOrganizationName("LabelQt");
     app.setApplicationName("LabelQtMobile");
-    app.setApplicationVersion("0.1.0-android-preview");
+    app.setApplicationVersion(QStringLiteral(LABELQT_MOBILE_VERSION));
     QQuickStyle::setStyle("Material");
     QImageReader::setAllocationLimit(128);
     const auto preferences = labelqt::core::AppPreferences::loadWithDiagnostics().preferences;

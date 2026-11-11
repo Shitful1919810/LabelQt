@@ -211,6 +211,47 @@ void noPublication(const ProjectTransferService& service, const QString& root)
 class ProjectTransferTests final : public QObject {
     Q_OBJECT
 private slots:
+    void commentFreeExportPreservesLocalStateAndOnlyCopiesLiveImages()
+    {
+        QTemporaryDir directory;
+        auto project = fixture(directory.filePath("source"));
+        project.setSourceName("original project.txt");
+        project.images()[0].labels[0].setText("Live text\nsecond line");
+        ReviewRound round;
+        round.before = ReviewRoundService::snapshot(project);
+        round.before.images()[0].path = directory.filePath("source/missing-history.png");
+        project.setCommentLines(ProjectMetadataService::rewriteCommentLines(
+            {"Private comment"}, {{"proofreading", ReviewRoundService::encode(round, project.filePath())}}));
+        const auto original = LabelPlusDocument::serialize(project);
+        const auto diskBytes = get(project.filePath());
+        ProjectTransferService service(directory.filePath("app"));
+        QVERIFY(!service.exportZip(project)); // Full export still requires its historical images.
+        const auto exported = service.exportZip(project, "clean.zip", LabelPlusDocument::CommentPolicy::Omit);
+        QVERIFY2(exported.has_value(), qPrintable(exported ? QString{} : exported.error()));
+        const auto extracted = directory.filePath("extracted");
+        QVERIFY(QDir().mkpath(extracted));
+        auto files = transfer::extractZip(*exported, extracted, {});
+        files.sort();
+        QCOMPARE(files, QStringList({"project/page.png", "project/project.txt"}));
+        const auto path = QDir(extracted).filePath("project/project.txt");
+        const auto text = get(path);
+        QVERIFY(text.startsWith("1,0\n-\ndialogue\n-\n\n>>>>>>>>[page.png]<<<<<<<<\n"));
+        QVERIFY(!text.contains("LabelQt"));
+        QVERIFY(!text.contains("Private comment"));
+        const auto loaded = LabelPlusDocument::loadFromFile(path);
+        QVERIFY(loaded.commentLines().isEmpty());
+        QVERIFY(loaded.sourceName().isEmpty());
+        QCOMPARE(loaded.images()[0].labels[0].text(), project.images()[0].labels[0].text());
+        QCOMPARE(loaded.images()[0].labels[0].group(), project.images()[0].labels[0].group());
+        QCOMPARE(loaded.images()[0].labels[0].position(), project.images()[0].labels[0].position());
+        QVERIFY(loaded.id() != project.id());
+        QCOMPARE(LabelPlusDocument::serialize(project), original);
+        QCOMPARE(get(project.filePath()), diskBytes);
+        // Clearing comments must never disable the current-image path boundary.
+        project.images()[0].path = directory.filePath("outside.png");
+        QVERIFY(!service.exportZip(project, "unsafe.zip", LabelPlusDocument::CommentPolicy::Omit));
+    }
+
     void macMetadataIsNotProjectContent()
     {
         QTemporaryDir directory;

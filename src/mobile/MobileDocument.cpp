@@ -1,4 +1,5 @@
 #include "MobileDocument.h"
+#include "core/LabelPlusDocument.h"
 
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -130,13 +131,14 @@ void MobileDocument::clearError()
     reportError({});
 }
 
-bool MobileDocument::openProject(const QString& path, const QString& title)
+bool MobileDocument::openProject(QString path, QString title)
 {
+    // Saving emits callbacks that may replace the workspace model owning the caller's strings.
     if (opened() && !save())
         return false;
     try {
         m_controller.loadFromFile(path);
-        m_title = title;
+        m_title = std::move(title);
         m_undo.clear();
         m_pageIndex = m_controller.project().images().isEmpty() ? -1 : 0;
         m_selected = {};
@@ -291,13 +293,21 @@ void MobileDocument::setGroup(const QString& group)
     refresh();
 }
 
-void MobileDocument::addGroup(const QString& group)
+bool MobileDocument::addGroup(const QString& group)
 {
     if (!opened() || !commitText())
-        return;
-    if (m_edits.addGroup(group).changed)
-        m_visibleGroups.append(group.trimmed());
+        return false;
+    const auto name = group.trimmed();
+    if (!core::LabelPlusDocument::isValidGroupName(name) || groups().contains(name)) {
+        reportError(tr("Use a unique, nonempty group name without line breaks or the reserved name '-'."));
+        return false;
+    }
+    if (!m_edits.addGroup(name).changed)
+        return false;
+    m_visibleGroups.append(name);
+    clearError();
     refresh();
+    return true;
 }
 
 void MobileDocument::setVisibleGroups(const QStringList& requested)

@@ -1,4 +1,5 @@
 #include "services/label/LabelEditController.h"
+#include "core/LabelPlusDocument.h"
 #include "services/project/ProjectController.h"
 
 #include <algorithm>
@@ -78,7 +79,7 @@ LabelEditController::LabelEditController(ProjectController& controller, labelqt:
 LabelEditResult LabelEditController::addGroup(const QString& group)
 {
     const QString trimmedGroup = group.trimmed();
-    if (trimmedGroup.isEmpty() || m_project.groups().contains(trimmedGroup)) {
+    if (!core::LabelPlusDocument::isValidGroupName(trimmedGroup) || m_project.groups().contains(trimmedGroup)) {
         return {};
     }
 
@@ -514,6 +515,13 @@ LabelEditResult LabelEditController::setLabelPositions(int imageIndex, QVector<i
     QVector<int> changedIndexes;
     QVector<QPointF> oldPositions;
     QVector<QPointF> newPositions;
+    // Each target must have exactly one before/after pair for reversible batch edits.
+    QSet<int> targets;
+    for (int index : labelIndexes) {
+        if (targets.contains(index))
+            return {};
+        targets.insert(index);
+    }
     changedIndexes.reserve(labelIndexes.size());
     oldPositions.reserve(labelIndexes.size());
     newPositions.reserve(labelIndexes.size());

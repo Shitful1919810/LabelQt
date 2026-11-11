@@ -76,10 +76,14 @@ qt_add_executable(LabelQtMobile
 )
 target_link_libraries(LabelQtMobile PRIVATE LabelQtMobilePresentation Qt6::Quick Qt6::QuickControls2 Qt6::Svg)
 labelqt_enable_warnings(LabelQtMobile)
+set(LABELQT_MOBILE_VERSION "${PROJECT_VERSION}-android-preview.1")
+target_compile_definitions(LabelQtMobile PRIVATE LABELQT_MOBILE_VERSION="${LABELQT_MOBILE_VERSION}")
 set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(qml/ProjectCanvas.qml PROPERTIES QT_RESOURCE_ALIAS ProjectCanvas.qml)
 set_source_files_properties(qml/IconButton.qml PROPERTIES QT_RESOURCE_ALIAS IconButton.qml)
 set_source_files_properties(qml/SubmitDialog.qml PROPERTIES QT_RESOURCE_ALIAS SubmitDialog.qml)
+set_source_files_properties(qml/ScrollDialog.qml PROPERTIES QT_RESOURCE_ALIAS ScrollDialog.qml)
+set_source_files_properties(qml/AboutDialog.qml PROPERTIES QT_RESOURCE_ALIAS AboutDialog.qml)
 set_source_files_properties(qml/WorkspaceBrowser.qml PROPERTIES QT_RESOURCE_ALIAS WorkspaceBrowser.qml)
 set(LABELQT_MOBILE_ICONS menu undo-2 redo-2 ellipsis chevron-left chevron-right maximize x keyboard trash-2)
 set(LABELQT_MOBILE_ICON_FILES)
@@ -92,6 +96,7 @@ set_source_files_properties(qml/icons/LICENSE PROPERTIES QT_RESOURCE_ALIAS "icon
 qt_add_qml_module(LabelQtMobile
     URI LabelQt.Mobile VERSION 1.0
     QML_FILES qml/Main.qml qml/ProjectCanvas.qml qml/IconButton.qml qml/SubmitDialog.qml qml/WorkspaceBrowser.qml
+        qml/ScrollDialog.qml qml/AboutDialog.qml
     RESOURCES ${LABELQT_MOBILE_ICON_FILES} qml/icons/LICENSE
 )
 if(Qt6LinguistTools_FOUND)
@@ -102,7 +107,7 @@ if(ANDROID)
     set_target_properties(LabelQtMobile PROPERTIES
         QT_ANDROID_PACKAGE_SOURCE_DIR "${PROJECT_SOURCE_DIR}/android"
         QT_ANDROID_PACKAGE_NAME org.labelqt.mobile
-        QT_ANDROID_VERSION_NAME "0.1.0-android-preview.1"
+        QT_ANDROID_VERSION_NAME "${LABELQT_MOBILE_VERSION}"
         QT_ANDROID_VERSION_CODE 1
         QT_ANDROID_MIN_SDK_VERSION 28
         QT_ANDROID_TARGET_SDK_VERSION 36

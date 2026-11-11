@@ -1,4 +1,5 @@
 #include "core/LabelPlusDocument.h"
+#include "mobile/MobileReviewController.h"
 #include "mobile/MobileWorkspaceController.h"
 #include "services/transfer/TransferSupport.h"
 
@@ -40,6 +41,61 @@ class MobileWorkspaceTests : public QObject {
     }
 
 private slots:
+    void classicProjectDeleteEditAndZipRoundTrip()
+    {
+        QTemporaryDir root;
+        const auto input = createInput(root.path());
+        const QByteArray classic = "1,0\n-\ndialogue\nsound\n-\n\n>>>>>>>>[page.png]<<<<<<<<\n"
+                                   "----------------[1]----------------[0.200,0.300,1]\nfirst\n\n"
+                                   "----------------[2]----------------[0.400,0.500,2]\nsecond\n\n"
+                                   "----------------[3]----------------[0.600,0.700,1]\nthird\n\n";
+        QFile source(input);
+        QVERIFY(source.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QCOMPARE(source.write(classic), classic.size());
+        source.close();
+        ProjectTransferService transfer(root.filePath("app"));
+        const auto imported = transfer.importFile(input);
+        QVERIFY(imported.has_value());
+        MobileDocument mobile;
+        QVERIFY(mobile.openProject(imported->projectPath));
+        auto* model = qobject_cast<MobileLabelModel*>(mobile.labels());
+        QVERIFY(model);
+        const auto third = model->index(2).data(MobileLabelModel::Key).toString();
+        mobile.selectLabel(model->index(1).data(MobileLabelModel::Key).toString());
+        mobile.deleteSelected();
+        mobile.selectLabel(third);
+        mobile.updateText("third edited");
+        mobile.setVisibleGroups({"sound"}); // Empty view must not become an empty saved project.
+        QCOMPARE(model->rowCount(), 0);
+        QVERIFY(mobile.save());
+        const auto saved = labelqt::core::LabelPlusDocument::loadFromFile(imported->projectPath);
+        QCOMPARE(saved.images()[0].labels.size(), 2);
+        QCOMPARE(saved.images()[0].labels[1].text(), "third edited");
+        const auto text = labelqt::core::LabelPlusDocument::serialize(saved);
+        QVERIFY(text.contains("----------------[2]----------------[0.600,0.700,1]"));
+        QVERIFY(!text.contains("----------------[3]----------------"));
+        // The standard body remains readable without any LabelQt comment metadata.
+        const auto legacyBody = QStringLiteral("1,0\n-\ndialogue\nsound\n-\n\n") + text.mid(text.indexOf(">>>>>>>>["));
+        const auto legacy = labelqt::core::LabelPlusDocument::parse(legacyBody, root.filePath("legacy.txt"));
+        QCOMPARE(legacy.images()[0].labels.size(), 2);
+        QCOMPARE(legacy.images()[0].labels[1].text(), "third edited");
+        QCOMPARE(legacy.images()[0].labels[1].group(), "dialogue");
+        const auto exported = transfer.exportZip(saved);
+        QVERIFY(exported.has_value());
+        const auto received = ProjectTransferService(root.filePath("recipient")).importFile(*exported);
+        QVERIFY(received.has_value());
+        MobileDocument recipient;
+        QVERIFY(recipient.openProject(received->projectPath));
+        auto* receivedModel = qobject_cast<MobileLabelModel*>(recipient.labels());
+        QVERIFY(receivedModel);
+        QCOMPARE(receivedModel->rowCount(), 2);
+        QCOMPARE(receivedModel->index(1).data(MobileLabelModel::Number).toInt(), 2);
+        QCOMPARE(receivedModel->index(1).data(MobileLabelModel::Key).toString(), third);
+        QCOMPARE(receivedModel->index(1).data(MobileLabelModel::Text).toString(), "third edited");
+        QVERIFY(source.open(QIODevice::ReadOnly));
+        QCOMPARE(source.readAll(), classic);
+    }
+
     void imageArchiveCreatesEditableWorkspace()
     {
         QTemporaryDir root;
@@ -113,6 +169,9 @@ private slots:
         workspace.importLocal(QUrl::fromLocalFile(path));
         QTRY_COMPARE_WITH_TIMEOUT(workspace.workspaces()->rowCount(), 1, 10000);
         QVERIFY(workspace.openWorkspace(workspace.workspaces()->entries().first().id));
+        MobileReviewController review(document.controller(), document.undoStack());
+        review.startRound();
+        QVERIFY(review.addNote(document.pageId(), {}, "Local-only proofreading note"));
         document.selectLabel(document.controller().project().images().first().labels.first().id().toString());
         document.updateText(QStringLiteral("Export snapshot"));
         QVERIFY(workspace.exportProject(workspace.suggestedShareName()));
@@ -122,6 +181,16 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 10000);
         QVERIFY2(!workspace.lastExport().isEmpty(), qPrintable(workspace.message()));
         QVERIFY(workspace.message().isEmpty());
+        const auto unpacked = root.filePath("shared");
+        QVERIFY(QDir().mkpath(unpacked));
+        transfer::extractZip(workspace.lastExport(), unpacked, {});
+        const auto shared =
+            labelqt::core::LabelPlusDocument::loadFromFile(QDir(unpacked).filePath("project/project.txt"));
+        QVERIFY(shared.commentLines().isEmpty());
+        QVERIFY(shared.sourceName().isEmpty());
+        const auto localRound = ReviewRoundService::read(document.controller().project());
+        QVERIFY(localRound && localRound->has_value());
+        QCOMPARE((**localRound).notes.first().text, "Local-only proofreading note");
         ProjectTransferService recipient(root.filePath("recipient"));
         const auto imported = recipient.importFile(workspace.lastExport());
         QVERIFY2(imported.has_value(), qPrintable(imported ? QString{} : imported.error()));

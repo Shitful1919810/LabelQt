@@ -1,7 +1,7 @@
 #pragma once
 
 #include "WorkspaceStorageService.h"
-#include "core/Project.h"
+#include "core/LabelPlusDocument.h"
 
 #include <QCoreApplication>
 #include <QString>
@@ -39,8 +39,9 @@ struct TransferLimits {
 // Finder resource files are excluded from discovery, not from archive safety checks. Gzip CRC/ISIZE are
 // independently checked with bounded streaming expansion; concatenated gzip members are unsupported.
 // Output is always ZIP. Decoder dictionary/solid-block allocations are not bounded by output byte limits.
-// Unsafe references and unknown metadata are rejected, not stripped. Missing images may be imported;
-// export requires every nonempty current/historical image reference to exist. Empty historical paths stay empty.
+// Unsafe references and unknown metadata are rejected in full-fidelity transfers. Omit exports explicitly discard
+// all comments before validation; only live references remain in scope. Missing images may be imported;
+// full export requires every nonempty current/historical image reference to exist. Empty historical paths stay empty.
 // References must remain below the TXT's own directory (not a sibling ZIP directory). Image payloads are
 // transported as bytes, not decoded/re-encoded. Name conflicts are errors; there is no automatic rename plan.
 // Publication is a same-filesystem directory rename, not a power-loss durability guarantee. Interrupted
@@ -63,7 +64,10 @@ public:
                                                      QString displayName = {}) const;
     // Unique read-only outgoing ZIP; subsequent exports never overwrite it. Does not save the source.
     // Managed provenance paths are reduced to basenames; user text/comments are deliberately untouched.
-    std::expected<QString, QString> exportZip(const core::Project& project, QString fileName = "project.zip") const;
+    // Omit exports only the live body/images; local state and normal import remain lossless.
+    std::expected<QString, QString>
+    exportZip(const core::Project& project, QString fileName = "project.zip",
+              core::LabelPlusDocument::CommentPolicy comments = core::LabelPlusDocument::CommentPolicy::Preserve) const;
 
 private:
     QString m_root;

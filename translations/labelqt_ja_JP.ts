@@ -3625,6 +3625,10 @@ Missing images: %2</source>
 <context>
     <name>Main</name>
     <message>
+        <source>About</source>
+        <translation>このアプリについて</translation>
+    </message>
+    <message>
         <source>Edited %1</source>
         <translation>最終編集：%1</translation>
     </message>
@@ -3643,6 +3647,10 @@ Missing images: %2</source>
     <message>
         <source>ZIP file name</source>
         <translation>ZIP ファイル名</translation>
+    </message>
+    <message>
+        <source>The ZIP excludes comments and proofreading records. They remain in the local project.</source>
+        <translation>ZIP にはプロジェクトのコメントと校正記録は含まれません。これらはローカルプロジェクトに残ります。</translation>
     </message>
     <message>
         <source>Delete the local copy of &quot;%1&quot; and its images? This cannot be undone. The original imported file and shared ZIPs will be kept.</source>
@@ -3781,8 +3789,8 @@ Missing images: %2</source>
         <translation>新しい校正ラウンドを開始しますか？</translation>
     </message>
     <message>
-        <source>The previous round will be replaced. Export a ZIP first to keep it.</source>
-        <translation>前の校正ラウンドは置き換えられます。残しておく場合は、先に ZIP をエクスポートしてください。</translation>
+        <source>The previous round and its notes will be replaced. Shared ZIPs do not retain this information.</source>
+        <translation>前の校正ラウンドと注釈は置き換えられます。共有 ZIP にはこれらの情報は保存されません。</translation>
     </message>
     <message>
         <source>Undo</source>
@@ -4005,6 +4013,10 @@ Missing images: %2</source>
 <context>
     <name>labelqt::mobile::MobileDocument</name>
     <message>
+        <source>Use a unique, nonempty group name without line breaks or the reserved name '-'.</source>
+        <translation>グループ名は空欄・重複・改行を含む名前・予約名「-」にはできません。</translation>
+    </message>
+    <message>
         <source>The edited label changed. Your text has been kept in the editor.</source>
         <translation>編集中のラベルが変更されました。入力したテキストはエディターに保持されています。</translation>
     </message>
@@ -4130,6 +4142,21 @@ Missing images: %2</source>
     <message>
         <source>No local projects</source>
         <translation>ローカルプロジェクトはありません</translation>
+    </message>
+</context>
+<context>
+    <name>AboutDialog</name>
+    <message>
+        <source>About LabelQt</source>
+        <translation>LabelQt について</translation>
+    </message>
+    <message>
+        <source>Version: %1</source>
+        <translation>バージョン：%1</translation>
+    </message>
+    <message>
+        <source>Author: %1</source>
+        <translation>作者：%1</translation>
     </message>
 </context>
 </TS>

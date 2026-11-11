@@ -3625,6 +3625,10 @@ Missing images: %2</source>
 <context>
     <name>Main</name>
     <message>
+        <source>About</source>
+        <translation>关于</translation>
+    </message>
+    <message>
         <source>Edited %1</source>
         <translation>最近编辑：%1</translation>
     </message>
@@ -3643,6 +3647,10 @@ Missing images: %2</source>
     <message>
         <source>ZIP file name</source>
         <translation>ZIP 文件名</translation>
+    </message>
+    <message>
+        <source>The ZIP excludes comments and proofreading records. They remain in the local project.</source>
+        <translation>ZIP 不包含工程注释和校对记录。这些信息仍保留在本地工程中。</translation>
     </message>
     <message>
         <source>Delete the local copy of &quot;%1&quot; and its images? This cannot be undone. The original imported file and shared ZIPs will be kept.</source>
@@ -3781,8 +3789,8 @@ Missing images: %2</source>
         <translation>开始新一轮校对？</translation>
     </message>
     <message>
-        <source>The previous round will be replaced. Export a ZIP first to keep it.</source>
-        <translation>上一轮校对记录将被替换。如需保留，请先导出 ZIP。</translation>
+        <source>The previous round and its notes will be replaced. Shared ZIPs do not retain this information.</source>
+        <translation>上一轮校对及其批注将被替换。分享的 ZIP 不保留这些信息。</translation>
     </message>
     <message>
         <source>Undo</source>
@@ -4005,6 +4013,10 @@ Missing images: %2</source>
 <context>
     <name>labelqt::mobile::MobileDocument</name>
     <message>
+        <source>Use a unique, nonempty group name without line breaks or the reserved name '-'.</source>
+        <translation>分组名不能重复或为空，不能包含换行或使用保留名称“-”。</translation>
+    </message>
+    <message>
         <source>The edited label changed. Your text has been kept in the editor.</source>
         <translation>正在编辑的标签已发生变化。您的文字已保留在编辑器中。</translation>
     </message>
@@ -4130,6 +4142,21 @@ Missing images: %2</source>
     <message>
         <source>No local projects</source>
         <translation>暂无本地工程</translation>
+    </message>
+</context>
+<context>
+    <name>AboutDialog</name>
+    <message>
+        <source>About LabelQt</source>
+        <translation>关于 LabelQt</translation>
+    </message>
+    <message>
+        <source>Version: %1</source>
+        <translation>版本：%1</translation>
+    </message>
+    <message>
+        <source>Author: %1</source>
+        <translation>作者：%1</translation>
     </message>
 </context>
 </TS>

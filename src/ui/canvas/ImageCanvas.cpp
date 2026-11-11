@@ -1,6 +1,7 @@
 #include "ui/canvas/ImageCanvas.h"
 
 #include "ui/canvas/CanvasLabelItems.h"
+#include "services/label/LabelVisibility.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -801,13 +802,10 @@ void ImageCanvas::rebuildLabelItems()
     }
 
     const QRectF rect = m_pixmapItem->boundingRect();
-    int displayNumber = 0;
-    for (int i = 0; i < m_labels.size(); ++i) {
-        if (!isLabelVisible(m_labels.at(i))) {
-            continue;
-        }
-
-        ++displayNumber;
+    const auto visible = labelqt::services::LabelVisibility::sourceIndexes(m_labels, m_visibleGroups);
+    for (int row = 0; row < visible.size(); ++row) {
+        const int i = visible.at(row);
+        const int displayNumber = row + 1;
         const labelqt::core::LabelGroupStyle style = styleForGroup(m_labels.at(i).group());
         auto* marker = new CanvasLabelMarkerItem(i, displayNumber, m_selectedLabels.contains(i), style);
         const QPointF position = m_labels.at(i).position();
@@ -916,7 +914,7 @@ void ImageCanvas::notifyViewportStateChanged()
 
 bool ImageCanvas::isLabelVisible(const labelqt::core::Label& label) const
 {
-    return !label.isDeleted() && m_visibleGroups.contains(label.group());
+    return labelqt::services::LabelVisibility::isVisible(label, m_visibleGroups);
 }
 
 int ImageCanvas::labelIndexAt(QPoint viewportPosition) const
@@ -943,17 +941,7 @@ bool ImageCanvas::hasMoveLabelModifiers(Qt::KeyboardModifiers modifiers) const
 
 int ImageCanvas::displayNumberForLabel(int index) const
 {
-    if (index < 0 || index >= m_labels.size() || !isLabelVisible(m_labels.at(index))) {
-        return 0;
-    }
-
-    int displayNumber = 0;
-    for (int i = 0; i <= index; ++i) {
-        if (isLabelVisible(m_labels.at(i))) {
-            ++displayNumber;
-        }
-    }
-    return displayNumber;
+    return labelqt::services::LabelVisibility::displayNumber(m_labels, m_visibleGroups, index);
 }
 
 QString ImageCanvas::displayTextForLabel(int index) const

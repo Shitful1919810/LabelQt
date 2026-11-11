@@ -3,11 +3,13 @@
 #include "core/LabelPlusDocument.h"
 #include "core/Project.h"
 #include "core/ProjectMetadataService.h"
+#include "mobile/MobileLabelModel.h"
 #include "services/automation/AutomationService.h"
 #include "services/label/LabelClipboardService.h"
 #include "services/label/LabelEditController.h"
 #include "services/label/LabelNavigator.h"
 #include "services/label/LabelPastePlanner.h"
+#include "services/label/LabelVisibility.h"
 #include "services/project/PageSourceInfoService.h"
 #include "services/project/ProjectController.h"
 #include "services/project/ProjectImageRenameService.h"
@@ -44,16 +46,16 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QPlainTextEdit>
-#include <QSettings>
 #include <QSet>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QStandardItemModel>
 #include <QTableView>
-#include <QTextStream>
-#include <QVBoxLayout>
 #include <QTemporaryDir>
+#include <QTextStream>
 #include <QTimer>
 #include <QUuid>
+#include <QVBoxLayout>
 #include <QWheelEvent>
 #include <QtTest/QtTest>
 
@@ -454,8 +456,15 @@ private slots:
         labelqt::core::UndoStack undoStack;
         QVector<int> selectedIndexes;
         labelqt::services::LabelEditController controller(project, undoStack, testCommandTexts());
+        for (const auto& name : QStringList{"-", "a\nb", "a\rb", QString("a") + QChar::Null + "b"})
+            QVERIFY(!controller.addGroup(name).changed);
+        QCOMPARE(project.groups(), QStringList{QStringLiteral("框内")});
         controller.setCallbacks({}, [&selectedIndexes](int, QVector<int> indexes) { selectedIndexes = indexes; }, {},
                                 {}, {});
+
+        QVERIFY(!controller.setLabelPositions(0, {0, 0}, {{0.3, 0.3}, {0.5, 0.5}}).changed);
+        QCOMPARE(project.images().first().labels.at(0).position(), QPointF(0.2, 0.2));
+        QVERIFY(!undoStack.canUndo());
 
         const labelqt::services::LabelEditResult result =
             controller.setLabelPositions(0, {0, 1}, {QPointF(0.3, 0.3), QPointF(0.5, 0.5)});
@@ -623,6 +632,44 @@ private slots:
         QVERIFY(result.error.contains(QStringLiteral("Python")) || result.error.contains(QStringLiteral("Failed")));
     }
 
+    void desktopAndMobileLabelProjectionsAgree()
+    {
+        using labelqt::mobile::MobileLabelModel;
+        QVector<Label> labels{Label("first", "dialogue", {}), Label("second", "sound", {}),
+                              Label("third", "dialogue", {})};
+        LabelTableModel desktop;
+        MobileLabelModel mobile;
+        const QAbstractItemModelTester desktopTester(&desktop, QAbstractItemModelTester::FailureReportingMode::QtTest);
+        const QAbstractItemModelTester mobileTester(&mobile, QAbstractItemModelTester::FailureReportingMode::QtTest);
+        desktop.setLabelsProvider([&labels] { return &labels; });
+        const QStringList groups{"dialogue", "sound"};
+        for (int deletedMask = 0; deletedMask < 8; ++deletedMask) {
+            for (int index = 0; index < labels.size(); ++index)
+                labels[index].setDeleted((deletedMask & (1 << index)) != 0);
+            for (int groupMask = 0; groupMask < 4; ++groupMask) {
+                QStringList visible;
+                for (int group = 0; group < groups.size(); ++group)
+                    if (groupMask & (1 << group))
+                        visible.append(groups[group]);
+                desktop.setGroupFilter(visible);
+                mobile.refresh(labels, visible, groups);
+                QCOMPARE(desktop.rowCount(), mobile.rowCount());
+                for (int row = 0; row < desktop.rowCount(); ++row) {
+                    const auto& label = labels.at(desktop.sourceIndexForRow(row));
+                    QVERIFY(!label.isDeleted());
+                    QVERIFY(visible.contains(label.group()));
+                    QCOMPARE(mobile.index(row).data(MobileLabelModel::Number).toInt(), row + 1);
+                    QCOMPARE(labelqt::services::LabelVisibility::displayNumber(
+                                 labels, {visible.cbegin(), visible.cend()}, desktop.sourceIndexForRow(row)),
+                             row + 1);
+                    QCOMPARE(mobile.index(row).data(MobileLabelModel::Number),
+                             desktop.index(row, LabelTableModel::NumberColumn).data());
+                    QCOMPARE(mobile.index(row).data(MobileLabelModel::Key).toString(),
+                             label.id().toString(QUuid::WithoutBraces));
+                }
+            }
+        }
+    }
 
     void labelTableModelPassesModelTesterAndFiltersGroups()
     {
@@ -2272,7 +2319,9 @@ private slots:
         labelqt::core::Project project;
         project.setCommentLines({
             QStringLiteral("# LabelQtReview v1"),
-            QStringLiteral("# {\"version\":1,\"mode\":\"baseline\",\"labels\":[{\"page\":\"001.png\",\"labelIndex\":0,\"text\":\"旧译文\",\"group\":\"框内\",\"x\":0.25,\"y\":0.5}]}"),
+            QStringLiteral("# "
+                           "{\"version\":1,\"mode\":\"baseline\",\"labels\":[{\"page\":\"001.png\",\"labelIndex\":0,"
+                           "\"text\":\"旧译文\",\"group\":\"框内\",\"x\":0.25,\"y\":0.5}]}"),
             QStringLiteral("# EndLabelQtReview"),
         });
 

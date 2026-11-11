@@ -179,6 +179,9 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `LabelTableModel` / `CurrentPageLabelContext`：右侧表格通过只读 provider 获取当前页标签，维护可见行映射，
   发出编辑/重排请求，但不直接修改标签。不缓存 `ImageEntry` 内部容器地址；工程快照的写时复制不会留下悬空绑定。
   provider 的宿主必须比模型活得久，宿主析构和工程切换时清空绑定。数据结构变化仍须按模型协议刷新可见行。
+- `LabelVisibility`：两端标签列表、桌面画布和导航共用的可见性及源索引投影规则。
+  显示编号等于可见行号加一，不能与保留删除条目的存储索引或稳定 UUID 混用。
+  UI 筛选不参与持久化；TXT 正文独立按全部未删除标签连续编号。
 - `LabelEditDelegates`：表格文本列和类别列的原地编辑控件。
 - `PageOrderDialog` / `PageOrderListModel`：页面管理界面与对应模型，负责页面排序、移除页面，以及展示按当前顺序生成的图片文件重命名或缺失页引用修复预览；真正的文件系统重命名和项目引用更新仍交给 `ProjectImageRenameService`。
 - `ProjectMergeDialog`：合并工程来源选择及当前冲突导航。仅使用两个 `MergeCandidatePreview`，后者复用 `ImagePageViewController` 和有界图片缓存，候选切换合并为最新请求，每个预览最多一个解码任务；不为隐藏冲突创建画布或解码图片。保留每页的来源选择和视口状态。

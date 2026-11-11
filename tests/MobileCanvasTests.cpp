@@ -536,6 +536,25 @@ private slots:
         QTRY_COMPARE(tapped.count(), 1);
     }
 
+    void markerRenumberingKeepsTapIdentity()
+    {
+        const auto secondKey = labelKey(m_host->labels[1]);
+        m_host->labels[0].setDeleted(true);
+        m_host->refresh();
+        QTRY_VERIFY(!m_host->marker(0));
+        QTRY_VERIFY(m_host->marker(1));
+        QCOMPARE(m_host->marker(1)->property("markerNumber").toInt(), 1);
+        QSignalSpy tapped(m_host->canvas.get(), SIGNAL(labelTapped(QString)));
+        tap(m_host->markerCenter(1), true);
+        QTRY_COMPARE(tapped.count(), 1);
+        QCOMPARE(tapped.first().first().toString(), secondKey);
+        m_host->labels[0].setDeleted(false);
+        m_host->refresh();
+        QTRY_VERIFY(m_host->marker(0));
+        QTRY_VERIFY(m_host->marker(1));
+        QCOMPARE(m_host->marker(1)->property("markerNumber").toInt(), 2);
+    }
+
     void compactBadgeKeepsTouchTarget()
     {
         auto* marker = m_host->marker(0);

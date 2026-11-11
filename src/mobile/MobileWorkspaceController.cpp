@@ -155,7 +155,7 @@ bool MobileWorkspaceController::exportProject(const QString& fileName)
     m_job.setFuture(QtConcurrent::run([root = m_root, snapshot, fileName = *name] {
         services::ProjectTransferService transfer(root);
         const auto cleaned = services::WorkspaceStorageService(root).cleanDisposableFiles();
-        const auto result = transfer.exportZip(snapshot, fileName);
+        const auto result = transfer.exportZip(snapshot, fileName, core::LabelPlusDocument::CommentPolicy::Omit);
         if (!cleaned && result)
             return Result{cleaned.error(), *result, transfer.listWorkspaces()};
         return Result{result ? QString{} : result.error(), result ? *result : QString{}, transfer.listWorkspaces()};

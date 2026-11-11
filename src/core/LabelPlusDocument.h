@@ -14,12 +14,16 @@ struct LoadedProjectDocument {
 
 class LabelPlusDocument {
 public:
+    enum class CommentPolicy { Preserve, Omit };
+    static bool isValidGroupName(const QString& group);
     static Project loadFromFile(const QString& filePath);
     static LoadedProjectDocument readFromFile(const QString& filePath);
     static void saveToFile(const Project& project, const QString& filePath);
 
     static Project parse(const QString& content, const QString& filePath);
-    static QString serialize(const Project& project);
+    // Omit writes an empty comment section, including sourceName and generated LabelQt metadata.
+    // Normal persistence must preserve comments; Omit is for explicit classic-body exports only.
+    static QString serialize(const Project& project, CommentPolicy comments = CommentPolicy::Preserve);
 };
 
 } // namespace labelqt::core

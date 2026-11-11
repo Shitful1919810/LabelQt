@@ -169,8 +169,7 @@ void validateSerializable(const Project& project)
     if (project.sourceName().contains(QLatin1Char('\n')) || project.sourceName().contains(QLatin1Char('\r')))
         invalidDocument();
     for (const QString& group : project.groups()) {
-        if (group.trimmed().isEmpty() || group != group.trimmed() || group == QStringLiteral("-") ||
-            group.contains(QLatin1Char('\n')) || group.contains(QLatin1Char('\r')))
+        if (!LabelPlusDocument::isValidGroupName(group))
             invalidDocument();
     }
     for (const ImageEntry& image : project.images()) {
@@ -192,6 +191,12 @@ void validateSerializable(const Project& project)
     }
 }
 } // namespace
+
+bool LabelPlusDocument::isValidGroupName(const QString& group)
+{
+    return !group.isEmpty() && group == group.trimmed() && group != QStringLiteral("-") &&
+           !group.contains(QLatin1Char('\n')) && !group.contains(QLatin1Char('\r')) && !group.contains(QChar::Null);
+}
 
 Project LabelPlusDocument::loadFromFile(const QString& filePath)
 {
@@ -354,7 +359,7 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
     return project;
 }
 
-QString LabelPlusDocument::serialize(const Project& project)
+QString LabelPlusDocument::serialize(const Project& project, CommentPolicy comments)
 {
     validateSerializable(project);
     if (!ProjectIdentityService::valid(project))
@@ -374,11 +379,13 @@ QString LabelPlusDocument::serialize(const Project& project)
         stream << group << '\n';
     }
     stream << "-\n";
-    if (!project.sourceName().isEmpty()) {
-        stream << QStringLiteral("关联文件:") << project.sourceName() << "\n";
-    }
-    for (const QString& commentLine : commentLinesWithMetadata(project)) {
-        stream << commentLine << '\n';
+    if (comments == CommentPolicy::Preserve) {
+        if (!project.sourceName().isEmpty()) {
+            stream << QStringLiteral("关联文件:") << project.sourceName() << "\n";
+        }
+        for (const QString& commentLine : commentLinesWithMetadata(project)) {
+            stream << commentLine << '\n';
+        }
     }
     stream << '\n';
 

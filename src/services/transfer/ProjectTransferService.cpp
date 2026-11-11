@@ -266,14 +266,22 @@ QJsonObject validateProject(const Project& project, const TransferLimits& limits
     return metadata;
 }
 
-QStringList materialize(const Project& source, const QString& destination, bool copyImages, bool exporting,
-                        const TransferLimits& limits)
+QStringList
+materialize(const Project& source, const QString& destination, bool copyImages, bool exporting,
+            const TransferLimits& limits,
+            core::LabelPlusDocument::CommentPolicy comments = core::LabelPlusDocument::CommentPolicy::Preserve)
 {
-    auto metadata = validateProject(source, limits);
+    auto output = source;
+    if (comments == core::LabelPlusDocument::CommentPolicy::Omit) {
+        output.setCommentLines({});
+        output.setSourceName({});
+    }
+    // Discarded history is not part of this artifact. Validate and copy only its actual references.
+    auto metadata = validateProject(output, limits);
     const auto base = QFileInfo(source.filePath()).absolutePath();
     const auto outputPath = QDir(destination).filePath("project.txt");
-    auto output = ProjectLocationService::forOutput(source, outputPath);
-    output.setSourceName(portableBasename(source.sourceName(), limits));
+    output = ProjectLocationService::forOutput(output, outputPath);
+    output.setSourceName(portableBasename(output.sourceName(), limits));
     Names names;
     names.add("project.txt");
     QStringList files;
@@ -338,7 +346,7 @@ QStringList materialize(const Project& source, const QString& destination, bool 
         metadata.insert("mergeSources", sources);
     metadata.remove("imagePaths"); // The serializer regenerates current paths from the relocated candidate.
     output.setCommentLines(ProjectMetadataService::rewriteCommentLines(output.commentLines(), metadata));
-    const auto bytes = core::LabelPlusDocument::serialize(output).toUtf8();
+    const auto bytes = core::LabelPlusDocument::serialize(output, comments).toUtf8();
     require(bytes.size() <= limits.textBytes && bytes.size() <= limits.fileBytes && bytes.size() <= remaining,
             ProjectTransferService::tr("Transfer size limit exceeded."));
     writeFile(outputPath, bytes);
@@ -487,7 +495,8 @@ std::expected<WorkspaceInfo, QString> ProjectTransferService::importFile(QString
     }
 }
 
-std::expected<QString, QString> ProjectTransferService::exportZip(const core::Project& project, QString fileName) const
+std::expected<QString, QString> ProjectTransferService::exportZip(const core::Project& project, QString fileName,
+                                                                  core::LabelPlusDocument::CommentPolicy comments) const
 {
     try {
         checkLimits(m_limits);
@@ -500,7 +509,7 @@ std::expected<QString, QString> ProjectTransferService::exportZip(const core::Pr
         require(stage.isValid(), tr("Cannot create transfer staging directory."));
         const auto projectDir = stage.filePath("project");
         makeDirectory(projectDir);
-        auto files = materialize(project, projectDir, true, true, m_limits);
+        auto files = materialize(project, projectDir, true, true, m_limits, comments);
         for (auto& file : files)
             file.prepend("project/");
         const auto archive = stage.filePath("output.zip");

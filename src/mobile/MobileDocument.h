@@ -32,7 +32,7 @@ class MobileDocument final : public QObject {
 public:
     explicit MobileDocument(QObject* parent = nullptr);
     ~MobileDocument() override;
-    bool openProject(const QString& path, const QString& title = {});
+    bool openProject(QString path, QString title = {});
     // Used only after confirmed workspace removal; never writes the detached project back.
     void closeRemovedProject();
     void setTitle(QString title);
@@ -114,7 +114,7 @@ public:
     Q_INVOKABLE void moveLabel(const QString& key, qreal x, qreal y);
     Q_INVOKABLE void deleteSelected();
     Q_INVOKABLE void setGroup(const QString& group);
-    Q_INVOKABLE void addGroup(const QString& group);
+    Q_INVOKABLE bool addGroup(const QString& group);
     Q_INVOKABLE void setVisibleGroups(const QStringList& groups);
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();

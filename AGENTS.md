@@ -61,8 +61,11 @@ See `docs/devtools.md` for the current helper commands.
 - Keep Android user-facing behavior and engineering contracts synchronized with the two dedicated guides above.
   Use `python scripts/devtool.py module-map android` to find their entry points and shared production modules.
 - Reuse `WorkspaceBrowser.qml` for home/drawer management and `SubmitDialog.qml` for validated submissions.
+  Use `ScrollDialog.qml` for height-bounded dialog bodies, keeping action buttons outside scrolling content.
   Keep label model updates incremental when visible identities are unchanged; derive group styles from the complete
   project group order, not the filtered list. Selection or text edits must not recreate gesture targets.
+  Use `LabelVisibility` for visible label projection; display numbers are visible row + 1, not storage indexes
+  or stable IDs. Never use UI filtering to select labels for saving or export.
 - Keep workspace identity, display title and suggested share filename separate. Renaming a title must not rename
   project/image files. Coordinate active-workspace deletion, timer shutdown and serialized transfer maintenance;
   never treat user workspaces or recovery evidence as disposable cache.
@@ -73,6 +76,9 @@ See `docs/devtools.md` for the current helper commands.
   not filesystem paths; never pass them to local path canonicalization, lock files or rename transactions.
 - Keep local save, recovery checkpoint, export and handoff-to-another-app as distinct states. Never report a QQ transfer
   as delivered based on a chooser or Activity callback. Do not overwrite the original imported external files.
+- Android sharing writes a comment-free TXT with current-page images only. Apply this policy to the export copy,
+  not local persistence or import. Omit generated metadata as well as ordinary comments and sourceName; never
+  describe shared ZIPs as backups of proofreading rounds or notes.
 - Share project ZIPs through Android's standard intents and narrowly scoped read-only FileProvider access. Receiving
   from QQ and manual system-picker import must use the same bounded, validated import service. Never scan QQ's private
   directories, request all-files access as a workaround, or implement archive parsing in UI/JNI code.
