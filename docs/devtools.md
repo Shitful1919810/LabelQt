@@ -40,7 +40,8 @@ python scripts/devtool.py module-map selection
 
 输出会列出相关文件、文档和职责边界提示。这个命令尤其适合 Agent 在进入任务时快速定位入口，避免把逻辑顺手塞回 `MainWindow`。
 
-Android 工作先读 [移植方案](android-port-plan.md)，再按 `selection`、`image-canvas`、`label-edit`、
+Android 工作先读 [工程约定](android-development.md)，用 [使用说明](android-user-guide.md) 核对当前行为，
+用 [移植方案](android-port-plan.md) 核对后续范围，再按 `selection`、`image-canvas`、`label-edit`、
 `page-draft`、`recovery`、`proofread` 等主题查找可复用边界。`module-map android` 定位移动前端、平台桥和 ZIP 服务；
 `mobile-host-debug` preset 运行移动模型/服务/界面测试，`android-arm64-debug` 构建 APK。
 工具链环境变量见 [Android 构建](android-build.md)。翻译检查覆盖 C++ 和 QML；

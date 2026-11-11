@@ -32,6 +32,11 @@ The Android design baseline is [docs/android-port-plan.md](docs/android-port-pla
 using [docs/android-build.md](docs/android-build.md); it is not yet the complete mobile release described by the plan.
 Its scope and milestone gates also apply to Agent contributions.
 
+Read [Android engineering contracts](docs/android-development.md) for module ownership, editor/worker lifetimes,
+model updates, naming and storage invariants. Keep [Android usage](docs/android-user-guide.md) synchronized with
+implemented behavior, not the future feature list. Documentation-only changes need fast checks; code changes need
+impact-based mobile host tests, desktop regressions and APK/device validation as detailed in the engineering guide.
+
 - Keep the C++ document, stable identities, undo, revisions, editing and proofreading rules shared with desktop.
   QML presents models and issues commands; JNI bridges Android facilities and never mutates the active document.
 - Add focused mobile adapters after extracting genuinely shared rules from desktop controllers. Avoid hidden Widgets,
@@ -96,8 +101,8 @@ Its scope and milestone gates also apply to Agent contributions.
 
 ## UI Text And i18n
 
-- User-visible C++ UI strings must use `tr()`. Planned QML UI uses `qsTr()`/`qsTranslate()`; extend extraction and
-  translation checks for QML when adding that frontend, and keep the same four language catalogs.
+- User-visible C++ UI strings must use `tr()`. QML UI uses `qsTr()`/`qsTranslate()`; extraction and translation
+  checks cover both frontends. Keep the same four language catalogs and verify runtime translation contexts.
 - When adding or changing a `tr()` string, update all of the 4 files:
   - `translations/labelqt_zh_CN.ts`
   - `translations/labelqt_zh_TW.ts`

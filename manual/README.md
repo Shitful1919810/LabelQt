@@ -2,6 +2,11 @@
 
 这里存放使用 Typst 编写的 LabelQt 用户手册。手册面向普通用户，不参与主程序 CMake 构建。
 
+当前 PDF 介绍桌面 Widgets 版，截图和鼠标/快捷键操作不适用于 Android 触控界面。
+移动技术预览请阅读 [Android 使用说明](../docs/android-user-guide.md)；
+APK 构建与协作约定分别见 [Android 构建](../docs/android-build.md) 和
+[Android 开发](../docs/android-development.md)。当前不生成独立的 Android PDF。
+
 ## 构建
 
 仓库根目录执行：

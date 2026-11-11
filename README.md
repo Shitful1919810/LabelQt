@@ -8,8 +8,12 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 
 Android 分支已有 Qt Quick 技术预览和 ARM64 APK 构建目标，复用 C++ 编辑、撤销和校对内核。
 预览只编辑导入的本机副本，通过系统文件选择器和分享面板交接标准 ZIP，不包含 Python 自动化。
-它尚未达到完整移动版的发布条件；构建、操作与限制见 [Android 构建](docs/android-build.md)，
-完整范围与验收安排见 [移植方案](docs/android-port-plan.md)。
+它尚未达到完整移动版的发布条件。文档入口：
+
+- 使用手机编辑与分享：[Android 使用说明](docs/android-user-guide.md)。
+- 构建 APK 与安装测试：[Android 构建](docs/android-build.md)。
+- 开发及 Agent 协作：[Android 工程约定](docs/android-development.md)。
+- 后续功能与验收安排：[移植方案](docs/android-port-plan.md)。
 
 ![LabelQt 主界面：图像标注与标签文本编辑](manual/assets/main-window.png)
 
@@ -30,6 +34,8 @@ Android 分支已有 Qt Quick 技术预览和 ARM64 APK 构建目标，复用 C+
 </details>
 
 ## 功能概览
+
+以下为桌面版功能；Android 已实现范围和触控操作以 [移动版使用说明](docs/android-user-guide.md) 为准。
 
 - 从图片文件夹新建工程，或打开和保存经典 LabelPlus `.txt` 工程文件。
 - 支持选择多个 LabelPlus `.txt` 工程并按页合并，冲突页可在预览窗口中选择采用来源，并可在保存前调整最终页序。

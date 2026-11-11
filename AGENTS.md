@@ -44,8 +44,9 @@ See `docs/devtools.md` for the current helper commands.
 ## Porting Direction
 
 - Prefer Qt Widgets for the main desktop workflow.
-- Android has a technical-preview frontend, not yet a supported release target. Read `docs/android-port-plan.md`
-  and `docs/android-build.md` before Android work.
+- Android has a technical-preview frontend, not yet a supported release target. Read `docs/android-development.md`
+  for implementation contracts, `docs/android-user-guide.md` for current behavior, `docs/android-port-plan.md`
+  for future scope, and `docs/android-build.md` for toolchain and validation before Android work.
 - Keep desktop Widgets and Android Qt Quick/QML as separate frontends over shared C++ services. Do not shrink
   `MainWindow` into a mobile UI or duplicate editing, undo, proofreading and persistence rules in QML/JNI.
 - Keep platform-independent logic under `src/core`.
@@ -57,6 +58,14 @@ See `docs/devtools.md` for the current helper commands.
 
 ## Android Collaboration Contract
 
+- Keep Android user-facing behavior and engineering contracts synchronized with the two dedicated guides above.
+  Use `python scripts/devtool.py module-map android` to find their entry points and shared production modules.
+- Reuse `WorkspaceBrowser.qml` for home/drawer management and `SubmitDialog.qml` for validated submissions.
+  Keep label model updates incremental when visible identities are unchanged; derive group styles from the complete
+  project group order, not the filtered list. Selection or text edits must not recreate gesture targets.
+- Keep workspace identity, display title and suggested share filename separate. Renaming a title must not rename
+  project/image files. Coordinate active-workspace deletion, timer shutdown and serialized transfer maintenance;
+  never treat user workspaces or recovery evidence as disposable cache.
 - Follow the scope, phase gates and failure semantics in `docs/android-port-plan.md`; track implementation in `TODO.md`.
   Distinguish the working preview from the uncompleted full-release milestones. Validate APK packaging, host mobile
   tests and desktop regression tests separately; a host QML test is not an Android/QQ device test.

@@ -1,13 +1,16 @@
 # 架构说明
 
-LabelQt 是一个独立的 C++/Qt 6 Widgets 应用。它的核心目标是编辑经典 LabelPlus `.txt` 工程，同时支持合并、页面管理、校对与自动化 v2 批处理。基于新 API 的 OCR 与 AI 翻译提供者尚待实现，不内置旧版脚本。
+LabelQt 是一个独立的 C++/Qt 6 应用，桌面使用 Widgets，Android 技术预览使用 Qt Quick。
+它的核心目标是编辑经典 LabelPlus `.txt` 工程；桌面同时支持合并、页面管理、校对与自动化 v2 批处理。
+基于新 API 的 OCR 与 AI 翻译提供者尚待实现，不内置旧版脚本。
 
 这份文档记录当前代码的职责边界。新增功能前请先确认它应该放在哪一层，避免把新的状态机、文件格式处理或业务规则继续塞回 `MainWindow`。
 
 ## Android 呈现边界
 
 Android 技术预览已引入独立 Qt Quick 前端；完整范围与验收基线见 [Android 移植实施方案](android-port-plan.md)，
-构建入口见 [Android 构建](android-build.md)，公共约定见 `AGENTS.md` / `CONTRIBUTING.md`。
+构建入口见 [Android 构建](android-build.md)，当前操作见 [使用说明](android-user-guide.md)，
+工程约定见 [Android 开发](android-development.md) 及 `AGENTS.md` / `CONTRIBUTING.md`。
 
 采用共用 C++ Core/Services、桌面 Widgets 与移动 Qt Quick 两套呈现。Android 预览编辑导入的本机副本，
 以标准 ZIP 导出和系统分享交接，不直接写回外部文档 URI。TXT/HTML 独立导出仍是后续任务。

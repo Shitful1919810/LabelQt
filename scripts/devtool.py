@@ -49,7 +49,8 @@ MODULE_TOPICS = (
         notes=("QML 只发命令；编辑、撤销、校对复用共享服务。",
                "JNI 只复制授权流到私有 inbox；ZIP 服务不得接受 URI 或直接修改活动工程。",
                "主机 QML 测试不能替代 APK 真机、中文 IME 和 QQ 收发验收。"),
-        docs=("docs/android-build.md", "docs/android-port-plan.md", "docs/architecture.md"),
+        docs=("docs/android-development.md", "docs/android-user-guide.md", "docs/android-build.md",
+              "docs/android-port-plan.md", "docs/architecture.md"),
     ),
     ModuleTopic(
         name="recovery",

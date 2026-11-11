@@ -4,6 +4,8 @@
 
 本文规定完整首版的产品范围、交互、存储边界和验收条件。仓库现有 ARM64 APK 构建目标和技术预览，
 构建与当前限制见 [Android 构建](android-build.md)，不可把后文尚未完成的设计当作已实现功能。
+当前成品的操作以 [使用说明](android-user-guide.md) 为准；实施时遵循
+[Android 工程约定](android-development.md)，不要在 QML 或平台桥中复制共享业务规则。
 实施进度在根目录 [TODO](../TODO.md) 维护；当前桌面行为仍以
 [架构](architecture.md)、[持久化安全](persistence-safety.md)、[产品工作流](product-workflows.md)
 和 [校对轮次](proofreading-rounds.md) 为准。修改本方案的安全边界必须显式说明，不得以适配为由静默降级。
