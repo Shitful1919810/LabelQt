@@ -18,12 +18,8 @@ set(LABELQT_CORE_SOURCES
 )
 
 set(LABELQT_SERVICE_SOURCES
-    services/automation/AutomationManifestParser.cpp
     services/automation/AutomationProtocol.cpp
     services/automation/ProjectTaskService.cpp
-    services/automation/AutomationPythonResolver.cpp
-    services/automation/AutomationService.cpp
-    services/automation/SecretStore.cpp
     services/io/ImagePageCache.cpp
     services/io/FileRenameTransaction.cpp
     services/io/FileRevision.cpp
@@ -79,6 +75,42 @@ file(GLOB LABELQT_TRANSLATION_FILES CONFIGURE_DEPENDS
 )
 list(SORT LABELQT_TRANSLATION_FILES)
 
+# Both frontends own one catalog. Scan translation input independently from build-target selection.
+file(GLOB_RECURSE LABELQT_TRANSLATION_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.qml"
+)
+
+add_library(LabelQtShared STATIC
+    ${LABELQT_CORE_SOURCES}
+    ${LABELQT_SERVICE_SOURCES}
+)
+target_include_directories(LabelQtShared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(LabelQtShared PUBLIC cxx_std_23)
+target_compile_definitions(LabelQtShared PRIVATE LABELQT_INSTALL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/labelqt")
+target_link_libraries(LabelQtShared
+    PUBLIC Qt6::Core Qt6::Gui
+    PRIVATE Qt6::Concurrent DiffMatchPatch ZLIB::ZLIB
+)
+set_target_properties(LabelQtShared PROPERTIES POSITION_INDEPENDENT_CODE ON)
+labelqt_enable_warnings(LabelQtShared)
+
+if(LABELQT_BUILD_MOBILE)
+    add_subdirectory(mobile)
+endif()
+
+if(NOT LABELQT_BUILD_DESKTOP)
+    return()
+endif()
+
+set(LABELQT_DESKTOP_SERVICE_SOURCES
+    services/automation/AutomationManifestParser.cpp
+    services/automation/AutomationPythonResolver.cpp
+    services/automation/AutomationService.cpp
+    services/automation/SecretStore.cpp
+)
+
 set(LABELQT_UI_SOURCES
     ui/automation/AutomationController.cpp
     ui/automation/AutomationParameterDialog.cpp
@@ -132,6 +164,17 @@ set(LABELQT_UI_SOURCES
     ui/MainWindowShortcutController.cpp
 )
 
+add_library(LabelQtDesktop STATIC
+    ${LABELQT_DESKTOP_SERVICE_SOURCES}
+    ${LABELQT_UI_SOURCES}
+)
+target_link_libraries(LabelQtDesktop
+    PUBLIC LabelQtShared Qt6::Widgets
+    PRIVATE Qt6::Concurrent Qt6Keychain::Qt6Keychain
+)
+set_target_properties(LabelQtDesktop PROPERTIES POSITION_INDEPENDENT_CODE ON)
+labelqt_enable_warnings(LabelQtDesktop)
+
 qt_add_resources(LABELQT_RESOURCE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/breeze.qrc"
 )
@@ -140,16 +183,10 @@ qt_add_executable(LabelQt
     WIN32
     MACOSX_BUNDLE
     main.cpp
-    ${LABELQT_CORE_SOURCES}
-    ${LABELQT_SERVICE_SOURCES}
-    ${LABELQT_UI_SOURCES}
     ${LABELQT_RESOURCE_SOURCES}
 )
 
-target_include_directories(LabelQt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(LabelQt PRIVATE LABELQT_INSTALL_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/labelqt")
-
-target_link_libraries(LabelQt PRIVATE DiffMatchPatch Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent Qt6Keychain::Qt6Keychain ZLIB::ZLIB)
+target_link_libraries(LabelQt PRIVATE LabelQtDesktop)
 
 if(TARGET Qt6::Svg)
     target_link_libraries(LabelQt PRIVATE Qt6::Svg)
@@ -157,6 +194,7 @@ endif()
 
 if(COMMAND qt_add_translations)
     qt_add_translations(LabelQt
+        SOURCES ${LABELQT_TRANSLATION_SOURCES}
         TS_FILES
             ${LABELQT_TRANSLATION_FILES}
         RESOURCE_PREFIX "/i18n"
@@ -186,7 +224,9 @@ function(labelqt_add_runtime_files target_name runtime_target_name)
     add_dependencies(${target_name} ${runtime_target_name})
 endfunction()
 
-labelqt_add_runtime_files(LabelQt LabelQtRuntimeFiles)
+if(NOT ANDROID)
+    labelqt_add_runtime_files(LabelQt LabelQtRuntimeFiles)
+endif()
 
 if(WIN32 AND NOT LABELQT_ENABLE_WINDOWS_STATIC_RELEASE)
     find_program(WINDEPLOYQT_EXECUTABLE
@@ -217,7 +257,7 @@ set_target_properties(LabelQt PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
 )
 
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT ANDROID)
     set_target_properties(LabelQt PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         INSTALL_RPATH ""
@@ -238,6 +278,10 @@ if(LABELQT_ENABLE_WINDOWS_STATIC_RELEASE)
     else()
         target_link_options(LabelQt PRIVATE -static -static-libgcc -static-libstdc++)
     endif()
+endif()
+
+if(ANDROID)
+    return()
 endif()
 
 set(LABELQT_INSTALL_DOCDIR "${CMAKE_INSTALL_DATAROOTDIR}/doc/labelqt")

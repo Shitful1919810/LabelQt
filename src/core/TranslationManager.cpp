@@ -2,7 +2,6 @@
 
 #include "core/RuntimePaths.h"
 
-#include <QApplication>
 #include <QDir>
 #include <QLocale>
 #include <QSet>

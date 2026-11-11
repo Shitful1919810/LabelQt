@@ -3622,4 +3622,502 @@ Missing images: %2</source>
         <translation>校對記錄無效或版本不受支援，未變更原記錄。</translation>
     </message>
 </context>
+<context>
+    <name>Main</name>
+    <message>
+        <source>Edited %1</source>
+        <translation>最近編輯：%1</translation>
+    </message>
+    <message>
+        <source>Manage project</source>
+        <translation>管理專案</translation>
+    </message>
+    <message>
+        <source>Rename project</source>
+        <translation>重新命名專案</translation>
+    </message>
+    <message>
+        <source>Delete project</source>
+        <translation>刪除專案</translation>
+    </message>
+    <message>
+        <source>ZIP file name</source>
+        <translation>ZIP 檔名</translation>
+    </message>
+    <message>
+        <source>Delete the local copy of &quot;%1&quot; and its images? This cannot be undone. The original imported file and shared ZIPs will be kept.</source>
+        <translation>刪除「%1」的本機副本及其圖片？此操作無法復原。原始匯入檔案和已分享的 ZIP 將保留。</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>新增</translation>
+    </message>
+    <message>
+        <source>Browse</source>
+        <translation>瀏覽</translation>
+    </message>
+    <message>
+        <source>Changes</source>
+        <translation>變更</translation>
+    </message>
+    <message>
+        <source>Delete label</source>
+        <translation>刪除標籤</translation>
+    </message>
+    <message>
+        <source>Delete selected label?</source>
+        <translation>刪除選取的標籤？</translation>
+    </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>關閉提示</translation>
+    </message>
+    <message>
+        <source>Edits are saved to a local copy. Export a ZIP to send your changes.</source>
+        <translation>修改會儲存至本機副本。請匯出 ZIP 以傳送修改後的工程。</translation>
+    </message>
+    <message>
+        <source>Empty label</source>
+        <translation>空白標籤</translation>
+    </message>
+    <message>
+        <source>Finish review</source>
+        <translation>完成校對</translation>
+    </message>
+    <message>
+        <source>Close project list</source>
+        <translation>關閉工程列表</translation>
+    </message>
+    <message>
+        <source>Finish editing</source>
+        <translation>結束編輯</translation>
+    </message>
+    <message>
+        <source>Fit image</source>
+        <translation>符合視窗大小</translation>
+    </message>
+    <message>
+        <source>Groups</source>
+        <translation>分組</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>圖片</translation>
+    </message>
+    <message>
+        <source>Import ZIP or TXT</source>
+        <translation>匯入 ZIP 或 TXT</translation>
+    </message>
+    <message>
+        <source>Labels</source>
+        <translation>標籤</translation>
+    </message>
+    <message>
+        <source>Local projects</source>
+        <translation>本機工程</translation>
+    </message>
+    <message>
+        <source>Move</source>
+        <translation>移動</translation>
+    </message>
+    <message>
+        <source>New group</source>
+        <translation>新分組</translation>
+    </message>
+    <message>
+        <source>Next page</source>
+        <translation>下一頁</translation>
+    </message>
+    <message>
+        <source>Note</source>
+        <translation>批註</translation>
+    </message>
+    <message>
+        <source>Note for the selected label or current page</source>
+        <translation>為選取的標籤或目前頁面新增批註</translation>
+    </message>
+    <message>
+        <source>Previous page</source>
+        <translation>上一頁</translation>
+    </message>
+    <message>
+        <source>Project actions</source>
+        <translation>工程操作</translation>
+    </message>
+    <message>
+        <source>Project files (*.zip *.txt)</source>
+        <translation>工程檔案 (*.zip *.txt)</translation>
+    </message>
+    <message>
+        <source>Projects</source>
+        <translation>工程</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>重做</translation>
+    </message>
+    <message>
+        <source>Review</source>
+        <translation>校對</translation>
+    </message>
+    <message>
+        <source>Review note</source>
+        <translation>校對批註</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>儲存</translation>
+    </message>
+    <message>
+        <source>Share ZIP</source>
+        <translation>分享 ZIP</translation>
+    </message>
+    <message>
+        <source>Start review</source>
+        <translation>開始校對</translation>
+    </message>
+    <message>
+        <source>Start a new review?</source>
+        <translation>開始新一輪校對？</translation>
+    </message>
+    <message>
+        <source>The previous round will be replaced. Export a ZIP first to keep it.</source>
+        <translation>上一輪校對記錄將被取代。如需保留，請先匯出 ZIP。</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>復原</translation>
+    </message>
+</context>
+<context>
+    <name>MobileReviewController</name>
+    <message>
+        <source>A proofreading round already exists.</source>
+        <translation>已有一輪校對記錄。</translation>
+    </message>
+    <message>
+        <source>Add proofreading note</source>
+        <translation>新增校對批註</translation>
+    </message>
+    <message>
+        <source>An active proofreading round is required.</source>
+        <translation>需要有進行中的校對輪次。</translation>
+    </message>
+    <message>
+        <source>Complete proofreading round</source>
+        <translation>完成本輪校對</translation>
+    </message>
+    <message>
+        <source>No proofreading round exists.</source>
+        <translation>尚無校對記錄。</translation>
+    </message>
+    <message>
+        <source>No text changes</source>
+        <translation>無文字變更</translation>
+    </message>
+    <message>
+        <source>Resolve proofreading note</source>
+        <translation>將校對批註標記為已解決</translation>
+    </message>
+    <message>
+        <source>Start proofreading round</source>
+        <translation>開始一輪校對</translation>
+    </message>
+    <message>
+        <source>The note target no longer exists.</source>
+        <translation>批註對應的標籤或頁面已不存在。</translation>
+    </message>
+    <message>
+        <source>The note text must not be empty.</source>
+        <translation>批註內容不可空白。</translation>
+    </message>
+    <message>
+        <source>The project changed. Calculate proofreading changes again.</source>
+        <translation>工程已變更，請重新計算校對變更。</translation>
+    </message>
+    <message>
+        <source>The proofreading note no longer exists.</source>
+        <translation>該校對批註已不存在。</translation>
+    </message>
+    <message>
+        <source>This round is too large for the mobile preview.</source>
+        <translation>本輪校對內容過多，無法在行動版預覽。</translation>
+    </message>
+    <message>
+        <source>Unable to calculate proofreading changes.</source>
+        <translation>無法計算校對變更。</translation>
+    </message>
+    <message>
+        <source>Unable to edit the proofreading round.</source>
+        <translation>無法編輯本輪校對。</translation>
+    </message>
+    <message>
+        <source>Unable to read the proofreading round.</source>
+        <translation>無法讀取本輪校對記錄。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectCanvas</name>
+    <message>
+        <source>Image unavailable</source>
+        <translation>圖片無法使用</translation>
+    </message>
+    <message>
+        <source>Label %1</source>
+        <translation>標籤 %1</translation>
+    </message>
+    <message>
+        <source>Loading image...</source>
+        <translation>正在載入圖片...</translation>
+    </message>
+    <message>
+        <source>Select label</source>
+        <translation>選取標籤</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectTransferService</name>
+    <message>
+        <source>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</source>
+        <translation>分享快取已滿（2 GiB）。匯出檔案保留七天，請在到期清理後重試。</translation>
+    </message>
+    <message>
+        <source>A local project location is required for transfer.</source>
+        <translation>傳輸需要工程的本機檔案位置。</translation>
+    </message>
+    <message>
+        <source>A required image is missing: %1</source>
+        <translation>缺少必要的圖片：%1</translation>
+    </message>
+    <message>
+        <source>A transfer source changed while being copied. Try again.</source>
+        <translation>傳輸來源檔案在複製期間發生變更，請重試。</translation>
+    </message>
+    <message>
+        <source>An absolute app-owned transfer root is required.</source>
+        <translation>傳輸根目錄必須是應用程式專用目錄，且須使用絕對路徑。</translation>
+    </message>
+    <message>
+        <source>An image cannot use the project TXT extension.</source>
+        <translation>圖片不可使用工程檔案的 TXT 副檔名。</translation>
+    </message>
+    <message>
+        <source>An image has no transfer path.</source>
+        <translation>有圖片缺少傳輸路徑。</translation>
+    </message>
+    <message>
+        <source>Cannot create transfer staging directory.</source>
+        <translation>無法建立傳輸暫存目錄。</translation>
+    </message>
+    <message>
+        <source>Cannot inspect transfer input.</source>
+        <translation>無法檢查待傳輸檔案。</translation>
+    </message>
+    <message>
+        <source>Cannot protect the outgoing ZIP.</source>
+        <translation>無法將待分享的 ZIP 設為唯讀。</translation>
+    </message>
+    <message>
+        <source>Cannot publish the imported workspace.</source>
+        <translation>無法完成匯入並啟用工作區。</translation>
+    </message>
+    <message>
+        <source>Cannot publish the outgoing ZIP.</source>
+        <translation>無法將 ZIP 儲存為可分享的匯出檔案。</translation>
+    </message>
+    <message>
+        <source>Duplicate or colliding transfer path: %1</source>
+        <translation>傳輸路徑重複或衝突：%1</translation>
+    </message>
+    <message>
+        <source>Invalid or unsupported ZIP. Use an unencrypted, single-volume ZIP with UTF-8 names, store or deflate compression, and no ZIP64 extensions.</source>
+        <translation>ZIP 無效或不受支援。請使用未加密、不分卷的 ZIP，檔名採用 UTF-8 編碼，壓縮方式為僅儲存或 Deflate，且不使用 ZIP64 擴充。</translation>
+    </message>
+    <message>
+        <source>Invalid transfer limits.</source>
+        <translation>傳輸限制設定無效。</translation>
+    </message>
+    <message>
+        <source>Links are not allowed in transfer paths: %1</source>
+        <translation>傳輸路徑中不允許包含連結：%1</translation>
+    </message>
+    <message>
+        <source>Nested archives are not supported.</source>
+        <translation>不支援巢狀壓縮檔。</translation>
+    </message>
+    <message>
+        <source>The ZIP contains multiple TXT files. Select a single project before importing.</source>
+        <translation>ZIP 中包含多個 TXT 檔案，請選擇單一工程後再匯入。</translation>
+    </message>
+    <message>
+        <source>The ZIP contains no project TXT.</source>
+        <translation>ZIP 中沒有工程 TXT 檔案。</translation>
+    </message>
+    <message>
+        <source>The transfer root is unavailable.</source>
+        <translation>傳輸根目錄無法使用。</translation>
+    </message>
+    <message>
+        <source>Transfer accepts local files only.</source>
+        <translation>傳輸僅接受本機檔案。</translation>
+    </message>
+    <message>
+        <source>Transfer cannot safely preserve unknown or unsupported project metadata.</source>
+        <translation>傳輸無法安全保留未知或不受支援的工程中繼資料。</translation>
+    </message>
+    <message>
+        <source>Transfer could not read or write a regular local file: %1</source>
+        <translation>傳輸無法讀取或寫入本機一般檔案：%1</translation>
+    </message>
+    <message>
+        <source>Transfer entry limit exceeded.</source>
+        <translation>傳輸項目數量超過限制。</translation>
+    </message>
+    <message>
+        <source>Transfer size limit exceeded.</source>
+        <translation>傳輸大小超過限制。</translation>
+    </message>
+    <message>
+        <source>Unsafe or nonportable transfer path: %1</source>
+        <translation>傳輸路徑不安全或不相容於其他平台：%1</translation>
+    </message>
+    <message>
+        <source>Workspace title is too long.</source>
+        <translation>工作區名稱過長。</translation>
+    </message>
+    <message>
+        <source>ZIP verification failed.</source>
+        <translation>ZIP 驗證失敗。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileDocument</name>
+    <message>
+        <source>The edited label changed. Your text has been kept in the editor.</source>
+        <translation>正在編輯的標籤已變更。您的文字已保留在編輯器中。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileWorkspaceController</name>
+    <message>
+        <source>Finish pending imports before adding more files.</source>
+        <translation>請先完成待處理的匯入，再新增更多檔案。</translation>
+    </message>
+    <message>
+        <source>Importing a private copy...</source>
+        <translation>正在匯入應用程式專用副本...</translation>
+    </message>
+    <message>
+        <source>Preparing a verified ZIP...</source>
+        <translation>正在產生並驗證 ZIP...</translation>
+    </message>
+    <message>
+        <source>Project imported. Select it to open.</source>
+        <translation>工程已匯入，選取後即可開啟。</translation>
+    </message>
+    <message>
+        <source>Select a local ZIP or TXT file.</source>
+        <translation>請選擇本機 ZIP 或 TXT 檔案。</translation>
+    </message>
+    <message>
+        <source>The file operation failed. Existing workspaces were kept.</source>
+        <translation>檔案操作失敗，現有工作區已保留。</translation>
+    </message>
+    <message>
+        <source>The received file is outside the private inbox.</source>
+        <translation>接收的檔案不在應用程式專用收件目錄內。</translation>
+    </message>
+    <message>
+        <source>The workspace is no longer available.</source>
+        <translation>該工作區已無法使用。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::platform::AndroidFileBridge</name>
+    <message>
+        <source>An interrupted file import was discarded. Select the source file again.</source>
+        <translation>已捨棄中斷的檔案匯入，請重新選擇來源檔案。</translation>
+    </message>
+    <message>
+        <source>Android file access is not available here.</source>
+        <translation>目前環境無法使用 Android 檔案存取功能。</translation>
+    </message>
+    <message>
+        <source>Only ZIP and TXT files are accepted by this file bridge.</source>
+        <translation>此檔案橋接僅接受 ZIP 和 TXT 檔案。</translation>
+    </message>
+    <message>
+        <source>Permission to read the selected file was lost. Select the file again.</source>
+        <translation>已失去所選檔案的讀取權限，請重新選擇該檔案。</translation>
+    </message>
+    <message>
+        <source>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</source>
+        <translation>請選擇一個 ZIP 或 TXT 檔案的 content URI。不接受互相衝突的 URI 或本機檔案 URI。</translation>
+    </message>
+    <message>
+        <source>The Android file bridge is not configured correctly.</source>
+        <translation>Android 檔案橋接設定不正確。</translation>
+    </message>
+    <message>
+        <source>The Android share chooser could not be opened. The exported file has been kept.</source>
+        <translation>無法開啟 Android 分享選擇器，匯出的檔案已保留。</translation>
+    </message>
+    <message>
+        <source>The Android system file chooser could not be opened.</source>
+        <translation>無法開啟 Android 系統檔案選擇器。</translation>
+    </message>
+    <message>
+        <source>The file could not be staged. Check available storage and select it again.</source>
+        <translation>無法暫存該檔案。請檢查可用儲存空間，然後重新選擇該檔案。</translation>
+    </message>
+    <message>
+        <source>The file inbox or system file chooser is busy. Finish a pending import and try again.</source>
+        <translation>檔案收件目錄或系統檔案選擇器忙碌中。請完成待處理的匯入後重試。</translation>
+    </message>
+    <message>
+        <source>The file or pending inbox exceeds the 2 GiB limit.</source>
+        <translation>該檔案或待處理的收件總量超過了 2 GiB 限制。</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspaceStorageService</name>
+    <message>
+        <source>The local project is unavailable.</source>
+        <translation>本機專案無法使用。</translation>
+    </message>
+    <message>
+        <source>Enter a valid ZIP file name without folders or reserved characters.</source>
+        <translation>請輸入有效的 ZIP 檔名，不要包含目錄或保留字元。</translation>
+    </message>
+    <message>
+        <source>Enter a project name of 1 to 200 characters.</source>
+        <translation>請輸入 1 至 200 個字元的專案名稱。</translation>
+    </message>
+    <message>
+        <source>The project name could not be saved.</source>
+        <translation>無法儲存專案名稱。</translation>
+    </message>
+    <message>
+        <source>The local project could not be deleted.</source>
+        <translation>無法刪除本機專案。</translation>
+    </message>
+    <message>
+        <source>Some temporary files could not be removed. Cleanup will be retried later.</source>
+        <translation>部分暫存檔無法刪除，將稍後重試清理。</translation>
+    </message>
+</context>
+<context>
+    <name>SubmitDialog</name>
+    <message>
+        <source>Confirm</source>
+        <translation>確定</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspaceBrowser</name>
+    <message>
+        <source>No local projects</source>
+        <translation>尚無本機專案</translation>
+    </message>
+</context>
 </TS>

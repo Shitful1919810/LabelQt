@@ -6,6 +6,11 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 
 本项目为独立实现，不包含原 WPF 项目的源代码。
 
+Android 分支已有 Qt Quick 技术预览和 ARM64 APK 构建目标，复用 C++ 编辑、撤销和校对内核。
+预览只编辑导入的本机副本，通过系统文件选择器和分享面板交接标准 ZIP，不包含 Python 自动化。
+它尚未达到完整移动版的发布条件；构建、操作与限制见 [Android 构建](docs/android-build.md)，
+完整范围与验收安排见 [移植方案](docs/android-port-plan.md)。
+
 ![LabelQt 主界面：图像标注与标签文本编辑](manual/assets/main-window.png)
 
 截图来自 Fedora 44 KDE，不同平台和主题下的外观会有所不同。用户手册与 README 共用

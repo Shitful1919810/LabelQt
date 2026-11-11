@@ -3622,4 +3622,502 @@ Missing images: %2</source>
         <translation>校正記録が無効か、未対応の形式です。元の記録は変更していません。</translation>
     </message>
 </context>
+<context>
+    <name>Main</name>
+    <message>
+        <source>Edited %1</source>
+        <translation>最終編集：%1</translation>
+    </message>
+    <message>
+        <source>Manage project</source>
+        <translation>プロジェクトを管理</translation>
+    </message>
+    <message>
+        <source>Rename project</source>
+        <translation>プロジェクト名を変更</translation>
+    </message>
+    <message>
+        <source>Delete project</source>
+        <translation>プロジェクトを削除</translation>
+    </message>
+    <message>
+        <source>ZIP file name</source>
+        <translation>ZIP ファイル名</translation>
+    </message>
+    <message>
+        <source>Delete the local copy of &quot;%1&quot; and its images? This cannot be undone. The original imported file and shared ZIPs will be kept.</source>
+        <translation>「%1」のローカルコピーと画像を削除しますか？この操作は元に戻せません。インポート元のファイルと共有済み ZIP は保持されます。</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>追加</translation>
+    </message>
+    <message>
+        <source>Browse</source>
+        <translation>閲覧</translation>
+    </message>
+    <message>
+        <source>Changes</source>
+        <translation>変更</translation>
+    </message>
+    <message>
+        <source>Delete label</source>
+        <translation>ラベルを削除</translation>
+    </message>
+    <message>
+        <source>Delete selected label?</source>
+        <translation>選択したラベルを削除しますか？</translation>
+    </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>通知を閉じる</translation>
+    </message>
+    <message>
+        <source>Edits are saved to a local copy. Export a ZIP to send your changes.</source>
+        <translation>編集内容はローカルのコピーに保存されます。変更後のプロジェクトを送るには ZIP をエクスポートしてください。</translation>
+    </message>
+    <message>
+        <source>Empty label</source>
+        <translation>空のラベル</translation>
+    </message>
+    <message>
+        <source>Finish review</source>
+        <translation>校正を完了</translation>
+    </message>
+    <message>
+        <source>Close project list</source>
+        <translation>プロジェクト一覧を閉じる</translation>
+    </message>
+    <message>
+        <source>Finish editing</source>
+        <translation>編集を終了</translation>
+    </message>
+    <message>
+        <source>Fit image</source>
+        <translation>画像を画面に合わせる</translation>
+    </message>
+    <message>
+        <source>Groups</source>
+        <translation>グループ</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>画像</translation>
+    </message>
+    <message>
+        <source>Import ZIP or TXT</source>
+        <translation>ZIP または TXT をインポート</translation>
+    </message>
+    <message>
+        <source>Labels</source>
+        <translation>ラベル</translation>
+    </message>
+    <message>
+        <source>Local projects</source>
+        <translation>ローカルプロジェクト</translation>
+    </message>
+    <message>
+        <source>Move</source>
+        <translation>移動</translation>
+    </message>
+    <message>
+        <source>New group</source>
+        <translation>新しいグループ</translation>
+    </message>
+    <message>
+        <source>Next page</source>
+        <translation>次のページ</translation>
+    </message>
+    <message>
+        <source>Note</source>
+        <translation>コメント</translation>
+    </message>
+    <message>
+        <source>Note for the selected label or current page</source>
+        <translation>選択したラベルまたは現在のページへのコメント</translation>
+    </message>
+    <message>
+        <source>Previous page</source>
+        <translation>前のページ</translation>
+    </message>
+    <message>
+        <source>Project actions</source>
+        <translation>プロジェクトの操作</translation>
+    </message>
+    <message>
+        <source>Project files (*.zip *.txt)</source>
+        <translation>プロジェクトファイル (*.zip *.txt)</translation>
+    </message>
+    <message>
+        <source>Projects</source>
+        <translation>プロジェクト</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>やり直す</translation>
+    </message>
+    <message>
+        <source>Review</source>
+        <translation>校正</translation>
+    </message>
+    <message>
+        <source>Review note</source>
+        <translation>校正コメント</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>保存</translation>
+    </message>
+    <message>
+        <source>Share ZIP</source>
+        <translation>ZIP を共有</translation>
+    </message>
+    <message>
+        <source>Start review</source>
+        <translation>校正を開始</translation>
+    </message>
+    <message>
+        <source>Start a new review?</source>
+        <translation>新しい校正ラウンドを開始しますか？</translation>
+    </message>
+    <message>
+        <source>The previous round will be replaced. Export a ZIP first to keep it.</source>
+        <translation>前の校正ラウンドは置き換えられます。残しておく場合は、先に ZIP をエクスポートしてください。</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>元に戻す</translation>
+    </message>
+</context>
+<context>
+    <name>MobileReviewController</name>
+    <message>
+        <source>A proofreading round already exists.</source>
+        <translation>校正ラウンドはすでに存在します。</translation>
+    </message>
+    <message>
+        <source>Add proofreading note</source>
+        <translation>校正コメントを追加</translation>
+    </message>
+    <message>
+        <source>An active proofreading round is required.</source>
+        <translation>進行中の校正ラウンドが必要です。</translation>
+    </message>
+    <message>
+        <source>Complete proofreading round</source>
+        <translation>今回の校正を完了</translation>
+    </message>
+    <message>
+        <source>No proofreading round exists.</source>
+        <translation>校正ラウンドがありません。</translation>
+    </message>
+    <message>
+        <source>No text changes</source>
+        <translation>テキストの変更なし</translation>
+    </message>
+    <message>
+        <source>Resolve proofreading note</source>
+        <translation>校正コメントを解決済みにする</translation>
+    </message>
+    <message>
+        <source>Start proofreading round</source>
+        <translation>校正ラウンドを開始</translation>
+    </message>
+    <message>
+        <source>The note target no longer exists.</source>
+        <translation>コメントの対象となるラベルまたはページが見つかりません。</translation>
+    </message>
+    <message>
+        <source>The note text must not be empty.</source>
+        <translation>コメント本文を入力してください。</translation>
+    </message>
+    <message>
+        <source>The project changed. Calculate proofreading changes again.</source>
+        <translation>プロジェクトが変更されました。校正の差分を再計算してください。</translation>
+    </message>
+    <message>
+        <source>The proofreading note no longer exists.</source>
+        <translation>この校正コメントはすでに存在しません。</translation>
+    </message>
+    <message>
+        <source>This round is too large for the mobile preview.</source>
+        <translation>今回の校正はサイズが大きすぎるため、モバイル版ではプレビューできません。</translation>
+    </message>
+    <message>
+        <source>Unable to calculate proofreading changes.</source>
+        <translation>校正の差分を計算できません。</translation>
+    </message>
+    <message>
+        <source>Unable to edit the proofreading round.</source>
+        <translation>校正ラウンドを編集できません。</translation>
+    </message>
+    <message>
+        <source>Unable to read the proofreading round.</source>
+        <translation>校正ラウンドを読み込めません。</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectCanvas</name>
+    <message>
+        <source>Image unavailable</source>
+        <translation>画像を表示できません</translation>
+    </message>
+    <message>
+        <source>Label %1</source>
+        <translation>ラベル %1</translation>
+    </message>
+    <message>
+        <source>Loading image...</source>
+        <translation>画像を読み込み中...</translation>
+    </message>
+    <message>
+        <source>Select label</source>
+        <translation>ラベルを選択</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectTransferService</name>
+    <message>
+        <source>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</source>
+        <translation>共有キャッシュが上限（2 GiB）に達しました。エクスポートは7日間保持されます。期限後の削除を待って再試行してください。</translation>
+    </message>
+    <message>
+        <source>A local project location is required for transfer.</source>
+        <translation>転送にはプロジェクトのローカルファイルの場所が必要です。</translation>
+    </message>
+    <message>
+        <source>A required image is missing: %1</source>
+        <translation>必要な画像が見つかりません：%1</translation>
+    </message>
+    <message>
+        <source>A transfer source changed while being copied. Try again.</source>
+        <translation>コピー中に転送元のファイルが変更されました。やり直してください。</translation>
+    </message>
+    <message>
+        <source>An absolute app-owned transfer root is required.</source>
+        <translation>転送先のルートディレクトリには、アプリ専用ディレクトリの絶対パスが必要です。</translation>
+    </message>
+    <message>
+        <source>An image cannot use the project TXT extension.</source>
+        <translation>画像にプロジェクトファイル用の TXT 拡張子は使用できません。</translation>
+    </message>
+    <message>
+        <source>An image has no transfer path.</source>
+        <translation>転送パスがない画像があります。</translation>
+    </message>
+    <message>
+        <source>Cannot create transfer staging directory.</source>
+        <translation>転送用の一時ディレクトリを作成できません。</translation>
+    </message>
+    <message>
+        <source>Cannot inspect transfer input.</source>
+        <translation>転送するファイルを検査できません。</translation>
+    </message>
+    <message>
+        <source>Cannot protect the outgoing ZIP.</source>
+        <translation>共有用の ZIP を読み取り専用に設定できません。</translation>
+    </message>
+    <message>
+        <source>Cannot publish the imported workspace.</source>
+        <translation>インポートしたワークスペースを利用可能な状態にできません。</translation>
+    </message>
+    <message>
+        <source>Cannot publish the outgoing ZIP.</source>
+        <translation>ZIP を共有可能なエクスポートファイルとして保存できません。</translation>
+    </message>
+    <message>
+        <source>Duplicate or colliding transfer path: %1</source>
+        <translation>転送パスが重複または競合しています：%1</translation>
+    </message>
+    <message>
+        <source>Invalid or unsupported ZIP. Use an unencrypted, single-volume ZIP with UTF-8 names, store or deflate compression, and no ZIP64 extensions.</source>
+        <translation>ZIP が無効か、未対応の形式です。暗号化・分割されておらず、ファイル名が UTF-8、圧縮方式が無圧縮または Deflate で、ZIP64 拡張を使用しない ZIP を使用してください。</translation>
+    </message>
+    <message>
+        <source>Invalid transfer limits.</source>
+        <translation>転送制限の設定が無効です。</translation>
+    </message>
+    <message>
+        <source>Links are not allowed in transfer paths: %1</source>
+        <translation>転送パスにリンクは使用できません：%1</translation>
+    </message>
+    <message>
+        <source>Nested archives are not supported.</source>
+        <translation>アーカイブ内のアーカイブには対応していません。</translation>
+    </message>
+    <message>
+        <source>The ZIP contains multiple TXT files. Select a single project before importing.</source>
+        <translation>ZIP に複数の TXT ファイルが含まれています。インポートする前に、プロジェクトを一つ選択してください。</translation>
+    </message>
+    <message>
+        <source>The ZIP contains no project TXT.</source>
+        <translation>ZIP にプロジェクトの TXT ファイルがありません。</translation>
+    </message>
+    <message>
+        <source>The transfer root is unavailable.</source>
+        <translation>転送用のルートディレクトリを利用できません。</translation>
+    </message>
+    <message>
+        <source>Transfer accepts local files only.</source>
+        <translation>転送できるのはローカルファイルのみです。</translation>
+    </message>
+    <message>
+        <source>Transfer cannot safely preserve unknown or unsupported project metadata.</source>
+        <translation>不明な形式または未対応のプロジェクトメタデータを安全に保持したまま転送することはできません。</translation>
+    </message>
+    <message>
+        <source>Transfer could not read or write a regular local file: %1</source>
+        <translation>転送時にローカルの通常ファイルを読み書きできませんでした：%1</translation>
+    </message>
+    <message>
+        <source>Transfer entry limit exceeded.</source>
+        <translation>転送する項目の数が上限を超えています。</translation>
+    </message>
+    <message>
+        <source>Transfer size limit exceeded.</source>
+        <translation>転送サイズが上限を超えています。</translation>
+    </message>
+    <message>
+        <source>Unsafe or nonportable transfer path: %1</source>
+        <translation>転送パスが安全でないか、他のプラットフォームで使用できません：%1</translation>
+    </message>
+    <message>
+        <source>Workspace title is too long.</source>
+        <translation>ワークスペース名が長すぎます。</translation>
+    </message>
+    <message>
+        <source>ZIP verification failed.</source>
+        <translation>ZIP の検証に失敗しました。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileDocument</name>
+    <message>
+        <source>The edited label changed. Your text has been kept in the editor.</source>
+        <translation>編集中のラベルが変更されました。入力したテキストはエディターに保持されています。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileWorkspaceController</name>
+    <message>
+        <source>Finish pending imports before adding more files.</source>
+        <translation>保留中のインポートを完了してから、ファイルを追加してください。</translation>
+    </message>
+    <message>
+        <source>Importing a private copy...</source>
+        <translation>アプリ専用のコピーをインポート中...</translation>
+    </message>
+    <message>
+        <source>Preparing a verified ZIP...</source>
+        <translation>ZIP を作成・検証中...</translation>
+    </message>
+    <message>
+        <source>Project imported. Select it to open.</source>
+        <translation>プロジェクトをインポートしました。選択すると開きます。</translation>
+    </message>
+    <message>
+        <source>Select a local ZIP or TXT file.</source>
+        <translation>ローカルの ZIP または TXT ファイルを選択してください。</translation>
+    </message>
+    <message>
+        <source>The file operation failed. Existing workspaces were kept.</source>
+        <translation>ファイル操作に失敗しました。既存のワークスペースは保持されています。</translation>
+    </message>
+    <message>
+        <source>The received file is outside the private inbox.</source>
+        <translation>受信したファイルがアプリ専用の受信ディレクトリ内にありません。</translation>
+    </message>
+    <message>
+        <source>The workspace is no longer available.</source>
+        <translation>このワークスペースは利用できなくなりました。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::platform::AndroidFileBridge</name>
+    <message>
+        <source>An interrupted file import was discarded. Select the source file again.</source>
+        <translation>中断されたファイルのインポートを破棄しました。元のファイルを選び直してください。</translation>
+    </message>
+    <message>
+        <source>Android file access is not available here.</source>
+        <translation>この環境では Android のファイルアクセス機能を利用できません。</translation>
+    </message>
+    <message>
+        <source>Only ZIP and TXT files are accepted by this file bridge.</source>
+        <translation>このファイル連携機能で受け付けるのは ZIP と TXT ファイルのみです。</translation>
+    </message>
+    <message>
+        <source>Permission to read the selected file was lost. Select the file again.</source>
+        <translation>選択したファイルの読み取り権限が失われました。ファイルを選び直してください。</translation>
+    </message>
+    <message>
+        <source>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</source>
+        <translation>ZIP または TXT ファイルの content URI を一つ選択してください。競合する URI やローカルファイルの URI は受け付けません。</translation>
+    </message>
+    <message>
+        <source>The Android file bridge is not configured correctly.</source>
+        <translation>Android のファイル連携設定が正しくありません。</translation>
+    </message>
+    <message>
+        <source>The Android share chooser could not be opened. The exported file has been kept.</source>
+        <translation>Android の共有先選択画面を開けませんでした。エクスポートしたファイルは保持されています。</translation>
+    </message>
+    <message>
+        <source>The Android system file chooser could not be opened.</source>
+        <translation>Android のシステムファイル選択画面を開けませんでした。</translation>
+    </message>
+    <message>
+        <source>The file could not be staged. Check available storage and select it again.</source>
+        <translation>ファイルを一時保存できませんでした。ストレージの空き容量を確認してから、ファイルを選び直してください。</translation>
+    </message>
+    <message>
+        <source>The file inbox or system file chooser is busy. Finish a pending import and try again.</source>
+        <translation>ファイル受信処理またはシステムのファイル選択画面が使用中です。保留中のインポートを完了してから、やり直してください。</translation>
+    </message>
+    <message>
+        <source>The file or pending inbox exceeds the 2 GiB limit.</source>
+        <translation>ファイルのサイズまたは未処理の受信ファイルの合計サイズが、2 GiB の上限を超えています。</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspaceStorageService</name>
+    <message>
+        <source>The local project is unavailable.</source>
+        <translation>ローカルプロジェクトを利用できません。</translation>
+    </message>
+    <message>
+        <source>Enter a valid ZIP file name without folders or reserved characters.</source>
+        <translation>フォルダーや予約文字を含まない有効な ZIP ファイル名を入力してください。</translation>
+    </message>
+    <message>
+        <source>Enter a project name of 1 to 200 characters.</source>
+        <translation>プロジェクト名を 1～200 文字で入力してください。</translation>
+    </message>
+    <message>
+        <source>The project name could not be saved.</source>
+        <translation>プロジェクト名を保存できませんでした。</translation>
+    </message>
+    <message>
+        <source>The local project could not be deleted.</source>
+        <translation>ローカルプロジェクトを削除できませんでした。</translation>
+    </message>
+    <message>
+        <source>Some temporary files could not be removed. Cleanup will be retried later.</source>
+        <translation>一部の一時ファイルを削除できませんでした。後で再試行します。</translation>
+    </message>
+</context>
+<context>
+    <name>SubmitDialog</name>
+    <message>
+        <source>Confirm</source>
+        <translation>確認</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspaceBrowser</name>
+    <message>
+        <source>No local projects</source>
+        <translation>ローカルプロジェクトはありません</translation>
+    </message>
+</context>
 </TS>

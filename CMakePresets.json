@@ -2,6 +2,37 @@
   "version": 6,
   "configurePresets": [
     {
+      "name": "mobile-host-debug",
+      "displayName": "Mobile frontend (host tests)",
+      "inherits": "debug-base",
+      "binaryDir": "${sourceDir}/build/mobile-host",
+      "cacheVariables": {
+        "LABELQT_BUILD_DESKTOP": "OFF",
+        "LABELQT_BUILD_MOBILE": "ON"
+      }
+    },
+    {
+      "name": "android-arm64-debug",
+      "displayName": "Android ARM64 preview APK",
+      "inherits": "debug-base",
+      "binaryDir": "${sourceDir}/build/android/arm64-debug",
+      "toolchainFile": "$env{QT_ANDROID_DIR}/lib/cmake/Qt6/qt.toolchain.cmake",
+      "cacheVariables": {
+        "QT_HOST_PATH": "$env{QT_HOST_PATH}",
+        "ANDROID_SDK_ROOT": "$env{ANDROID_SDK_ROOT}",
+        "ANDROID_NDK_ROOT": "$env{ANDROID_NDK_ROOT}",
+        "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_ROOT}",
+        "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-28",
+        "ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES": "ON",
+        "LABELQT_BUILD_DESKTOP": "OFF",
+        "LABELQT_BUILD_MOBILE": "ON",
+        "LABELQT_ENABLE_TESTS": "OFF",
+        "LABELQT_REQUIRE_LINGUIST_TOOLS": "ON"
+      }
+    },
+    {
       "name": "base",
       "hidden": true,
       "generator": "Ninja",
@@ -174,6 +205,15 @@
   ],
   "buildPresets": [
     {
+      "name": "mobile-host-debug",
+      "configurePreset": "mobile-host-debug"
+    },
+    {
+      "name": "android-arm64-debug",
+      "configurePreset": "android-arm64-debug",
+      "targets": ["apk"]
+    },
+    {
       "name": "linux-debug",
       "configurePreset": "linux-debug"
     },
@@ -224,6 +264,12 @@
     }
   ],
   "testPresets": [
+    {
+      "name": "mobile-host-debug",
+      "configurePreset": "mobile-host-debug",
+      "environment": {"QT_QPA_PLATFORM": "offscreen"},
+      "output": {"outputOnFailure": true}
+    },
     {
       "name": "linux-debug",
       "configurePreset": "linux-debug",

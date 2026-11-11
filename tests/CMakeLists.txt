@@ -1,118 +1,55 @@
-find_package(Qt6 6.5 REQUIRED COMPONENTS Gui Test Widgets)
+if(LABELQT_BUILD_MOBILE AND NOT ANDROID)
+    find_package(Qt6 6.8 REQUIRED COMPONENTS Test Quick QuickControls2)
+    find_package(LibArchive REQUIRED)
+    qt_add_executable(ProjectTransferTests ProjectTransferTests.cpp)
+    target_link_libraries(ProjectTransferTests PRIVATE LabelQtTransfer Qt6::Test LibArchive::LibArchive ZLIB::ZLIB)
+    labelqt_enable_warnings(ProjectTransferTests)
+    add_test(NAME ProjectTransferTests COMMAND $<TARGET_FILE:ProjectTransferTests>)
+    qt_add_executable(MobileDocumentTests MobileDocumentTests.cpp)
+    target_link_libraries(MobileDocumentTests PRIVATE LabelQtMobilePresentation Qt6::Test)
+    labelqt_enable_warnings(MobileDocumentTests)
+    add_test(NAME MobileDocumentTests COMMAND $<TARGET_FILE:MobileDocumentTests>)
+    set_tests_properties(ProjectTransferTests MobileDocumentTests PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+    qt_add_executable(MobileShellTests MobileShellTests.cpp
+        ../src/platform/android/AndroidFileBridge.cpp ../src/platform/android/AndroidFileBridge.h)
+    target_link_libraries(MobileShellTests PRIVATE LabelQtMobilePresentation Qt6::Test Qt6::Quick Qt6::QuickControls2)
+    target_compile_definitions(MobileShellTests PRIVATE LABELQT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    labelqt_enable_warnings(MobileShellTests)
+    add_test(NAME MobileShellTests COMMAND $<TARGET_FILE:MobileShellTests>)
+    set_tests_properties(MobileShellTests PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 120)
+    qt_add_executable(MobileCanvasTests MobileCanvasTests.cpp)
+    target_link_libraries(MobileCanvasTests PRIVATE LabelQtMobilePresentation Qt6::Test Qt6::Quick Qt6::QuickControls2)
+    target_compile_definitions(MobileCanvasTests PRIVATE LABELQT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    labelqt_enable_warnings(MobileCanvasTests)
+    add_test(NAME MobileCanvasTests COMMAND $<TARGET_FILE:MobileCanvasTests>)
+    set_tests_properties(MobileCanvasTests PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 120)
+    qt_add_executable(MobileWorkspaceTests MobileWorkspaceTests.cpp)
+    target_link_libraries(MobileWorkspaceTests PRIVATE LabelQtMobilePresentation Qt6::Test)
+    labelqt_enable_warnings(MobileWorkspaceTests)
+    add_test(NAME MobileWorkspaceTests COMMAND $<TARGET_FILE:MobileWorkspaceTests>)
+    set_tests_properties(MobileWorkspaceTests PROPERTIES TIMEOUT 120)
+endif()
 
-add_library(LabelQtTestSupport STATIC
-    ../src/core/ApplicationTheme.cpp
-    ../src/core/AppPreferences.cpp
-    ../src/core/AtomicFileWriter.cpp
-    ../src/core/CommandLineUtils.cpp
-    ../src/core/LabelPlusDocument.cpp
-    ../src/core/Label.cpp
-    ../src/core/Project.cpp
-    ../src/core/ProjectIdentityService.cpp
-    ../src/core/ProjectMetadataService.cpp
-    ../src/core/RuntimePaths.cpp
-    ../src/core/UndoStack.cpp
-    ../src/services/automation/AutomationManifestParser.cpp
-    ../src/services/automation/AutomationProtocol.cpp
-    ../src/services/automation/ProjectTaskService.cpp
-    ../src/services/automation/AutomationPythonResolver.cpp
-    ../src/services/automation/AutomationService.cpp
-    ../src/services/automation/SecretStore.cpp
-    ../src/services/io/FileRenameTransaction.cpp
-    ../src/services/io/FileRevision.cpp
-    ../src/services/io/ProjectFileTransaction.cpp
-    ../src/services/io/ProjectFileMonitor.cpp
-    ../src/services/io/ImagePageCache.cpp
-    ../src/services/label/LabelClipboardService.cpp
-    ../src/services/label/LabelEditController.cpp
-    ../src/services/label/LabelEditControllerBatch.cpp
-    ../src/services/label/ProjectTextSearchService.cpp
-    ../src/ui/search/ProjectTextSearchModel.cpp
-    ../src/services/label/LabelNavigator.cpp
-    ../src/services/label/LabelPastePlanner.cpp
-    ../src/services/project/PageSourceInfoService.cpp
-    ../src/services/project/ProjectController.cpp
-    ../src/services/project/ProjectRevisionTracker.cpp
-    ../src/services/project/ProjectLocationService.cpp
-    ../src/services/project/PageManagementDraft.cpp
-    ../src/services/project/ProjectRecoveryService.cpp
-    ../src/services/project/ProjectImageRenameService.cpp
-    ../src/services/project/ProjectImageValidator.cpp
-    ../src/services/project/ProjectMergeService.cpp
-    ../src/services/project/ProjectPageOrderService.cpp
-    ../src/services/project/ProjectWorkflowController.cpp
-    ../src/services/project/SaveChangesDecision.cpp
-    ../src/services/project/SessionStateStore.cpp
-    ../src/services/proofread/LabelSequenceDiffService.cpp
-    ../src/services/proofread/ProjectComparisonService.cpp
-    ../src/services/proofread/ProofreadReportService.cpp
-    ../src/services/proofread/ReviewChangeClassifier.cpp
-    ../src/services/proofread/ReviewMetadataService.cpp
-    ../src/services/proofread/ReviewSessionService.cpp
-    ../src/services/proofread/ReviewRoundService.cpp
-    ../src/services/proofread/ReviewRoundEditService.cpp
-    ../src/services/proofread/TextDiffHtmlRenderer.cpp
-    ../src/services/proofread/TextDiffService.cpp
-    ../src/ui/canvas/CanvasLabelItems.cpp
-    ../src/ui/canvas/CanvasLabelTextEditController.cpp
-    ../src/ui/canvas/CanvasLabelTextEditor.cpp
-    ../src/ui/labeltable/CurrentPageLabelContext.cpp
-    ../src/ui/canvas/ImageCanvas.cpp
-    ../src/ui/canvas/ImagePageViewController.cpp
-    ../src/ui/labeltable/LabelEditDelegates.cpp
-    ../src/ui/labeltable/LabelSelectionController.cpp
-    ../src/ui/labeltable/LabelTableModel.cpp
-    ../src/ui/labeltable/LabelTableView.cpp
-    ../src/ui/project/PageOrderListModel.cpp
-    ../src/ui/project/PageOrderDialog.cpp
-    ../src/ui/project/ImageRenamePreviewWidget.cpp
-    ../src/ui/project/ProjectRecoveryDialog.cpp
-    ../src/ui/project/ProjectRecoveryController.cpp
-    ../src/ui/project/ProjectExternalChangeController.cpp
-    ../src/ui/search/ProjectSearchPanel.cpp
-    ../src/ui/proofread/ProofreadChangesDialog.cpp
-    ../src/ui/proofread/ProofreadReviewPanel.cpp
-    ../src/ui/proofread/ProofreadNotesWidget.cpp
-    ../src/ui/proofread/ProofreadingController.cpp
-    ../src/ui/proofread/ReviewStatusDelegate.cpp
-    ../src/ui/MainWindowShortcutController.cpp
-    ../src/services/preferences/PreferenceStore.cpp
-    ../src/core/TranslationManager.cpp
-    ../src/ui/preferences/PreferenceDialog.cpp
-    ../src/ui/preferences/PreferenceDialogWidgets.cpp
-    ../src/ui/preferences/GroupStyleEditorWidget.cpp
-    ../src/ui/automation/AutomationShortcutEditorWidget.cpp
-    ../src/ui/widgets/ThemeManager.cpp
-    ../src/ui/project/MergeCandidatePreview.cpp
-    ../src/ui/project/ProjectMergeDialog.cpp
-    ../src/ui/proofread/ProofreadChangeTableModel.cpp
-    ../src/ui/labeltable/ViewportFittedTableColumns.cpp
-    ../src/ui/widgets/DialogWindowUtils.cpp
-    ../src/ui/widgets/BusyTaskDialog.cpp
-    ../src/ui/widgets/CheckableFilterButton.cpp
-    ../src/ui/automation/AutomationRunDialog.cpp
-    ../src/ui/automation/AutomationController.cpp
-    ../src/ui/automation/AutomationParameterDialog.cpp
+if(NOT LABELQT_BUILD_DESKTOP)
+    return()
+endif()
+
+find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
+
+qt_add_resources(LABELQT_TEST_RESOURCE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/../resources/themes/breeze/breeze.qrc"
 )
 
-target_include_directories(LabelQtTestSupport
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/../src
-)
-
-target_link_libraries(LabelQtTestSupport
-    PUBLIC
-        DiffMatchPatch
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Test
-        Qt6::Widgets
-        Qt6::Concurrent
-        Qt6Keychain::Qt6Keychain
-        ZLIB::ZLIB
-)
-
-labelqt_enable_warnings(LabelQtTestSupport)
+# Compile resources into the test executables so static archive extraction cannot omit them.
+add_library(LabelQtTestSupport INTERFACE)
+target_sources(LabelQtTestSupport INTERFACE ${LABELQT_TEST_RESOURCE_SOURCES})
+target_link_libraries(LabelQtTestSupport INTERFACE LabelQtDesktop Qt6::Test)
+if(TARGET Qt6::Svg)
+    target_link_libraries(LabelQtTestSupport INTERFACE Qt6::Svg)
+endif()
 
 qt_add_executable(LabelQtTests LabelTests.cpp)
 target_link_libraries(LabelQtTests PRIVATE LabelQtTestSupport)
@@ -165,12 +102,9 @@ set_tests_properties(LabelQtTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscr
 
 qt_add_executable(ProofreadChangeTableModelTests
     ProofreadChangeTableModelTests.cpp
-    ../src/services/proofread/ReviewChangeClassifier.cpp
-    ../src/services/proofread/TextDiffService.cpp
-    ../src/ui/proofread/ProofreadChangeTableModel.cpp
 )
 
-target_include_directories(ProofreadChangeTableModelTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
-target_link_libraries(ProofreadChangeTableModelTests PRIVATE DiffMatchPatch Qt6::Core Qt6::Test)
+target_link_libraries(ProofreadChangeTableModelTests PRIVATE LabelQtTestSupport)
 labelqt_enable_warnings(ProofreadChangeTableModelTests)
 add_test(NAME ProofreadChangeTableModelTests COMMAND $<TARGET_FILE:ProofreadChangeTableModelTests>)
+set_tests_properties(ProofreadChangeTableModelTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

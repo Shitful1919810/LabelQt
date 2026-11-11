@@ -44,11 +44,42 @@ See `docs/devtools.md` for the current helper commands.
 ## Porting Direction
 
 - Prefer Qt Widgets for the main desktop workflow.
+- Android has a technical-preview frontend, not yet a supported release target. Read `docs/android-port-plan.md`
+  and `docs/android-build.md` before Android work.
+- Keep desktop Widgets and Android Qt Quick/QML as separate frontends over shared C++ services. Do not shrink
+  `MainWindow` into a mobile UI or duplicate editing, undo, proofreading and persistence rules in QML/JNI.
 - Keep platform-independent logic under `src/core`.
 - Put project workflow, session state, OS, archive, OCR and process integration under `src/services`.
-- Keep Qt UI classes under `src/ui`.
+- Keep desktop Qt UI classes under `src/ui`; mobile presentation and Android bridges follow
+  `src/mobile` and `src/platform/android` boundaries in the Android plan.
 - Avoid reintroducing WPF, .NET or Windows-only dependencies on this branch.
 - Avoid Qt GPL-only modules unless the user explicitly approves the license impact.
+
+## Android Collaboration Contract
+
+- Follow the scope, phase gates and failure semantics in `docs/android-port-plan.md`; track implementation in `TODO.md`.
+  Distinguish the working preview from the uncompleted full-release milestones. Validate APK packaging, host mobile
+  tests and desktop regression tests separately; a host QML test is not an Android/QQ device test.
+- The first Android release edits imported app-owned workspace copies. External document URIs are opaque capabilities,
+  not filesystem paths; never pass them to local path canonicalization, lock files or rename transactions.
+- Keep local save, recovery checkpoint, export and handoff-to-another-app as distinct states. Never report a QQ transfer
+  as delivered based on a chooser or Activity callback. Do not overwrite the original imported external files.
+- Share project ZIPs through Android's standard intents and narrowly scoped read-only FileProvider access. Receiving
+  from QQ and manual system-picker import must use the same bounded, validated import service. Never scan QQ's private
+  directories, request all-files access as a workaround, or implement archive parsing in UI/JNI code.
+- Treat archive entries, TXT image references, names, MIME types and incoming intents as untrusted. Reject traversal,
+  links, collisions and resource-budget violations before publishing a workspace; preserve existing projects on failure.
+- Keep active documents and undo on their owner thread. Background work uses snapshots and validates session/version
+  on return. Coordinate saves, recovery, rename and export in services, not merely by disabling mobile buttons.
+- Extract toolkit-independent selection, editor and image-display coordination from existing UI controllers when needed;
+  retain thin Widgets/Quick adapters and desktop regression coverage. Do not create hidden Widgets to reuse controllers.
+- Mobile touch interaction must not require hover, right-click or modifier keys. Define gesture cancellation and IME
+  composition behavior, and test rotation, keyboard resizing, background process death and delayed results.
+- Disabling mobile Python must not remove shared identity/version/commit infrastructure or break desktop automation.
+- New QML text uses `qsTr()`/`qsTranslate()` and all four translations. Keep translation extraction/checks covering
+  QML as well as C++ and verify runtime contexts, especially namespaced QObject classes.
+- Keep Android source under the planned mobile/platform boundaries; review new Qt/archive dependencies and APK licensing
+  before introduction. Use the system IME, not an unreviewed Qt Virtual Keyboard dependency. Never commit signing keys.
 
 ## Required Conventions
 
@@ -57,7 +88,7 @@ See `docs/devtools.md` for the current helper commands.
 - Commit messages should be written in Chinese using the repository `.gitmessage.txt` structure: title, background,
   changes, verification, and risk notes. Do not leave empty template sections in the final commit message.
 - Never run `clang-format` on CMake files such as `CMakeLists.txt` or `CMakePresets.json`; format CMake changes manually to match the existing style.
-- New user-visible UI text must use `tr()`.
+- New user-visible C++ UI text must use `tr()`; QML text follows the Android translation contract above.
 - When adding or changing `tr()` strings, update `translations/labelqt_zh_CN.ts`, `translations/labelqt_zh_TW.ts`, `translations/labelqt_ja_JP.ts` and `translations/labelqt_en_US.ts`.
 - Run `python scripts/check_translations.py` after UI text changes.
 - Configurable UI behavior should go through `AppPreferences` and `preference.json`.

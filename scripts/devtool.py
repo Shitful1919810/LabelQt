@@ -41,6 +41,17 @@ class ModuleTopic:
 
 MODULE_TOPICS = (
     ModuleTopic(
+        name="android",
+        keywords=("android", "mobile", "qml", "apk", "qq", "zip", "transfer"),
+        files=("src/mobile/*", "src/mobile/qml/*", "src/platform/android/*", "android/*",
+               "android/src/org/labelqt/mobile/*", "src/services/transfer/*", "tests/Mobile*",
+               "tests/ProjectTransferTests.cpp", "CMakePresets.json"),
+        notes=("QML 只发命令；编辑、撤销、校对复用共享服务。",
+               "JNI 只复制授权流到私有 inbox；ZIP 服务不得接受 URI 或直接修改活动工程。",
+               "主机 QML 测试不能替代 APK 真机、中文 IME 和 QQ 收发验收。"),
+        docs=("docs/android-build.md", "docs/android-port-plan.md", "docs/architecture.md"),
+    ),
+    ModuleTopic(
         name="recovery",
         keywords=("recovery", "backup", "save conflict", "file revision", "external change", "file monitor"),
         files=("src/services/project/ProjectRecoveryService.*", "src/services/project/ProjectLocationService.*",

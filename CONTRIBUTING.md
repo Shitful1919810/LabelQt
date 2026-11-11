@@ -4,7 +4,7 @@ LabelQt is an independent C++/Qt 6 LabelPlus text project editor. Keep changes a
 
 ## Code Style
 
-- Use C++23 and Qt 6 Widgets.
+- Use C++23. Desktop UI uses Qt 6 Widgets; the Android preview uses Qt Quick/QML over the same services.
 - Class names use `PascalCase`.
 - Functions use `camelCase`.
 - Member variables use the `m_` prefix.
@@ -19,12 +19,37 @@ LabelQt is an independent C++/Qt 6 LabelPlus text project editor. Keep changes a
 ## Architecture Boundaries
 
 - `src/core`: platform-independent models, parsing, preferences and undo infrastructure.
-- `src/ui`: Qt Widgets UI classes.
+- `src/ui`: desktop Qt Widgets UI classes.
 - `src/services`: application services such as project workflow, session persistence, backup, OCR, archive and process handling.
 - `translations`: Qt `.ts` files.
 - `preference.json`: runtime UI tuning defaults.
 
 See `docs/architecture.md` for more detail.
+
+## Android Port Collaboration
+
+The Android design baseline is [docs/android-port-plan.md](docs/android-port-plan.md). The technical preview is built
+using [docs/android-build.md](docs/android-build.md); it is not yet the complete mobile release described by the plan.
+Its scope and milestone gates also apply to Agent contributions.
+
+- Keep the C++ document, stable identities, undo, revisions, editing and proofreading rules shared with desktop.
+  QML presents models and issues commands; JNI bridges Android facilities and never mutates the active document.
+- Add focused mobile adapters after extracting genuinely shared rules from desktop controllers. Avoid hidden Widgets,
+  duplicate workflow state, a monolithic mobile controller, or platform conditionals scattered through `MainWindow`.
+- The first release uses imported app-owned workspace copies. Never treat a `content://` URI as a local path or promise
+  local-filesystem transactions for arbitrary document providers. Direct external overwrite/synchronization is out of scope.
+- Preserve separate states for recovery protection, workspace saves, generated exports and external sharing. A QQ
+  handoff is not delivery confirmation. Standard Android sharing and picker import must converge on shared transfer services.
+- Validate all archive paths, project image references, permissions, sizes and collisions before publishing imports.
+  Keep existing data intact on cancellation, insufficient space, process death or partial provider writes.
+- Serialize conflicting file operations in services. Workers use snapshots; callbacks validate document session and
+  version. Handle IME composition and cancelled gestures explicitly rather than simulating desktop mouse shortcuts.
+- Mobile builds may exclude Python and its private dependencies, but must retain the shared mutation/version contracts
+  and preserve desktop automation behavior. No alternate editing or undo implementation is permitted.
+- Every implementation change records its milestone, shared-boundary impact, recovery/cancellation behavior, regression
+  evidence and remaining device checks. Real QQ/file-provider and lifecycle tests complement, not replace, unit tests.
+- Keep Android support marked as planned/experimental until its release gates pass; sync the manual, build instructions,
+  translation tools and dependency notices as the corresponding capabilities become real.
 
 ## Project Metadata In LabelPlus Comments
 
@@ -71,7 +96,8 @@ See `docs/architecture.md` for more detail.
 
 ## UI Text And i18n
 
-- User-visible UI strings must use `tr()`.
+- User-visible C++ UI strings must use `tr()`. Planned QML UI uses `qsTr()`/`qsTranslate()`; extend extraction and
+  translation checks for QML when adding that frontend, and keep the same four language catalogs.
 - When adding or changing a `tr()` string, update all of the 4 files:
   - `translations/labelqt_zh_CN.ts`
   - `translations/labelqt_zh_TW.ts`

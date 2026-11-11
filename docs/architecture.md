@@ -4,12 +4,46 @@ LabelQt 是一个独立的 C++/Qt 6 Widgets 应用。它的核心目标是编辑
 
 这份文档记录当前代码的职责边界。新增功能前请先确认它应该放在哪一层，避免把新的状态机、文件格式处理或业务规则继续塞回 `MainWindow`。
 
+## Android 呈现边界
+
+Android 技术预览已引入独立 Qt Quick 前端；完整范围与验收基线见 [Android 移植实施方案](android-port-plan.md)，
+构建入口见 [Android 构建](android-build.md)，公共约定见 `AGENTS.md` / `CONTRIBUTING.md`。
+
+采用共用 C++ Core/Services、桌面 Widgets 与移动 Qt Quick 两套呈现。Android 预览编辑导入的本机副本，
+以标准 ZIP 导出和系统分享交接，不直接写回外部文档 URI。TXT/HTML 独立导出仍是后续任务。
+现有选择、编辑器及图片显示控制器中的无控件规则应按需抽取共享，具体 Widgets/Quick 绑定留在各前端；
+不得复制正文编辑、撤销、校对或文件事务逻辑，也不得为关掉移动 Python 而删除共用版本和提交机制。
+
+- `LabelQtShared` 编译 Core 与平台无关服务；`LabelQtDesktop` 编译 Widgets、Python runner 与 QtKeychain。
+  桌面测试链接生产目标，不再各自维护一份服务源文件清单。Android 不链接 Widgets、Python runner 或 QtKeychain。
+- `ProjectTransferService` / `TransferSupport` 负责有界 ZIP、路径验证、元数据所有权验证、图源重定位和暂存发布。
+  它们只接受本地文件和工程值快照，不接受 URI、不修改活动工程；libarchive 是移动目标的独立依赖。
+- `MobileDocument` 是活动工程的命令与呈现适配器：稳定 ID 选择、文本提交、自动保存、只读列表模型；
+  标签变更委托 `LabelEditController`，持久化委托 `ProjectController`，撤销使用同一个 `UndoStack`。
+- `WorkspaceStorageService` 管理本机清单改名、确认删除后的目录移出及可丢弃文件的保留/容量策略；
+  原 ZIP 名独立于显示名持久化，清理不能遍历删除工作区或未解决事务。分享路径为 `outgoing/<UUID>/<用户文件名>`。
+- `MobileWorkspaceController` 串行协调导入、导出、工作区管理和后台清理；后台只捕获值，不持有活动文档指针。
+  删除活动工程先保存，目录移出成功后交给 `MobileDocument` 关闭会话及定时器，避免自动保存重新创建已删除文件。
+- `MobileWorkspaceModel` 按工作区 ID 稳定排序并增量更新名称/保存时间，不因状态提示或自动保存重建 QML 条目菜单。
+- `WorkspaceBrowser.qml` 由首页与工程抽屉共同使用，只展示列表并发出请求；文件管理仍由服务处理，首次扫描走后台队列。
+- `MobileLabelModel` 在可见 ID 序列不变时按实际变化的 role 更新，不因选择或正文编辑重建所有 marker；
+  过滤、换页、结构变化才重置。样式索引来自完整工程分组而非筛选结果，使用已有偏好设置颜色/形状。
+  分组筛选保留用户意图，但实际可见集合与当前分组取交集，撤销移除的分组不能成为新增标签的目标。
+- `SubmitDialog.qml` 复用需校验的提交交互：确认按钮只发出请求，操作成功才由调用方接受并关闭；
+  不使用会自动关闭弹窗的默认 AcceptRole 处理文件名校验或提交失败。
+- `MobileReviewController` 通过 `ReviewRoundEditService` 提交校对与批注；异步 diff 必须匹配会话与版本才交付。
+- `ProjectCanvas.qml` 只负责显示、坐标换算、触控手势与取消，拖动结束才发一次命令，不在 QML 内改工程。
+- `AndroidFileBridge` / `LabelQtActivity` 负责 Intent、系统选择器、有界流复制和只读分享授权；JNI 回调排入
+  Qt 所属线程。私有 inbox 与 outgoing 分离，FileProvider 不能访问工作区、恢复材料或应用根目录。
+
 ## 总体分层
 
 ```text
 src/core       平台无关的数据模型、文件格式、偏好设置、撤销栈
 src/services   工程工作流、会话状态、自动化、图片缓存、密钥等应用服务
 src/ui         Qt Widgets 界面、模型/委托、画布、对话框和 UI 控制器
+src/mobile     Qt Quick 呈现、移动文档/工作区/校对适配器
+src/platform   Android JNI 桥；Java Activity 和 Manifest 位于 android/
 scripts        官方/用户自动化脚本，以及官方脚本 SDK
 translations   Qt Linguist 翻译源文件
 tests          Qt Test 测试

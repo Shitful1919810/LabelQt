@@ -3635,4 +3635,502 @@ Missing images: %2</translation>
         <translation>The proofreading record is invalid or unsupported. It has not been changed.</translation>
     </message>
 </context>
+<context>
+    <name>Main</name>
+    <message>
+        <source>Edited %1</source>
+        <translation>Edited %1</translation>
+    </message>
+    <message>
+        <source>Manage project</source>
+        <translation>Manage project</translation>
+    </message>
+    <message>
+        <source>Rename project</source>
+        <translation>Rename project</translation>
+    </message>
+    <message>
+        <source>Delete project</source>
+        <translation>Delete project</translation>
+    </message>
+    <message>
+        <source>ZIP file name</source>
+        <translation>ZIP file name</translation>
+    </message>
+    <message>
+        <source>Delete the local copy of &quot;%1&quot; and its images? This cannot be undone. The original imported file and shared ZIPs will be kept.</source>
+        <translation>Delete the local copy of &quot;%1&quot; and its images? This cannot be undone. The original imported file and shared ZIPs will be kept.</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Add</translation>
+    </message>
+    <message>
+        <source>Browse</source>
+        <translation>Browse</translation>
+    </message>
+    <message>
+        <source>Changes</source>
+        <translation>Changes</translation>
+    </message>
+    <message>
+        <source>Delete label</source>
+        <translation>Delete label</translation>
+    </message>
+    <message>
+        <source>Delete selected label?</source>
+        <translation>Delete selected label?</translation>
+    </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Dismiss</translation>
+    </message>
+    <message>
+        <source>Edits are saved to a local copy. Export a ZIP to send your changes.</source>
+        <translation>Edits are saved to a local copy. Export a ZIP to send your changes.</translation>
+    </message>
+    <message>
+        <source>Empty label</source>
+        <translation>Empty label</translation>
+    </message>
+    <message>
+        <source>Finish review</source>
+        <translation>Finish review</translation>
+    </message>
+    <message>
+        <source>Close project list</source>
+        <translation>Close project list</translation>
+    </message>
+    <message>
+        <source>Finish editing</source>
+        <translation>Finish editing</translation>
+    </message>
+    <message>
+        <source>Fit image</source>
+        <translation>Fit image</translation>
+    </message>
+    <message>
+        <source>Groups</source>
+        <translation>Groups</translation>
+    </message>
+    <message>
+        <source>Image</source>
+        <translation>Image</translation>
+    </message>
+    <message>
+        <source>Import ZIP or TXT</source>
+        <translation>Import ZIP or TXT</translation>
+    </message>
+    <message>
+        <source>Labels</source>
+        <translation>Labels</translation>
+    </message>
+    <message>
+        <source>Local projects</source>
+        <translation>Local projects</translation>
+    </message>
+    <message>
+        <source>Move</source>
+        <translation>Move</translation>
+    </message>
+    <message>
+        <source>New group</source>
+        <translation>New group</translation>
+    </message>
+    <message>
+        <source>Next page</source>
+        <translation>Next page</translation>
+    </message>
+    <message>
+        <source>Note</source>
+        <translation>Note</translation>
+    </message>
+    <message>
+        <source>Note for the selected label or current page</source>
+        <translation>Note for the selected label or current page</translation>
+    </message>
+    <message>
+        <source>Previous page</source>
+        <translation>Previous page</translation>
+    </message>
+    <message>
+        <source>Project actions</source>
+        <translation>Project actions</translation>
+    </message>
+    <message>
+        <source>Project files (*.zip *.txt)</source>
+        <translation>Project files (*.zip *.txt)</translation>
+    </message>
+    <message>
+        <source>Projects</source>
+        <translation>Projects</translation>
+    </message>
+    <message>
+        <source>Redo</source>
+        <translation>Redo</translation>
+    </message>
+    <message>
+        <source>Review</source>
+        <translation>Review</translation>
+    </message>
+    <message>
+        <source>Review note</source>
+        <translation>Review note</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Save</translation>
+    </message>
+    <message>
+        <source>Share ZIP</source>
+        <translation>Share ZIP</translation>
+    </message>
+    <message>
+        <source>Start review</source>
+        <translation>Start review</translation>
+    </message>
+    <message>
+        <source>Start a new review?</source>
+        <translation>Start a new review?</translation>
+    </message>
+    <message>
+        <source>The previous round will be replaced. Export a ZIP first to keep it.</source>
+        <translation>The previous round will be replaced. Export a ZIP first to keep it.</translation>
+    </message>
+    <message>
+        <source>Undo</source>
+        <translation>Undo</translation>
+    </message>
+</context>
+<context>
+    <name>MobileReviewController</name>
+    <message>
+        <source>A proofreading round already exists.</source>
+        <translation>A proofreading round already exists.</translation>
+    </message>
+    <message>
+        <source>Add proofreading note</source>
+        <translation>Add proofreading note</translation>
+    </message>
+    <message>
+        <source>An active proofreading round is required.</source>
+        <translation>An active proofreading round is required.</translation>
+    </message>
+    <message>
+        <source>Complete proofreading round</source>
+        <translation>Complete proofreading round</translation>
+    </message>
+    <message>
+        <source>No proofreading round exists.</source>
+        <translation>No proofreading round exists.</translation>
+    </message>
+    <message>
+        <source>No text changes</source>
+        <translation>No text changes</translation>
+    </message>
+    <message>
+        <source>Resolve proofreading note</source>
+        <translation>Resolve proofreading note</translation>
+    </message>
+    <message>
+        <source>Start proofreading round</source>
+        <translation>Start proofreading round</translation>
+    </message>
+    <message>
+        <source>The note target no longer exists.</source>
+        <translation>The note target no longer exists.</translation>
+    </message>
+    <message>
+        <source>The note text must not be empty.</source>
+        <translation>The note text must not be empty.</translation>
+    </message>
+    <message>
+        <source>The project changed. Calculate proofreading changes again.</source>
+        <translation>The project changed. Calculate proofreading changes again.</translation>
+    </message>
+    <message>
+        <source>The proofreading note no longer exists.</source>
+        <translation>The proofreading note no longer exists.</translation>
+    </message>
+    <message>
+        <source>This round is too large for the mobile preview.</source>
+        <translation>This round is too large for the mobile preview.</translation>
+    </message>
+    <message>
+        <source>Unable to calculate proofreading changes.</source>
+        <translation>Unable to calculate proofreading changes.</translation>
+    </message>
+    <message>
+        <source>Unable to edit the proofreading round.</source>
+        <translation>Unable to edit the proofreading round.</translation>
+    </message>
+    <message>
+        <source>Unable to read the proofreading round.</source>
+        <translation>Unable to read the proofreading round.</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectCanvas</name>
+    <message>
+        <source>Image unavailable</source>
+        <translation>Image unavailable</translation>
+    </message>
+    <message>
+        <source>Label %1</source>
+        <translation>Label %1</translation>
+    </message>
+    <message>
+        <source>Loading image...</source>
+        <translation>Loading image...</translation>
+    </message>
+    <message>
+        <source>Select label</source>
+        <translation>Select label</translation>
+    </message>
+</context>
+<context>
+    <name>ProjectTransferService</name>
+    <message>
+        <source>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</source>
+        <translation>The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.</translation>
+    </message>
+    <message>
+        <source>A local project location is required for transfer.</source>
+        <translation>A local project location is required for transfer.</translation>
+    </message>
+    <message>
+        <source>A required image is missing: %1</source>
+        <translation>A required image is missing: %1</translation>
+    </message>
+    <message>
+        <source>A transfer source changed while being copied. Try again.</source>
+        <translation>A transfer source changed while being copied. Try again.</translation>
+    </message>
+    <message>
+        <source>An absolute app-owned transfer root is required.</source>
+        <translation>An absolute app-owned transfer root is required.</translation>
+    </message>
+    <message>
+        <source>An image cannot use the project TXT extension.</source>
+        <translation>An image cannot use the project TXT extension.</translation>
+    </message>
+    <message>
+        <source>An image has no transfer path.</source>
+        <translation>An image has no transfer path.</translation>
+    </message>
+    <message>
+        <source>Cannot create transfer staging directory.</source>
+        <translation>Cannot create transfer staging directory.</translation>
+    </message>
+    <message>
+        <source>Cannot inspect transfer input.</source>
+        <translation>Cannot inspect transfer input.</translation>
+    </message>
+    <message>
+        <source>Cannot protect the outgoing ZIP.</source>
+        <translation>Cannot protect the outgoing ZIP.</translation>
+    </message>
+    <message>
+        <source>Cannot publish the imported workspace.</source>
+        <translation>Cannot publish the imported workspace.</translation>
+    </message>
+    <message>
+        <source>Cannot publish the outgoing ZIP.</source>
+        <translation>Cannot publish the outgoing ZIP.</translation>
+    </message>
+    <message>
+        <source>Duplicate or colliding transfer path: %1</source>
+        <translation>Duplicate or colliding transfer path: %1</translation>
+    </message>
+    <message>
+        <source>Invalid or unsupported ZIP. Use an unencrypted, single-volume ZIP with UTF-8 names, store or deflate compression, and no ZIP64 extensions.</source>
+        <translation>Invalid or unsupported ZIP. Use an unencrypted, single-volume ZIP with UTF-8 names, store or deflate compression, and no ZIP64 extensions.</translation>
+    </message>
+    <message>
+        <source>Invalid transfer limits.</source>
+        <translation>Invalid transfer limits.</translation>
+    </message>
+    <message>
+        <source>Links are not allowed in transfer paths: %1</source>
+        <translation>Links are not allowed in transfer paths: %1</translation>
+    </message>
+    <message>
+        <source>Nested archives are not supported.</source>
+        <translation>Nested archives are not supported.</translation>
+    </message>
+    <message>
+        <source>The ZIP contains multiple TXT files. Select a single project before importing.</source>
+        <translation>The ZIP contains multiple TXT files. Select a single project before importing.</translation>
+    </message>
+    <message>
+        <source>The ZIP contains no project TXT.</source>
+        <translation>The ZIP contains no project TXT.</translation>
+    </message>
+    <message>
+        <source>The transfer root is unavailable.</source>
+        <translation>The transfer root is unavailable.</translation>
+    </message>
+    <message>
+        <source>Transfer accepts local files only.</source>
+        <translation>Transfer accepts local files only.</translation>
+    </message>
+    <message>
+        <source>Transfer cannot safely preserve unknown or unsupported project metadata.</source>
+        <translation>Transfer cannot safely preserve unknown or unsupported project metadata.</translation>
+    </message>
+    <message>
+        <source>Transfer could not read or write a regular local file: %1</source>
+        <translation>Transfer could not read or write a regular local file: %1</translation>
+    </message>
+    <message>
+        <source>Transfer entry limit exceeded.</source>
+        <translation>Transfer entry limit exceeded.</translation>
+    </message>
+    <message>
+        <source>Transfer size limit exceeded.</source>
+        <translation>Transfer size limit exceeded.</translation>
+    </message>
+    <message>
+        <source>Unsafe or nonportable transfer path: %1</source>
+        <translation>Unsafe or nonportable transfer path: %1</translation>
+    </message>
+    <message>
+        <source>Workspace title is too long.</source>
+        <translation>Workspace title is too long.</translation>
+    </message>
+    <message>
+        <source>ZIP verification failed.</source>
+        <translation>ZIP verification failed.</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileDocument</name>
+    <message>
+        <source>The edited label changed. Your text has been kept in the editor.</source>
+        <translation>The edited label changed. Your text has been kept in the editor.</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileWorkspaceController</name>
+    <message>
+        <source>Finish pending imports before adding more files.</source>
+        <translation>Finish pending imports before adding more files.</translation>
+    </message>
+    <message>
+        <source>Importing a private copy...</source>
+        <translation>Importing a private copy...</translation>
+    </message>
+    <message>
+        <source>Preparing a verified ZIP...</source>
+        <translation>Preparing a verified ZIP...</translation>
+    </message>
+    <message>
+        <source>Project imported. Select it to open.</source>
+        <translation>Project imported. Select it to open.</translation>
+    </message>
+    <message>
+        <source>Select a local ZIP or TXT file.</source>
+        <translation>Select a local ZIP or TXT file.</translation>
+    </message>
+    <message>
+        <source>The file operation failed. Existing workspaces were kept.</source>
+        <translation>The file operation failed. Existing workspaces were kept.</translation>
+    </message>
+    <message>
+        <source>The received file is outside the private inbox.</source>
+        <translation>The received file is outside the private inbox.</translation>
+    </message>
+    <message>
+        <source>The workspace is no longer available.</source>
+        <translation>The workspace is no longer available.</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::platform::AndroidFileBridge</name>
+    <message>
+        <source>An interrupted file import was discarded. Select the source file again.</source>
+        <translation>An interrupted file import was discarded. Select the source file again.</translation>
+    </message>
+    <message>
+        <source>Android file access is not available here.</source>
+        <translation>Android file access is not available here.</translation>
+    </message>
+    <message>
+        <source>Only ZIP and TXT files are accepted by this file bridge.</source>
+        <translation>Only ZIP and TXT files are accepted by this file bridge.</translation>
+    </message>
+    <message>
+        <source>Permission to read the selected file was lost. Select the file again.</source>
+        <translation>Permission to read the selected file was lost. Select the file again.</translation>
+    </message>
+    <message>
+        <source>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</source>
+        <translation>Select one content URI for a ZIP or TXT file. Conflicting or local file URIs are not accepted.</translation>
+    </message>
+    <message>
+        <source>The Android file bridge is not configured correctly.</source>
+        <translation>The Android file bridge is not configured correctly.</translation>
+    </message>
+    <message>
+        <source>The Android share chooser could not be opened. The exported file has been kept.</source>
+        <translation>The Android share chooser could not be opened. The exported file has been kept.</translation>
+    </message>
+    <message>
+        <source>The Android system file chooser could not be opened.</source>
+        <translation>The Android system file chooser could not be opened.</translation>
+    </message>
+    <message>
+        <source>The file could not be staged. Check available storage and select it again.</source>
+        <translation>The file could not be staged. Check available storage and select it again.</translation>
+    </message>
+    <message>
+        <source>The file inbox or system file chooser is busy. Finish a pending import and try again.</source>
+        <translation>The file inbox or system file chooser is busy. Finish a pending import and try again.</translation>
+    </message>
+    <message>
+        <source>The file or pending inbox exceeds the 2 GiB limit.</source>
+        <translation>The file or pending inbox exceeds the 2 GiB limit.</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspaceStorageService</name>
+    <message>
+        <source>The local project is unavailable.</source>
+        <translation>The local project is unavailable.</translation>
+    </message>
+    <message>
+        <source>Enter a valid ZIP file name without folders or reserved characters.</source>
+        <translation>Enter a valid ZIP file name without folders or reserved characters.</translation>
+    </message>
+    <message>
+        <source>Enter a project name of 1 to 200 characters.</source>
+        <translation>Enter a project name of 1 to 200 characters.</translation>
+    </message>
+    <message>
+        <source>The project name could not be saved.</source>
+        <translation>The project name could not be saved.</translation>
+    </message>
+    <message>
+        <source>The local project could not be deleted.</source>
+        <translation>The local project could not be deleted.</translation>
+    </message>
+    <message>
+        <source>Some temporary files could not be removed. Cleanup will be retried later.</source>
+        <translation>Some temporary files could not be removed. Cleanup will be retried later.</translation>
+    </message>
+</context>
+<context>
+    <name>SubmitDialog</name>
+    <message>
+        <source>Confirm</source>
+        <translation>Confirm</translation>
+    </message>
+</context>
+<context>
+    <name>WorkspaceBrowser</name>
+    <message>
+        <source>No local projects</source>
+        <translation>No local projects</translation>
+    </message>
+</context>
 </TS>

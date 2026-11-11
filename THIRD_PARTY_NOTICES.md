@@ -9,7 +9,9 @@ LabelQt's own source code is licensed under the MIT License. See `LICENSE.txt`.
 ## Qt
 
 - Source: <https://www.qt.io/>
-- Usage: LabelQt is a Qt 6 Widgets application and links to Qt modules such as Core, Gui, Widgets and Concurrent. Qt Svg is used when available for SVG icon/theme support. Qt LinguistTools is used at build time when available.
+- Usage: the desktop frontend links Core, Gui, Widgets and Concurrent, with Svg for icon/theme support.
+  The mobile preview instead uses Qml, Quick, QuickControls2, Quick Dialogs and Svg over the shared services.
+  It uses the system input method, not Qt Virtual Keyboard. Qt LinguistTools is used at build time.
 - License: Qt is available under LGPL/GPL/commercial terms depending on module and distribution model.
 
 Qt source code, Qt SDK files and Qt runtime binaries are not committed to this repository. Binary releases that bundle Qt runtime files must include the required Qt license texts, module/version information and any notices required by the selected Qt license.
@@ -24,6 +26,28 @@ release artifacts.
 - Source: <https://github.com/frankosterfeld/qtkeychain>
 - Usage: linked as an external library to store automation script secrets in the operating system keychain.
 - License: BSD-style license. Use the exact license text shipped with the QtKeychain package used for a binary release.
+
+QtKeychain and the Python runner are desktop-only; they are not linked into the Android preview.
+
+## libarchive (Mobile Transfer)
+
+- Source: <https://github.com/libarchive/libarchive/releases/tag/v3.8.11>
+- Usage: bounded ZIP workspace import/export in `src/services/transfer`; not linked by the desktop-only target.
+- Android: source release 3.8.11, SHA256 `a3dc0872b1b39da34dc18ef1b944f0f11ffd37425d70ae04be679279f1cf43d2`,
+  fetched by CMake and statically linked. Only the zlib compression dependency is enabled; tools, XML,
+  cryptography and optional compression dependencies are disabled. Host mobile tests use system libarchive >= 3.6.
+- License: upstream COPYING describes the BSD-family licenses of the component sources. Ship that exact COPYING
+  and applicable source notices with a binary distribution; no libarchive SDK/source is committed here.
+
+## Android Runtime Dependencies
+
+- The Qt 6.10.2 Android template uses AndroidX Core 1.16.0 (Apache-2.0) for FileProvider. Gradle resolves its
+  transitive components; collect their actual licenses/versions for release, not only this direct dependency.
+- NDK r27c supplies libc++ (Apache-2.0 with LLVM exceptions) and links platform zlib. Keep the NDK runtime notices.
+- No QQ SDK is used. File exchange uses Android intents, the system document picker and scoped read-only URI grants.
+- APKs bundle dynamic Qt libraries. Before public distribution, collect the exact Qt module SBOMs, all dependency
+  notices and corresponding-source/rebuild instructions, including rebuilding/re-signing with modified Qt.
+  A technical-preview build is not a completed license or release audit; see `docs/android-build.md`.
 
 ## zlib
 
@@ -69,6 +93,13 @@ Release packages should include third-party license texts under a `licenses/` di
 Windows shared and static packages additionally collect the exact vcpkg triplet's native dependency notices under
 `licenses/native/` and include `QT_SOURCE_OFFER.txt` pointing to the corresponding Qt source archive controlled by the
 LabelQt project for that release. Static packages additionally include `STATIC_LINKING_NOTICE.txt` and `RELINKING.md`.
+
+## Mobile Icons
+
+The mobile frontend bundles selected unmodified SVG icons from [Lucide 0.468.0](https://github.com/lucide-icons/lucide/tree/0.468.0/icons).
+They use the ISC license with upstream attribution to Feather (MIT) portions and Lucide contributors.
+The original license is retained in `src/mobile/qml/icons/LICENSE` and embedded alongside the APK resources.
+These assets replace font-dependent Unicode symbols; no icon font or remote asset loading is required.
 
 ## Official Automation Scripts
 
