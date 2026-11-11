@@ -162,7 +162,7 @@ runner 管进程输出缓冲，窗口管呈现预算，二者不要互相依赖�
 | --- | --- |
 | CONTRIBUTING | 必需 Qt 模块补列 Concurrent，与 CMake 和第三方声明一致 |
 | README 偏好部分 | 区分内置回退值与仓库随附定制配置，列出关键差异 |
-| README 手册构建 | 默认构建总是使用占位；真实截图需要 `--with-screenshots`，缺图时该模式会报错 |
+| README 手册构建 | 默认构建使用占位；后续素材流程已支持 `--with-screenshots` 部分补图及 `--require-screenshots` 发布校验，见 `manual/SCREENSHOTS.md` |
 | architecture | OCR/AI 提供者改为后续扩展；v2 JSON 编解码指向 AutomationProtocol，不再指向旧快照实现 |
 | persistence-safety | 澄清 AtomicFileWriter 与 ProjectFileTransaction 的分工，不再声称所有最终文件提交均调用同一个 helper |
 | automation-foundation | 区分服务层可容许的并行契约与当前 UI 的全局编辑保护 |

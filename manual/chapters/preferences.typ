@@ -1,4 +1,4 @@
-#import "../style.typ": note
+#import "../style.typ": note, screenshot
 
 = 偏好设置
 
@@ -17,6 +17,8 @@
 
 点击“应用”保存并生效；关闭时若有未应用修改，会询问是否保留。语言修改后需要重启生效。
 左侧搜索可查找设置项；重新载入、JSON 预览和外部编辑位于高级菜单。配置被外部修改时不会覆盖，需重新载入后再编辑。
+
+#screenshot("preferences.png", [偏好设置的分类导航、搜索与应用操作])
 
 #note("配置文件位置", [
   Windows 便携运行时，程序会优先使用可执行文件旁边的 `preference.json`。Linux 安装包通常使用程序内置默认值和用户目录配置。

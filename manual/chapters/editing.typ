@@ -1,3 +1,5 @@
+#import "../style.typ": screenshot
+
 = Label 编辑
 
 == 新增 label
@@ -16,6 +18,8 @@
 - 使用快捷键进入表格编辑模式。
 
 表格编辑适合长文本，marker 临时文本框适合在图像语境中快速改字。
+
+#screenshot("marker-editor.png", [双击 marker 后就地编辑标签文本])
 
 == 移动 marker
 

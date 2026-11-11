@@ -6,6 +6,24 @@ LabelQt 是一个使用 C++/Qt 6 开发的跨平台 LabelPlus 文本工程编辑
 
 本项目为独立实现，不包含原 WPF 项目的源代码。
 
+![LabelQt 主界面：图像标注与标签文本编辑](manual/assets/main-window.png)
+
+截图来自 Fedora 44 KDE，不同平台和主题下的外观会有所不同。用户手册与 README 共用
+[`manual/assets/`](manual/assets/) 中的截图；部分新增控件尚未出现在现有截图中。
+
+<details>
+<summary>查看更多界面：页面管理与校对</summary>
+
+**页面管理**：调整页序、暂存图片改名，并修复缺失图片引用。
+
+![页面管理界面](manual/assets/page-manager.png)
+
+**校对与工程对比**：筛选变更、查看文本差异及双侧图像预览。
+
+![校对变更与双图预览](manual/assets/proofread-diff.png)
+
+</details>
+
 ## 功能概览
 
 - 从图片文件夹新建工程，或打开和保存经典 LabelPlus `.txt` 工程文件。
@@ -111,7 +129,7 @@ git submodule update --init --recursive
 python scripts/build_manual.py
 ```
 
-默认输出到 `dist/LabelQt-user-manual-zh_CN.pdf`，默认构建使用截图占位框。素材放在 `manual/assets/`；加入 `--with-screenshots` 才会嵌入真实截图，此时缺少素材会构建失败。正式发布时建议把带截图的 PDF 作为独立 release 附件上传。
+默认输出到 `dist/LabelQt-user-manual-zh_CN.pdf`，默认构建使用截图占位框。加入 `--with-screenshots` 会嵌入已有图片，缺失部分仍显示带文件名的占位框；`--require-screenshots` 用于发布前强制检查素材齐全。用 `--list-missing-screenshots` 查看实时缺图清单。图片统一放在 `manual/assets/`，截图步骤见 [素材准备清单](manual/SCREENSHOTS.md)。正式发布时建议把带截图的 PDF 作为独立 release 附件上传。
 
 ### Linux
 

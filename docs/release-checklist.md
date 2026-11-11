@@ -42,11 +42,12 @@ GUI 相关改动应做一次手动 smoke test：
 用户手册由 `manual/` 下的 Typst 子工程生成，不参与主程序 CMake 构建。发布前可运行：
 
 ```bash
-python scripts/build_manual.py --with-screenshots --output dist/LabelQt-v0.1.0-user-manual-zh_CN.pdf
+python scripts/build_manual.py --require-screenshots --output dist/LabelQt-v0.1.0-user-manual-zh_CN.pdf
 ```
 
-如果 `manual/assets/` 中缺少截图，PDF 会显示占位框。正式发布前建议按 `manual/chapters/assets-needed.typ`
-补齐主界面、页面管理和校对变更截图。合并工程章节使用纯文字说明，不需要截图。手册 PDF 作为独立 release 附件上传，不放进 Windows exe 或 Linux RPM。
+开发预览可使用 `--with-screenshots`，缺图显示占位框；正式发布使用上面的严格模式，缺图时失败且不覆盖原 PDF。
+按 [截图清单](../manual/SCREENSHOTS.md) 补齐 `manual/assets/` 中的素材，用 `--list-missing-screenshots` 查看实时缺图列表。
+合并工程保持纯文字。手册 PDF 作为独立 release 附件上传，不放进 Windows exe 或 Linux RPM。
 
 ## Windows 动态链接包
 

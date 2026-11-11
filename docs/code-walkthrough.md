@@ -48,7 +48,10 @@ python scripts/build_manual.py
 python scripts/build_manual.py --with-screenshots --output dist/LabelQt-v0.1.0-user-manual-zh_CN.pdf
 ```
 
-`--with-screenshots` 会把 `manual/assets/` 中的截图嵌入 PDF；不传该参数时使用占位框，方便没有截图素材的开发环境也能编译手册。手册默认使用思源宋体作为正文、思源黑体作为标题；若本机缺少这些字体，会回退到 Noto CJK 或系统字体。Typst 对 variable font 的 warning 只影响排版稳定性提示，不代表构建失败。
+`--with-screenshots` 嵌入 `manual/assets/` 中已有截图，缺失部分保持占位；不传参数时全部占位。
+`--list-missing-screenshots` 查询缺图，发布前改用 `--require-screenshots` 强制素材齐全。
+截图位通过 Typst metadata 自动收集，准备步骤见 [截图清单](../manual/SCREENSHOTS.md)，README 直接复用这些图源。
+手册使用思源宋体和黑体，缺少时回退到 Noto CJK 或系统字体；variable font 警告不代表构建失败，但发布前仍需检查排版。
 
 ## 推荐阅读顺序
 

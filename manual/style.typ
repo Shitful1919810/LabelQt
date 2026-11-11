@@ -28,9 +28,12 @@
 #let menu(body) = ui(body)
 
 #let use-screenshots = sys.inputs.at("screenshots", default: "false") == "true"
+#let available-screenshots = json(bytes(sys.inputs.at("screenshot-files", default: "[]")))
 
-#let screenshot(file, caption) = figure(
-  if use-screenshots {
+#let screenshot(file, caption) = [
+  #metadata(file) <manual-screenshot>
+  #figure(
+  if use-screenshots and file in available-screenshots {
     image("assets/" + file, width: 100%)
   } else {
     rect(
@@ -42,10 +45,12 @@
     )[
       #align(center + horizon)[
         #text(fill: rgb("#64748b"))[
-          截图占位：`manual/assets/#file`
+          截图占位：#raw("manual/assets/" + file)
         ]
       ]
     ]
   },
+  kind: image,
   caption: caption,
 )
+]

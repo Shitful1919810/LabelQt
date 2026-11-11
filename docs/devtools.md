@@ -98,12 +98,13 @@ python scripts/build_manual.py
 发布前使用真实截图并指定版本化输出名：
 
 ```bash
-python scripts/build_manual.py --with-screenshots --output dist/LabelQt-v0.1.0-user-manual-zh_CN.pdf
+python scripts/build_manual.py --require-screenshots --output dist/LabelQt-v0.1.0-user-manual-zh_CN.pdf
 ```
 
-如果本机没有 Typst，脚本会给出安装提示。截图素材放在 `manual/assets/`，当前手册使用
-`main-window.png`、`page-manager.png` 和 `proofread-diff.png`。合并工程章节使用纯文字说明，不需要
-`merge-dialog.png`。
+如果本机没有 Typst，脚本会给出安装提示。截图素材放在 `manual/assets/`，准备步骤见
+[截图清单](../manual/SCREENSHOTS.md)。`--list-missing-screenshots` 从 Typst metadata 收集引用并检查缺图；
+`--with-screenshots` 使用已有图片、缺图占位，`--require-screenshots` 则要求素材齐全且缺图不覆盖原 PDF。
+README 复用同目录中的三张概览图。合并工程保持纯文字，不要求 `merge-dialog.png`。
 
 ## Commit Message 初稿
 
