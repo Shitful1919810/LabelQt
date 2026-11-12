@@ -49,10 +49,16 @@ void MobileReviewController::refresh()
                 const auto target = ReviewRoundService::locateNote(m_controller.project(), note);
                 const auto pageName =
                     target.first >= 0 ? m_controller.project().images().at(target.first).name : note.pageName;
-                m_notes.append(QVariantMap{{"key", note.id.toString(QUuid::WithoutBraces)},
-                                           {"text", note.text},
-                                           {"resolved", note.resolved},
-                                           {"pageName", pageName}});
+                m_notes.append(QVariantMap{
+                    {"key", note.id.toString(QUuid::WithoutBraces)},
+                    {"text", note.text},
+                    {"resolved", note.resolved},
+                    {"pageName", pageName},
+                    {"quote", note.quote},
+                    {"pageKey", note.targetPageId().toString(QUuid::WithoutBraces)},
+                    {"labelKey",
+                     note.targetLabelId().isNull() ? QString{} : note.targetLabelId().toString(QUuid::WithoutBraces)},
+                    {"orphan", target.first < 0 || (!note.targetLabelId().isNull() && target.second < 0)}});
             }
         if (!round || !*round)
             m_changes.clear();
@@ -67,8 +73,19 @@ void MobileReviewController::refresh()
     emit changed();
 }
 
-bool MobileReviewController::edit(const QString& description, const std::function<QString(Round&)>& mutate)
+QString MobileReviewController::editToken() const
 {
+    const auto token = ReviewRoundEditService::token(m_controller);
+    return m_controller.documentSession().toString() + token.session.toString() + QString::number(token.revision);
+}
+
+bool MobileReviewController::edit(const QString& description, const std::function<QString(Round&)>& mutate,
+                                  const QString& expectedToken)
+{
+    if (!expectedToken.isEmpty() && expectedToken != editToken()) {
+        setError(tr("The project changed while this dialog was open. Close it and try again."));
+        return false;
+    }
     refresh();
     if (m_roundState == QStringLiteral("invalid"))
         return false;
@@ -99,63 +116,82 @@ bool MobileReviewController::edit(const QString& description, const std::functio
     }
 }
 
-void MobileReviewController::startRound(bool replaceCompleted)
+bool MobileReviewController::startRound(bool replaceCompleted, QString expectedToken)
 {
-    edit(tr("Start proofreading round"), [this, replaceCompleted](Round& round) -> QString {
-        if (round && (!round->after || !replaceCompleted))
-            return tr("A proofreading round already exists.");
-        round.emplace();
-        round->before = ReviewRoundService::snapshot(m_controller.project());
-        return {};
-    });
+    return edit(
+        tr("Start proofreading round"),
+        [this, replaceCompleted](Round& round) -> QString {
+            if (round && (!round->after || !replaceCompleted))
+                return tr("A proofreading round already exists.");
+            round.emplace();
+            round->before = ReviewRoundService::snapshot(m_controller.project());
+            return {};
+        },
+        expectedToken);
 }
 
-void MobileReviewController::completeRound()
+bool MobileReviewController::completeRound(QString expectedToken)
 {
-    edit(tr("Complete proofreading round"), [this](Round& round) -> QString {
-        if (!round || round->after)
-            return tr("An active proofreading round is required.");
-        *round = ReviewRoundService::complete(std::move(*round), m_controller.project());
-        return {};
-    });
+    return edit(
+        tr("Complete proofreading round"),
+        [this](Round& round) -> QString {
+            if (!round || round->after)
+                return tr("An active proofreading round is required.");
+            *round = ReviewRoundService::complete(std::move(*round), m_controller.project());
+            return {};
+        },
+        expectedToken);
 }
 
-bool MobileReviewController::addNote(QString pageId, QString labelId, QString text)
+bool MobileReviewController::editNote(const ReviewNoteEdit& request, const QString& expectedToken)
 {
-    return edit(tr("Add proofreading note"), [&](Round& round) -> QString {
-        if (!round || round->after)
-            return tr("An active proofreading round is required.");
-        const QUuid page(pageId), label(labelId);
-        const auto& project = m_controller.project();
-        const auto target = ReviewRoundService::locate(project, page, label);
-        if (page.isNull() || (!labelId.isEmpty() && label.isNull()) || target.first < 0 ||
-            (!label.isNull() && target.second < 0))
-            return tr("The note target no longer exists.");
-        if (text.trimmed().isEmpty())
-            return tr("The note text must not be empty.");
-        ProofreadNote note;
-        note.pageId = page;
-        note.labelId = label;
-        note.pageName = project.images().at(target.first).name;
-        if (target.second >= 0)
-            note.quote = project.images().at(target.first).labels.at(target.second).text();
-        note.text = text;
-        round->notes.append(std::move(note));
-        return {};
-    });
+    return edit(
+        tr("Edit proofreading comments"),
+        [&](Round& round) -> QString {
+            if (!round)
+                return tr("No proofreading round exists.");
+            const auto result = ReviewRoundEditService::editNote(*round, m_controller.project(), request);
+            return result ? QString{} : result.error();
+        },
+        expectedToken);
+}
+
+bool MobileReviewController::addNote(QString pageId, QString labelId, QString text, QString expectedToken)
+{
+    if ((!labelId.isEmpty() && QUuid(labelId).isNull()) || QUuid(pageId).isNull()) {
+        setError(tr("The note target no longer exists."));
+        return false;
+    }
+    return editNote({.operation = ReviewNoteEdit::Operation::Add,
+                     .pageId = QUuid(pageId),
+                     .labelId = QUuid(labelId),
+                     .text = std::move(text)},
+                    expectedToken);
+}
+
+bool MobileReviewController::updateNote(QString noteId, QString text, QString expectedToken)
+{
+    return editNote({.operation = ReviewNoteEdit::Operation::Edit, .noteId = QUuid(noteId), .text = std::move(text)},
+                    expectedToken);
+}
+
+bool MobileReviewController::removeNote(QString noteId, QString expectedToken)
+{
+    return editNote({.operation = ReviewNoteEdit::Operation::Remove, .noteId = QUuid(noteId)}, expectedToken);
+}
+
+bool MobileReviewController::relinkNote(QString noteId, QString pageId, QString labelId, QString expectedToken)
+{
+    return editNote({.operation = ReviewNoteEdit::Operation::Relink,
+                     .noteId = QUuid(noteId),
+                     .pageId = QUuid(pageId),
+                     .labelId = QUuid(labelId)},
+                    expectedToken);
 }
 
 void MobileReviewController::resolveNote(QString noteId, bool resolved)
 {
-    edit(tr("Resolve proofreading note"), [&](Round& round) -> QString {
-        if (round && !QUuid(noteId).isNull())
-            for (auto& note : round->notes)
-                if (note.id == QUuid(noteId)) {
-                    note.resolved = resolved;
-                    return {};
-                }
-        return tr("The proofreading note no longer exists.");
-    });
+    editNote({.operation = ReviewNoteEdit::Operation::Resolve, .noteId = QUuid(noteId), .resolved = resolved});
 }
 
 void MobileReviewController::calculateChanges()

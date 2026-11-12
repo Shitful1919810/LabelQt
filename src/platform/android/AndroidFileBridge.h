@@ -14,9 +14,9 @@ public:
     explicit AndroidFileBridge(QObject* parent = nullptr);
     ~AndroidFileBridge() override;
 
-    // Android system picker, ZIP/TXT only. Cancellation is silent.
+    // Android system picker, supported project/archive formats only. Cancellation is silent.
     Q_INVOKABLE void chooseFile();
-    // Absolute path to an immutable ZIP inside Context.getFilesDir()/outgoing/<UUID>/.
+    // Absolute path to an immutable ZIP or PDF inside Context.getFilesDir()/outgoing/<UUID>/.
     // The export service owns its lifetime (at least seven days); this never deletes it.
     Q_INVOKABLE void shareFile(QString localFilePath);
 

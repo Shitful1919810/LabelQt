@@ -35,6 +35,10 @@ ProjectTextSearchResult ProjectTextSearchService::search(const labelqt::core::Pr
                 continue;
             qsizetype offset = 0;
             while ((offset = label.text().indexOf(query.text, offset, sensitivity)) >= 0) {
+                if (query.maxMatches >= 0 && result.matches.size() >= query.maxMatches) {
+                    result.truncated = true;
+                    return result;
+                }
                 result.matches.append({page, index, offset, query.text.size(), image.name, label.text()});
                 offset += query.text.size();
             }

@@ -8,6 +8,7 @@
 #include <QVector>
 
 #include <expected>
+#include <functional>
 
 namespace labelqt::services {
 
@@ -50,6 +51,7 @@ struct ProofreadReportOptions {
 
 class ProofreadReportService final {
 public:
+    static ProofreadReportTexts defaultTexts(const QString& before, const QString& after);
     static QString htmlReport(const QVector<ReviewChange>& changes, const labelqt::core::Project& beforeProject,
                               const labelqt::core::Project& currentProject, const ProofreadReportTexts& texts,
                               const QString& filterDescription = {}, ProofreadReportOptions options = {});
@@ -59,6 +61,11 @@ public:
                                                        const ProofreadReportTexts& texts,
                                                        const QString& filterDescription = {},
                                                        ProofreadReportOptions options = {});
+    static std::expected<void, QString>
+    savePdfReport(const QString& filePath, const QVector<ReviewChange>& changes,
+                  const labelqt::core::Project& beforeProject, const labelqt::core::Project& currentProject,
+                  const ProofreadReportTexts& texts, const QString& filterDescription = {},
+                  ProofreadReportOptions options = {}, const std::function<bool()>& canceled = {});
 };
 
 } // namespace labelqt::services

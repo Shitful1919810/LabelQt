@@ -62,6 +62,21 @@ EditorStateController::Mode EditorStateController::activeMode() const
     return Mode::None;
 }
 
+bool EditorStateController::hasActiveLabelTextEditor(int imageIndex, int sourceIndex,
+                                                   const QModelIndex& tableIndex) const
+{
+    if (m_canvasTextEditController != nullptr && m_canvasTextEditController->isEditing() &&
+        m_canvasTextEditController->imageIndex() == imageIndex &&
+        m_canvasTextEditController->labelIndex() == sourceIndex) {
+        return true;
+    }
+    if (m_labelView == nullptr || !tableIndex.isValid() || tableIndex.model() != m_labelView->model()) {
+        return false;
+    }
+    const auto* editor = m_labelView->indexWidget(tableIndex);
+    return editor != nullptr && editor->isVisible();
+}
+
 void EditorStateController::commitActive()
 {
     if (m_canvasTextEditController != nullptr && m_canvasTextEditController->hasEditorFocus()) {

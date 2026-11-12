@@ -115,6 +115,36 @@ QString MobileDocument::selectedGroup() const
     return index < 0 ? QString{} : page()->labels.at(index).group();
 }
 
+bool MobileDocument::navigateToLabel(const QString& pageKey, const QString& labelKey)
+{
+    if (!commitText())
+        return false;
+    const auto& images = m_controller.project().images();
+    for (int i = 0; i < images.size(); ++i) {
+        if (images.at(i).id != QUuid(pageKey))
+            continue;
+        if (labelKey.isEmpty()) {
+            m_pageIndex = i;
+            m_selected = {};
+            restoreEditor();
+            refresh();
+            return true;
+        }
+        for (const auto& label : images.at(i).labels) {
+            if (label.id() != QUuid(labelKey) || label.isDeleted())
+                continue;
+            m_pageIndex = i;
+            m_selected = label.id();
+            if (!m_visibleGroups.contains(label.group()))
+                m_visibleGroups.append(label.group());
+            restoreEditor();
+            refresh();
+            return true;
+        }
+    }
+    return false;
+}
+
 QUrl MobileDocument::imageSource() const
 {
     return page() && !page()->path.isEmpty() ? QUrl::fromLocalFile(page()->path) : QUrl{};

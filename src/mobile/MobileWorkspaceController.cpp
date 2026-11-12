@@ -1,4 +1,6 @@
 #include "MobileWorkspaceController.h"
+#include "services/proofread/ReviewRoundService.h"
+#include "services/transfer/ProofreadReportShareService.h"
 #include <QFile>
 
 #include <QDir>
@@ -12,7 +14,11 @@ MobileWorkspaceController::MobileWorkspaceController(MobileDocument& document, Q
     : QObject(parent), m_document(document), m_root(std::move(root))
 {
     connect(&document.controller(), &services::ProjectController::storageChanged, this,
-            [this] { m_workspaces.refreshSavedTime(m_document.controller().project().filePath()); });
+            [this] {
+                m_workspaces.refreshSavedTime(m_document.controller().project().filePath());
+                refreshActiveReview();
+            });
+    connect(&document, &MobileDocument::changed, this, &MobileWorkspaceController::refreshActiveReview);
     connect(&m_cleanupTimer, &QTimer::timeout, this, &MobileWorkspaceController::startMaintenance);
     m_cleanupTimer.start(60 * 60 * 1000);
     QTimer::singleShot(0, this, &MobileWorkspaceController::startMaintenance);
@@ -20,9 +26,16 @@ MobileWorkspaceController::MobileWorkspaceController(MobileDocument& document, Q
         const auto completedOperation = m_operation;
         try {
             const auto result = m_job.result();
-            m_workspaces.replace(result.workspaces);
+            auto entries = result.workspaces;
+            // A worker's disk snapshot may predate edits to the active document.
+            const auto& project = m_document.controller().project();
+            const bool active = activeReview();
+            for (auto& entry : entries)
+                if (entry.projectPath == project.filePath())
+                    entry.reviewActive = active;
+            m_workspaces.replace(std::move(entries));
             if (m_operation == Operation::Export)
-                m_lastExport = result.exportPath;
+                m_lastExport = m_reportCancel && m_reportCancel->load() ? QString{} : result.exportPath;
             if (m_operation != Operation::Maintenance || !result.error.isEmpty())
                 m_message = !result.error.isEmpty()            ? result.error
                             : m_operation == Operation::Import ? tr("Project imported. Select it to open.")
@@ -37,6 +50,7 @@ MobileWorkspaceController::MobileWorkspaceController(MobileDocument& document, Q
             m_lastExport.clear();
         }
         m_busy = false;
+        m_reportCancel.reset();
         const auto exportPath = completedOperation == Operation::Export ? m_lastExport : QString{};
         emit changed();
         if (!exportPath.isEmpty())
@@ -47,6 +61,7 @@ MobileWorkspaceController::MobileWorkspaceController(MobileDocument& document, Q
 
 MobileWorkspaceController::~MobileWorkspaceController()
 {
+    cancelReportExport();
     disconnect(&m_job, nullptr, this, nullptr);
     m_cleanupTimer.stop();
     disconnect(&m_cleanupTimer, nullptr, this, nullptr);
@@ -57,6 +72,24 @@ void MobileWorkspaceController::showMessage(const QString& message)
 {
     m_message = message;
     emit changed();
+}
+
+void MobileWorkspaceController::refreshActiveReview()
+{
+    m_workspaces.setReviewActive(m_document.controller().project().filePath(), activeReview());
+}
+
+bool MobileWorkspaceController::activeReview()
+{
+    const auto& project = m_document.controller().project();
+    const auto session = m_document.controller().documentSession();
+    if (session == m_reviewSession && project.commentLines() == m_reviewComments)
+        return m_reviewActive;
+    m_reviewSession = session;
+    m_reviewComments = project.commentLines();
+    const auto round = services::ReviewRoundService::read(project);
+    m_reviewActive = round && *round && !(**round).after;
+    return m_reviewActive;
 }
 
 void MobileWorkspaceController::clearMessage()
@@ -137,6 +170,60 @@ QString MobileWorkspaceController::suggestedShareName() const
     return services::WorkspaceStorageService::suggestedArchiveName(m_document.title());
 }
 
+QString MobileWorkspaceController::suggestedReportName() const
+{
+    return QFileInfo(suggestedShareName()).completeBaseName() + "-proofreading.pdf";
+}
+
+bool MobileWorkspaceController::shareLastExport()
+{
+    if (m_busy || m_lastExport.isEmpty())
+        return false;
+    const auto path = services::WorkspaceStorageService(m_root).validateSharedFile(m_lastExport);
+    if (!path) {
+        m_lastExport.clear();
+        showMessage(path.error());
+        return false;
+    }
+    clearMessage();
+    emit exportReady(*path);
+    return true;
+}
+
+void MobileWorkspaceController::cancelReportExport()
+{
+    if (m_reportCancel)
+        m_reportCancel->store(true);
+}
+
+bool MobileWorkspaceController::exportProofreadingPdf(const QString& fileName, bool currentPage)
+{
+    if (m_busy || !m_document.opened() || !m_document.save())
+        return false;
+    const auto name = services::WorkspaceStorageService::pdfFileName(fileName);
+    if (!name) {
+        showMessage(name.error());
+        return false;
+    }
+    const auto snapshot = m_document.controller().project();
+    const QUuid page = currentPage ? QUuid(m_document.pageId()) : QUuid{};
+    m_reportCancel = std::make_shared<std::atomic_bool>(false);
+    m_busy = true;
+    m_operation = Operation::Export;
+    m_lastExport.clear();
+    m_message = tr("Preparing PDF report...");
+    emit changed();
+    m_job.setFuture(QtConcurrent::run([root = m_root, snapshot, page, name = *name, canceled = m_reportCancel] {
+        services::ProjectTransferService transfer(root);
+        const auto cleaned = services::WorkspaceStorageService(root).cleanDisposableFiles();
+        const auto result = services::ProofreadReportShareService::exportPdf(
+            root, snapshot, name, page, [canceled] { return canceled->load(); });
+        return Result{!result ? result.error() : !cleaned ? cleaned.error() : QString{},
+                      result ? *result : QString{}, transfer.listWorkspaces()};
+    }));
+    return true;
+}
+
 bool MobileWorkspaceController::exportProject(const QString& fileName)
 {
     if (m_busy || !m_document.opened() || !m_document.save())
@@ -155,7 +242,7 @@ bool MobileWorkspaceController::exportProject(const QString& fileName)
     m_job.setFuture(QtConcurrent::run([root = m_root, snapshot, fileName = *name] {
         services::ProjectTransferService transfer(root);
         const auto cleaned = services::WorkspaceStorageService(root).cleanDisposableFiles();
-        const auto result = transfer.exportZip(snapshot, fileName, core::LabelPlusDocument::CommentPolicy::Omit);
+        const auto result = transfer.exportZip(snapshot, fileName);
         if (!cleaned && result)
             return Result{cleaned.error(), *result, transfer.listWorkspaces()};
         return Result{result ? QString{} : result.error(), result ? *result : QString{}, transfer.listWorkspaces()};
@@ -174,8 +261,10 @@ bool MobileWorkspaceController::renameWorkspace(const QString& id, const QString
     }
     auto entries = m_workspaces.entries();
     for (auto& workspace : entries)
-        if (workspace.id == id)
-            workspace = *result;
+        if (workspace.id == id) {
+            workspace.title = result->title;
+            workspace.modifiedAt = result->modifiedAt;
+        }
     m_workspaces.replace(std::move(entries));
     if (result->projectPath == m_document.controller().project().filePath())
         m_document.setTitle(result->title);

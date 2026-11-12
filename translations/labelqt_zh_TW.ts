@@ -2876,6 +2876,26 @@ Last error: %1</source>
         <source>Pages: %1; Changes: %2; Summaries: %3</source>
         <translation>頁面：%1；變更：%2；摘要：%3</translation>
     </message>
+    <message>
+        <source>Export HTML report...</source>
+        <translation>匯出 HTML 報告...</translation>
+    </message>
+    <message>
+        <source>Export PDF report...</source>
+        <translation>匯出 PDF 報告...</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html)</source>
+        <translation>HTML 檔案 (*.html)</translation>
+    </message>
+    <message>
+        <source>PDF files (*.pdf)</source>
+        <translation>PDF 檔案 (*.pdf)</translation>
+    </message>
+    <message>
+        <source>Export report...</source>
+        <translation>匯出報告...</translation>
+    </message>
 </context>
 <context>
     <name>main</name>
@@ -3598,6 +3618,22 @@ Missing images: %2</source>
         <source>The project changed while this dialog was open. Please try again.</source>
         <translation>此視窗開啟期間工程已變更，請重試。</translation>
     </message>
+    <message>
+        <source>Completed comments are read-only. Start a new round to add or edit comments.</source>
+        <translation>已完成的批註唯讀，請開始新一輪校對後新增或編輯批註。</translation>
+    </message>
+    <message>
+        <source>The note text must not be empty.</source>
+        <translation>批註正文不可為空。</translation>
+    </message>
+    <message>
+        <source>The proofreading note no longer exists.</source>
+        <translation>校對批註已不存在。</translation>
+    </message>
+    <message>
+        <source>The note target no longer exists.</source>
+        <translation>批註目標已不存在。</translation>
+    </message>
 </context>
 <context>
     <name>ReviewRoundService</name>
@@ -3796,6 +3832,62 @@ Missing images: %2</source>
         <source>Undo</source>
         <translation>復原</translation>
     </message>
+    <message>
+        <source>Find and Review</source>
+        <translation>查找與校對</translation>
+    </message>
+    <message>
+        <source>Locate marker</source>
+        <translation>定位標記</translation>
+    </message>
+    <message>
+        <source>The ZIP includes comments, proofreading records and their referenced images. LabelQt on PC or Android can continue the review.</source>
+        <translation>ZIP 包含註解、校對記錄及其引用的圖片，可在 PC 或 Android 版 LabelQt 中繼續校對。</translation>
+    </message>
+    <message>
+        <source>Finish this review?</source>
+        <translation>完成本輪校對？</translation>
+    </message>
+    <message>
+        <source>Freeze the reviewed text and comment bodies? You can still resolve comments and change their linked labels.</source>
+        <translation>固定完成稿和批註正文？之後仍可解決批註或修改其關聯標籤。</translation>
+    </message>
+    <message>
+        <source>The previous round and its notes will be replaced. Share a ZIP first to keep a copy.</source>
+        <translation>上一輪校對及批註將被取代。如需保留，請先分享 ZIP 並另存。</translation>
+    </message>
+    <message>
+        <source>All pages in this round</source>
+        <translation>本輪全部頁面</translation>
+    </message>
+    <message>
+        <source>Cancel export</source>
+        <translation>中止匯出</translation>
+    </message>
+    <message>
+        <source>Current page only</source>
+        <translation>僅目前頁面</translation>
+    </message>
+    <message>
+        <source>PDF file name</source>
+        <translation>PDF 檔名</translation>
+    </message>
+    <message>
+        <source>Preparing PDF report...</source>
+        <translation>正在產生 PDF 報告...</translation>
+    </message>
+    <message>
+        <source>Share proofreading PDF</source>
+        <translation>分享校對 PDF</translation>
+    </message>
+    <message>
+        <source>The PDF includes text differences, images and comments. It does not replace the editable project ZIP.</source>
+        <translation>PDF 包含文字差異、圖片和批註，不能取代可繼續編輯的工程 ZIP。</translation>
+    </message>
+    <message>
+        <source>Share last export</source>
+        <translation>分享上次匯出</translation>
+    </message>
 </context>
 <context>
     <name>MobileReviewController</name>
@@ -3862,6 +3954,14 @@ Missing images: %2</source>
     <message>
         <source>Unable to read the proofreading round.</source>
         <translation>無法讀取本輪校對記錄。</translation>
+    </message>
+    <message>
+        <source>The project changed while this dialog was open. Close it and try again.</source>
+        <translation>對話框開啟期間工程已變更，請關閉後重新開啟。</translation>
+    </message>
+    <message>
+        <source>Edit proofreading comments</source>
+        <translation>編輯校對批註</translation>
     </message>
 </context>
 <context>
@@ -4009,6 +4109,10 @@ Missing images: %2</source>
         <source>ZIP verification failed.</source>
         <translation>ZIP 驗證失敗。</translation>
     </message>
+    <message>
+        <source>The project is too large to inspect in the workspace list.</source>
+        <translation>工程過大，無法在工程清單中讀取詳細狀態。</translation>
+    </message>
 </context>
 <context>
     <name>labelqt::mobile::MobileDocument</name>
@@ -4054,6 +4158,10 @@ Missing images: %2</source>
     <message>
         <source>The workspace is no longer available.</source>
         <translation>該工作區已無法使用。</translation>
+    </message>
+    <message>
+        <source>Preparing PDF report...</source>
+        <translation>正在產生 PDF 報告...</translation>
     </message>
 </context>
 <context>
@@ -4129,6 +4237,42 @@ Missing images: %2</source>
         <source>Some temporary files could not be removed. Cleanup will be retried later.</source>
         <translation>部分暫存檔無法刪除，將稍後重試清理。</translation>
     </message>
+    <message>
+        <source>Cannot create report staging directory.</source>
+        <translation>無法建立匯出暫存目錄。</translation>
+    </message>
+    <message>
+        <source>Cannot protect the exported file.</source>
+        <translation>無法保護匯出檔案。</translation>
+    </message>
+    <message>
+        <source>Cannot publish the exported file.</source>
+        <translation>無法發佈匯出檔案。</translation>
+    </message>
+    <message>
+        <source>Enter a valid PDF file name without folders or reserved characters.</source>
+        <translation>請輸入有效的 PDF 檔名，不要包含目錄或保留字元。</translation>
+    </message>
+    <message>
+        <source>Export canceled.</source>
+        <translation>已中止匯出。</translation>
+    </message>
+    <message>
+        <source>The exported file is empty.</source>
+        <translation>匯出檔案為空。</translation>
+    </message>
+    <message>
+        <source>Cannot determine available storage for export.</source>
+        <translation>無法確定匯出所需的可用儲存空間。</translation>
+    </message>
+    <message>
+        <source>Not enough storage for export staging while keeping 256 MiB available for project saves.</source>
+        <translation>儲存空間不足，無法暫存匯出檔案並為工程儲存預留 256 MiB。</translation>
+    </message>
+    <message>
+        <source>The last export is no longer available. Export the project or report again.</source>
+        <translation>上次匯出的檔案已無法使用，請重新匯出工程或報告。</translation>
+    </message>
 </context>
 <context>
     <name>SubmitDialog</name>
@@ -4142,6 +4286,10 @@ Missing images: %2</source>
     <message>
         <source>No local projects</source>
         <translation>尚無本機專案</translation>
+    </message>
+    <message>
+        <source>Review in progress</source>
+        <translation>校對中</translation>
     </message>
 </context>
 <context>
@@ -4157,6 +4305,180 @@ Missing images: %2</source>
     <message>
         <source>Author: %1</source>
         <translation>作者：%1</translation>
+    </message>
+</context>
+<context>
+    <name>InspectionPanel</name>
+    <message>
+        <source>Clear search</source>
+        <translation>清空搜尋</translation>
+    </message>
+    <message>
+        <source>Review in progress</source>
+        <translation>校對中</translation>
+    </message>
+    <message>
+        <source>Completed review</source>
+        <translation>校對已完成</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>搜尋結果</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>批註</translation>
+    </message>
+    <message>
+        <source>First %1 matches; narrow the search.</source>
+        <translation>僅顯示前 %1 處符合項目，請縮小範圍。</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewNoteDialog</name>
+    <message>
+        <source>Proofreading comment</source>
+        <translation>校對批註</translation>
+    </message>
+    <message>
+        <source>Selected label</source>
+        <translation>選取的標籤</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>目前頁面</translation>
+    </message>
+    <message>
+        <source>Completed comments are read-only. Their resolved status and linked label can still be changed.</source>
+        <translation>已完成的批註正文唯讀，仍可變更解決狀態和關聯標籤。</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>批註</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewNotesPanel</name>
+    <message>
+        <source>All pages</source>
+        <translation>全部頁面</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>目前頁面</translation>
+    </message>
+    <message>
+        <source>All comments</source>
+        <translation>全部批註</translation>
+    </message>
+    <message>
+        <source>Unresolved</source>
+        <translation>未解決</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>已解決</translation>
+    </message>
+    <message>
+        <source>Missing target</source>
+        <translation>目標失聯</translation>
+    </message>
+    <message>
+        <source>No comments in this view.</source>
+        <translation>目前篩選下沒有批註。</translation>
+    </message>
+    <message>
+        <source>Label comment</source>
+        <translation>標籤批註</translation>
+    </message>
+    <message>
+        <source>Page comment</source>
+        <translation>頁面批註</translation>
+    </message>
+    <message>
+        <source>Comment actions</source>
+        <translation>批註操作</translation>
+    </message>
+    <message>
+        <source>Go to target</source>
+        <translation>跳至目標</translation>
+    </message>
+    <message>
+        <source>Attach to selected label</source>
+        <translation>關聯至選取的標籤</translation>
+    </message>
+    <message>
+        <source>Delete comment</source>
+        <translation>刪除批註</translation>
+    </message>
+    <message>
+        <source>Delete this comment?</source>
+        <translation>刪除此批註？</translation>
+    </message>
+    <message>
+        <source>Attach this comment to the selected label? Its original quote will be preserved.</source>
+        <translation>將批註關聯至目前選取的標籤？原始摘錄將保留。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileSearchController</name>
+    <message>
+        <source>Search failed.</source>
+        <translation>搜尋失敗。</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadPdfReport</name>
+    <message>
+        <source>Cannot finish PDF output.</source>
+        <translation>無法完成 PDF 輸出。</translation>
+    </message>
+    <message>
+        <source>Cannot initialize PDF output.</source>
+        <translation>無法初始化 PDF 輸出。</translation>
+    </message>
+    <message>
+        <source>Cannot write PDF page.</source>
+        <translation>無法寫入 PDF 頁面。</translation>
+    </message>
+    <message>
+        <source>Image unavailable</source>
+        <translation>圖片無法使用</translation>
+    </message>
+    <message>
+        <source>Report export canceled.</source>
+        <translation>已中止報告匯出。</translation>
+    </message>
+    <message>
+        <source>Too many changes. Export a smaller page range.</source>
+        <translation>變更過多，請縮小匯出頁面範圍。</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadReportShareService</name>
+    <message>
+        <source>All pages</source>
+        <translation>全部頁面</translation>
+    </message>
+    <message>
+        <source>Completed draft</source>
+        <translation>完成稿</translation>
+    </message>
+    <message>
+        <source>Current draft</source>
+        <translation>目前譯稿</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>目前頁面</translation>
+    </message>
+    <message>
+        <source>No proofreading round exists.</source>
+        <translation>沒有校對輪次。</translation>
+    </message>
+    <message>
+        <source>Original draft</source>
+        <translation>原譯稿</translation>
     </message>
 </context>
 </TS>

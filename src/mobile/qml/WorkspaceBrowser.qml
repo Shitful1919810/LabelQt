@@ -48,11 +48,14 @@ ColumnLayout {
             required property string workspaceKey
             required property string workspaceTitle
             required property date modifiedAt
+            required property bool reviewActive
+            required property string diagnostic
             width: ListView.view.width
             spacing: 0
             ItemDelegate {
                 objectName: "openWorkspace_" + workspaceKey
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 enabled: !root.busy
                 onClicked: root.openRequested(workspaceKey)
                 contentItem: ColumnLayout {
@@ -64,9 +67,28 @@ ColumnLayout {
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
+                    Label {
+                        visible: reviewActive
+                        text: qsTr("Review in progress")
+                        font.bold: true
+                        font.pixelSize: 12
+                        padding: 4
+                        background: Rectangle { color: "transparent"; border.color: palette.mid; radius: 3 }
+                    }
+                    Label {
+                        objectName: "workspaceDiagnostic_" + workspaceKey
+                        visible: diagnostic.length > 0
+                        text: diagnostic
+                        textFormat: Text.PlainText
+                        font.pixelSize: 12
+                        wrapMode: Text.WrapAnywhere
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                    }
                 }
             }
             IconButton {
+                objectName: "manageWorkspace_" + workspaceKey
                 iconName: "ellipsis"
                 text: qsTranslate("Main", "Manage project")
                 enabled: !root.busy

@@ -12,6 +12,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QRegularExpression>
+#include <QStringConverter>
 #include <QTextStream>
 #include <QVector>
 
@@ -166,18 +167,26 @@ void restoreTextMetadata(Project& project)
 
 void validateSerializable(const Project& project)
 {
-    if (project.sourceName().contains(QLatin1Char('\n')) || project.sourceName().contains(QLatin1Char('\r')))
+    if (project.sourceName().contains(QLatin1Char('\n')) || project.sourceName().contains(QLatin1Char('\r')) ||
+        project.sourceName().contains(QChar::Null) || !project.sourceName().isValidUtf16())
         invalidDocument();
+    for (const auto& comment : project.commentLines())
+        if (comment.contains(QChar::Null) || !comment.isValidUtf16())
+            invalidDocument();
     for (const QString& group : project.groups()) {
         if (!LabelPlusDocument::isValidGroupName(group))
             invalidDocument();
     }
     for (const ImageEntry& image : project.images()) {
-        if (image.name.contains(QLatin1Char('\n')) || image.name.contains(QLatin1Char('\r')))
+        const auto name = imageNameFor(image);
+        if (name.contains(QLatin1Char('\n')) || name.contains(QLatin1Char('\r')) || name.contains(QChar::Null) ||
+            !name.isValidUtf16() || !image.path.isValidUtf16())
             invalidDocument();
         for (const Label& label : image.labels) {
             if (label.isDeleted())
                 continue;
+            if (label.text().contains(QChar::Null) || !label.text().isValidUtf16() || !label.group().isValidUtf16())
+                invalidDocument();
             for (const QString& line : normalizedText(label.text()).split(QLatin1Char('\n'))) {
                 if (imageLineRegex.match(line.trimmed()).hasMatch() ||
                     labelLineRegex.match(line.trimmed()).hasMatch()) {
@@ -194,7 +203,7 @@ void validateSerializable(const Project& project)
 
 bool LabelPlusDocument::isValidGroupName(const QString& group)
 {
-    return !group.isEmpty() && group == group.trimmed() && group != QStringLiteral("-") &&
+    return !group.isEmpty() && group.isValidUtf16() && group == group.trimmed() && group != QStringLiteral("-") &&
            !group.contains(QLatin1Char('\n')) && !group.contains(QLatin1Char('\r')) && !group.contains(QChar::Null);
 }
 
@@ -205,12 +214,30 @@ Project LabelPlusDocument::loadFromFile(const QString& filePath)
 
 LoadedProjectDocument LabelPlusDocument::readFromFile(const QString& filePath)
 {
-    const auto bytes = readFileBytes(filePath);
-    QTextStream stream(bytes);
-    stream.setEncoding(QStringConverter::Utf8);
-    const auto text = stream.readAll();
-    if (stream.status() != QTextStream::Ok)
+    return readFromBytes(readFileBytes(filePath), filePath);
+}
+
+LoadedProjectDocument LabelPlusDocument::readFromBytes(const QByteArray& bytes, const QString& filePath)
+{
+    const auto encoding = QStringConverter::encodingForData(bytes).value_or(QStringConverter::Utf8);
+    const int unitBytes = encoding == QStringConverter::Utf32LE || encoding == QStringConverter::Utf32BE   ? 4
+                          : encoding == QStringConverter::Utf16LE || encoding == QStringConverter::Utf16BE ? 2
+                                                                                                           : 1;
+    // Some Qt versions do not report incomplete UTF-32 code units, even with Stateless.
+    if (bytes.size() % unitBytes != 0)
         invalidDocument();
+    // A complete document is one conversion: incomplete final code units must fail too.
+    QStringDecoder decoder(encoding, QStringConverter::Flag::Stateless);
+    const QString text = decoder(bytes);
+    if (decoder.hasError() || !text.isValidUtf16() || text.contains(QChar::Null))
+        invalidDocument();
+    if (unitBytes == 4) {
+        // Qt can silently normalize invalid UTF-32 scalars. Require a lossless conversion.
+        QStringEncoder encoder(encoding, QStringConverter::Flag::WriteBom);
+        const QByteArray encoded = encoder(text);
+        if (encoder.hasError() || encoded != bytes)
+            invalidDocument();
+    }
     // Hash the same raw bytes we parsed, including BOM and original line endings.
     return {parse(text, filePath), QCryptographicHash::hash(bytes, QCryptographicHash::Sha256)};
 }
@@ -274,6 +301,8 @@ Project LabelPlusDocument::parse(const QString& content, const QString& filePath
 
         if (sectionSeparatorCount == 1) {
             if (!line.isEmpty()) {
+                if (!isValidGroupName(line))
+                    invalidDocument();
                 auto groups = project.groups();
                 groups.append(line);
                 project.setGroups(std::move(groups));

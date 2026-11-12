@@ -2889,6 +2889,26 @@ Last error: %1</translation>
         <source>Pages: %1; Changes: %2; Summaries: %3</source>
         <translation>Pages: %1; Changes: %2; Summaries: %3</translation>
     </message>
+    <message>
+        <source>Export HTML report...</source>
+        <translation>Export HTML report...</translation>
+    </message>
+    <message>
+        <source>Export PDF report...</source>
+        <translation>Export PDF report...</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html)</source>
+        <translation>HTML files (*.html)</translation>
+    </message>
+    <message>
+        <source>PDF files (*.pdf)</source>
+        <translation>PDF files (*.pdf)</translation>
+    </message>
+    <message>
+        <source>Export report...</source>
+        <translation>Export report...</translation>
+    </message>
 </context>
 <context>
     <name>main</name>
@@ -3611,6 +3631,22 @@ Missing images: %2</translation>
         <source>The project changed while this dialog was open. Please try again.</source>
         <translation>The project changed while this dialog was open. Please try again.</translation>
     </message>
+    <message>
+        <source>Completed comments are read-only. Start a new round to add or edit comments.</source>
+        <translation>Completed comments are read-only. Start a new round to add or edit comments.</translation>
+    </message>
+    <message>
+        <source>The note text must not be empty.</source>
+        <translation>The note text must not be empty.</translation>
+    </message>
+    <message>
+        <source>The proofreading note no longer exists.</source>
+        <translation>The proofreading note no longer exists.</translation>
+    </message>
+    <message>
+        <source>The note target no longer exists.</source>
+        <translation>The note target no longer exists.</translation>
+    </message>
 </context>
 <context>
     <name>ReviewRoundService</name>
@@ -3809,6 +3845,62 @@ Missing images: %2</translation>
         <source>Undo</source>
         <translation>Undo</translation>
     </message>
+    <message>
+        <source>Find and Review</source>
+        <translation>Find and Review</translation>
+    </message>
+    <message>
+        <source>Locate marker</source>
+        <translation>Locate marker</translation>
+    </message>
+    <message>
+        <source>The ZIP includes comments, proofreading records and their referenced images. LabelQt on PC or Android can continue the review.</source>
+        <translation>The ZIP includes comments, proofreading records and their referenced images. LabelQt on PC or Android can continue the review.</translation>
+    </message>
+    <message>
+        <source>Finish this review?</source>
+        <translation>Finish this review?</translation>
+    </message>
+    <message>
+        <source>Freeze the reviewed text and comment bodies? You can still resolve comments and change their linked labels.</source>
+        <translation>Freeze the reviewed text and comment bodies? You can still resolve comments and change their linked labels.</translation>
+    </message>
+    <message>
+        <source>The previous round and its notes will be replaced. Share a ZIP first to keep a copy.</source>
+        <translation>The previous round and its notes will be replaced. Share a ZIP first to keep a copy.</translation>
+    </message>
+    <message>
+        <source>All pages in this round</source>
+        <translation>All pages in this round</translation>
+    </message>
+    <message>
+        <source>Cancel export</source>
+        <translation>Cancel export</translation>
+    </message>
+    <message>
+        <source>Current page only</source>
+        <translation>Current page only</translation>
+    </message>
+    <message>
+        <source>PDF file name</source>
+        <translation>PDF file name</translation>
+    </message>
+    <message>
+        <source>Preparing PDF report...</source>
+        <translation>Preparing PDF report...</translation>
+    </message>
+    <message>
+        <source>Share proofreading PDF</source>
+        <translation>Share proofreading PDF</translation>
+    </message>
+    <message>
+        <source>The PDF includes text differences, images and comments. It does not replace the editable project ZIP.</source>
+        <translation>The PDF includes text differences, images and comments. It does not replace the editable project ZIP.</translation>
+    </message>
+    <message>
+        <source>Share last export</source>
+        <translation>Share last export</translation>
+    </message>
 </context>
 <context>
     <name>MobileReviewController</name>
@@ -3875,6 +3967,14 @@ Missing images: %2</translation>
     <message>
         <source>Unable to read the proofreading round.</source>
         <translation>Unable to read the proofreading round.</translation>
+    </message>
+    <message>
+        <source>The project changed while this dialog was open. Close it and try again.</source>
+        <translation>The project changed while this dialog was open. Close it and try again.</translation>
+    </message>
+    <message>
+        <source>Edit proofreading comments</source>
+        <translation>Edit proofreading comments</translation>
     </message>
 </context>
 <context>
@@ -4022,6 +4122,10 @@ Missing images: %2</translation>
         <source>ZIP verification failed.</source>
         <translation>ZIP verification failed.</translation>
     </message>
+    <message>
+        <source>The project is too large to inspect in the workspace list.</source>
+        <translation>The project is too large to inspect in the workspace list.</translation>
+    </message>
 </context>
 <context>
     <name>labelqt::mobile::MobileDocument</name>
@@ -4067,6 +4171,10 @@ Missing images: %2</translation>
     <message>
         <source>The workspace is no longer available.</source>
         <translation>The workspace is no longer available.</translation>
+    </message>
+    <message>
+        <source>Preparing PDF report...</source>
+        <translation>Preparing PDF report...</translation>
     </message>
 </context>
 <context>
@@ -4142,6 +4250,42 @@ Missing images: %2</translation>
         <source>Some temporary files could not be removed. Cleanup will be retried later.</source>
         <translation>Some temporary files could not be removed. Cleanup will be retried later.</translation>
     </message>
+    <message>
+        <source>Cannot create report staging directory.</source>
+        <translation>Cannot create report staging directory.</translation>
+    </message>
+    <message>
+        <source>Cannot protect the exported file.</source>
+        <translation>Cannot protect the exported file.</translation>
+    </message>
+    <message>
+        <source>Cannot publish the exported file.</source>
+        <translation>Cannot publish the exported file.</translation>
+    </message>
+    <message>
+        <source>Enter a valid PDF file name without folders or reserved characters.</source>
+        <translation>Enter a valid PDF file name without folders or reserved characters.</translation>
+    </message>
+    <message>
+        <source>Export canceled.</source>
+        <translation>Export canceled.</translation>
+    </message>
+    <message>
+        <source>The exported file is empty.</source>
+        <translation>The exported file is empty.</translation>
+    </message>
+    <message>
+        <source>Cannot determine available storage for export.</source>
+        <translation>Cannot determine available storage for export.</translation>
+    </message>
+    <message>
+        <source>Not enough storage for export staging while keeping 256 MiB available for project saves.</source>
+        <translation>Not enough storage for export staging while keeping 256 MiB available for project saves.</translation>
+    </message>
+    <message>
+        <source>The last export is no longer available. Export the project or report again.</source>
+        <translation>The last export is no longer available. Export the project or report again.</translation>
+    </message>
 </context>
 <context>
     <name>SubmitDialog</name>
@@ -4155,6 +4299,10 @@ Missing images: %2</translation>
     <message>
         <source>No local projects</source>
         <translation>No local projects</translation>
+    </message>
+    <message>
+        <source>Review in progress</source>
+        <translation>Review in progress</translation>
     </message>
 </context>
 <context>
@@ -4170,6 +4318,180 @@ Missing images: %2</translation>
     <message>
         <source>Author: %1</source>
         <translation>Author: %1</translation>
+    </message>
+</context>
+<context>
+    <name>InspectionPanel</name>
+    <message>
+        <source>Clear search</source>
+        <translation>Clear search</translation>
+    </message>
+    <message>
+        <source>Review in progress</source>
+        <translation>Review in progress</translation>
+    </message>
+    <message>
+        <source>Completed review</source>
+        <translation>Completed review</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>Results</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>Notes</translation>
+    </message>
+    <message>
+        <source>First %1 matches; narrow the search.</source>
+        <translation>First %1 matches; narrow the search.</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewNoteDialog</name>
+    <message>
+        <source>Proofreading comment</source>
+        <translation>Proofreading comment</translation>
+    </message>
+    <message>
+        <source>Selected label</source>
+        <translation>Selected label</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>Current page</translation>
+    </message>
+    <message>
+        <source>Completed comments are read-only. Their resolved status and linked label can still be changed.</source>
+        <translation>Completed comments are read-only. Their resolved status and linked label can still be changed.</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>Comment</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewNotesPanel</name>
+    <message>
+        <source>All pages</source>
+        <translation>All pages</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>Current page</translation>
+    </message>
+    <message>
+        <source>All comments</source>
+        <translation>All comments</translation>
+    </message>
+    <message>
+        <source>Unresolved</source>
+        <translation>Unresolved</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>Resolved</translation>
+    </message>
+    <message>
+        <source>Missing target</source>
+        <translation>Missing target</translation>
+    </message>
+    <message>
+        <source>No comments in this view.</source>
+        <translation>No comments in this view.</translation>
+    </message>
+    <message>
+        <source>Label comment</source>
+        <translation>Label comment</translation>
+    </message>
+    <message>
+        <source>Page comment</source>
+        <translation>Page comment</translation>
+    </message>
+    <message>
+        <source>Comment actions</source>
+        <translation>Comment actions</translation>
+    </message>
+    <message>
+        <source>Go to target</source>
+        <translation>Go to target</translation>
+    </message>
+    <message>
+        <source>Attach to selected label</source>
+        <translation>Attach to selected label</translation>
+    </message>
+    <message>
+        <source>Delete comment</source>
+        <translation>Delete comment</translation>
+    </message>
+    <message>
+        <source>Delete this comment?</source>
+        <translation>Delete this comment?</translation>
+    </message>
+    <message>
+        <source>Attach this comment to the selected label? Its original quote will be preserved.</source>
+        <translation>Attach this comment to the selected label? Its original quote will be preserved.</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileSearchController</name>
+    <message>
+        <source>Search failed.</source>
+        <translation>Search failed.</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadPdfReport</name>
+    <message>
+        <source>Cannot finish PDF output.</source>
+        <translation>Cannot finish PDF output.</translation>
+    </message>
+    <message>
+        <source>Cannot initialize PDF output.</source>
+        <translation>Cannot initialize PDF output.</translation>
+    </message>
+    <message>
+        <source>Cannot write PDF page.</source>
+        <translation>Cannot write PDF page.</translation>
+    </message>
+    <message>
+        <source>Image unavailable</source>
+        <translation>Image unavailable</translation>
+    </message>
+    <message>
+        <source>Report export canceled.</source>
+        <translation>Report export canceled.</translation>
+    </message>
+    <message>
+        <source>Too many changes. Export a smaller page range.</source>
+        <translation>Too many changes. Export a smaller page range.</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadReportShareService</name>
+    <message>
+        <source>All pages</source>
+        <translation>All pages</translation>
+    </message>
+    <message>
+        <source>Completed draft</source>
+        <translation>Completed draft</translation>
+    </message>
+    <message>
+        <source>Current draft</source>
+        <translation>Current draft</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>Current page</translation>
+    </message>
+    <message>
+        <source>No proofreading round exists.</source>
+        <translation>No proofreading round exists.</translation>
+    </message>
+    <message>
+        <source>Original draft</source>
+        <translation>Original draft</translation>
     </message>
 </context>
 </TS>

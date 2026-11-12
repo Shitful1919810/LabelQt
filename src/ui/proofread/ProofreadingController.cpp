@@ -293,7 +293,7 @@ void ProofreadingController::editNote(ProofreadNotesWidget::Operation operation,
     const auto token = ReviewRoundEditService::token(m_projectController);
     const auto selected = m_callbacks.currentSelection();
     const auto& project = m_callbacks.project();
-    auto it = std::find_if(round.notes.begin(), round.notes.end(), [&](const auto& note) { return note.id == id; });
+    const auto it = std::find_if(round.notes.cbegin(), round.notes.cend(), [&](const auto& note) { return note.id == id; });
     if (operation == Operation::Jump) {
         if (it != round.notes.end()) {
             const auto target = ReviewRoundService::locateNote(project, *it);
@@ -303,56 +303,53 @@ void ProofreadingController::editNote(ProofreadNotesWidget::Operation operation,
     }
     if (round.after && operation != Operation::Resolve && operation != Operation::Relink)
         return;
-    if (operation == Operation::AddLabel || operation == Operation::AddPage) {
+    ReviewNoteEdit edit{.operation = ReviewNoteEdit::Operation::Edit, .noteId = id};
+    const bool adding = operation == Operation::AddLabel || operation == Operation::AddPage;
+    if (adding || operation == Operation::Relink) {
         if (selected.first < 0 || selected.first >= project.images().size())
             return;
         const auto& page = project.images().at(selected.first);
-        ProofreadNote note;
-        note.pageId = page.id;
-        note.pageName = page.name;
-        if (operation == Operation::AddLabel) {
+        edit.pageId = page.id;
+        if (operation != Operation::AddPage) {
             if (selected.second < 0 || selected.second >= page.labels.size() ||
                 page.labels.at(selected.second).isDeleted())
                 return;
-            note.labelId = page.labels.at(selected.second).id();
-            note.quote = page.labels.at(selected.second).text();
+            edit.labelId = page.labels.at(selected.second).id();
         }
-        round.notes.append(note);
-        it = round.notes.end() - 1;
     }
-    if (it == round.notes.end())
+    if (!adding && it == round.notes.cend())
         return;
     if (operation == Operation::Resolve) {
-        it->resolved = !it->resolved;
+        edit.operation = ReviewNoteEdit::Operation::Resolve;
+        edit.resolved = !it->resolved;
     }
     else if (operation == Operation::Remove) {
         if (messageBox(m_parentWidget, QMessageBox::Question, tr("Delete comment"), tr("Delete this comment?"),
                        QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Ok)
             return;
-        round.notes.erase(it);
+        edit.operation = ReviewNoteEdit::Operation::Remove;
     }
     else if (operation == Operation::Relink) {
-        if (selected.first < 0 || selected.first >= project.images().size())
-            return;
-        const auto& page = project.images().at(selected.first);
-        if (selected.second < 0 || selected.second >= page.labels.size() || page.labels.at(selected.second).isDeleted())
-            return;
-        const QUuid pageId = page.id;
-        const QUuid labelId = page.labels.at(selected.second).id();
         if (messageBox(m_parentWidget, QMessageBox::Question, tr("Attach comment"),
                        tr("Attach this comment to the currently selected label? Its original quote will be preserved."),
                        QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Ok)
             return;
-        it->associatedPageId = pageId;
-        it->associatedLabelId = labelId;
+        edit.operation = ReviewNoteEdit::Operation::Relink;
     }
     else {
         bool ok = false;
         const QString value =
-            QInputDialog::getMultiLineText(m_parentWidget, tr("Proofreading comment"), tr("Comment"), it->text, &ok);
+            QInputDialog::getMultiLineText(m_parentWidget, tr("Proofreading comment"), tr("Comment"),
+                                          adding ? QString{} : it->text, &ok);
         if (!ok || value.trimmed().isEmpty())
             return;
-        it->text = value;
+        edit.operation = adding ? ReviewNoteEdit::Operation::Add : ReviewNoteEdit::Operation::Edit;
+        edit.text = value;
+    }
+    const auto result = ReviewRoundEditService::editNote(round, m_callbacks.project(), edit);
+    if (!result) {
+        warning(m_parentWidget, tr("Proofreading comment"), result.error());
+        return;
     }
     commitRound(round, token, tr("Edit proofreading comments"));
 }

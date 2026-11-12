@@ -8,7 +8,7 @@ namespace labelqt::mobile {
 class MobileWorkspaceModel final : public QAbstractListModel {
     Q_OBJECT
 public:
-    enum Role { KeyRole = Qt::UserRole + 1, TitleRole, ModifiedRole };
+    enum Role { KeyRole = Qt::UserRole + 1, TitleRole, ModifiedRole, ReviewActiveRole, DiagnosticRole };
     explicit MobileWorkspaceModel(QObject* parent = nullptr) : QAbstractListModel(parent) {}
     int rowCount(const QModelIndex& parent = {}) const override;
     QVariant data(const QModelIndex& index, int role) const override;
@@ -19,6 +19,7 @@ public:
     }
     void replace(QVector<services::WorkspaceInfo> entries);
     void refreshSavedTime(const QString& projectPath);
+    void setReviewActive(const QString& projectPath, bool active);
 
 private:
     QVector<services::WorkspaceInfo> m_entries;

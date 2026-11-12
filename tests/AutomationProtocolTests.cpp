@@ -289,6 +289,38 @@ private slots:
         QVERIFY(result.error.contains("canceled"));
         QVERIFY(!runner.isRunning());
     }
+
+    void interpreterDisappearingAfterRequirementsCompletesTask()
+    {
+#ifdef Q_OS_WIN
+        QSKIP("The self-removing interpreter fixture uses a POSIX shell");
+#else
+        QTemporaryDir dir;
+        QFile interpreter(dir.filePath("python"));
+        QVERIFY(interpreter.open(QIODevice::WriteOnly));
+        interpreter.write("#!/bin/sh\nrm -- \"$0\"\nexit 0\n");
+        interpreter.close();
+        QVERIFY(interpreter.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        QFile requirements(dir.filePath("requirements.txt"));
+        QVERIFY(requirements.open(QIODevice::WriteOnly));
+        requirements.close();
+        AutomationScript script;
+        script.directoryPath = dir.path();
+        script.entryPath = dir.filePath("unused.py");
+        AutomationPythonSettings settings;
+        settings.command = interpreter.fileName();
+        settings.autoInstallRequirements = true;
+        AutomationRunner runner;
+        QSignalSpy finished(&runner, &AutomationRunner::finished);
+        bool success = true;
+        connect(&runner, &AutomationRunner::finished, this,
+                [&](const AutomationRunResult& result) { success = result.success; });
+        runner.start(script, {}, {}, {}, {}, settings);
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+        QVERIFY(!success);
+        QVERIFY(!runner.isRunning());
+#endif
+    }
 };
 QTEST_GUILESS_MAIN(AutomationProtocolTests)
 #include "AutomationProtocolTests.moc"

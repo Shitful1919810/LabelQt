@@ -26,6 +26,7 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSaveFile>
@@ -41,8 +42,10 @@
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrent>
 
+#include <atomic>
 #include <cmath>
 #include <expected>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -105,17 +108,23 @@ runProofreadReportExportTask(QWidget* parent, const QString& title, const QStrin
                              QString filePath, QVector<labelqt::services::ReviewChange> changes,
                              labelqt::core::Project beforeProject, labelqt::core::Project currentProject,
                              labelqt::services::ProofreadReportTexts texts, QString filterDescription,
-                             labelqt::services::ProofreadReportOptions options)
+                             labelqt::services::ProofreadReportOptions options, bool pdf)
 {
     labelqt::ui::BusyTaskDialog progress(labelText, cancelText, parent);
     progress.setWindowTitle(title);
 
     const QString temporaryPath = temporaryExportPathFor(filePath);
+    const auto canceled = std::make_shared<std::atomic_bool>(false);
+    QObject::connect(&progress, &QDialog::rejected, &progress, [canceled] { canceled->store(true); });
     auto future =
         QtConcurrent::run([temporaryPath, changes = std::move(changes), beforeProject = std::move(beforeProject),
                            currentProject = std::move(currentProject), texts = std::move(texts),
-                           filterDescription = std::move(filterDescription), options]() {
+                           filterDescription = std::move(filterDescription), options, pdf, canceled]() {
             try {
+                if (pdf)
+                    return labelqt::services::ProofreadReportService::savePdfReport(
+                        temporaryPath, changes, beforeProject, currentProject, texts, filterDescription, options,
+                        [canceled] { return canceled->load(); });
                 return labelqt::services::ProofreadReportService::saveHtmlReport(
                     temporaryPath, changes, beforeProject, currentProject, texts, filterDescription, options);
             }
@@ -464,9 +473,12 @@ void ProofreadChangesDialog::buildUi()
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
     m_jumpButton = buttons->addButton(tr("Jump to Label"), QDialogButtonBox::AcceptRole);
-    auto* exportButton = buttons->addButton(tr("Export HTML..."), QDialogButtonBox::ActionRole);
+    auto* exportButton = buttons->addButton(tr("Export report..."), QDialogButtonBox::ActionRole);
     connect(m_jumpButton, &QPushButton::clicked, this, &QDialog::accept);
-    connect(exportButton, &QPushButton::clicked, this, &ProofreadChangesDialog::exportReport);
+    auto* exportMenu = new QMenu(exportButton);
+    exportMenu->addAction(tr("Export HTML report..."), this, [this] { exportReport(false); });
+    exportMenu->addAction(tr("Export PDF report..."), this, [this] { exportReport(true); });
+    exportButton->setMenu(exportMenu);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     rootLayout->addWidget(buttons);
 
@@ -613,7 +625,7 @@ void ProofreadChangesDialog::saveTableColumnWidths() const
     m_sessionStateStore.saveProofreadingChangesColumnWidths(widths);
 }
 
-void ProofreadChangesDialog::exportReport()
+void ProofreadChangesDialog::exportReport(bool pdf)
 {
     const QVector<labelqt::services::ReviewChange> changesToExport = filteredChanges();
     if (changesToExport.isEmpty()) {
@@ -624,12 +636,14 @@ void ProofreadChangesDialog::exportReport()
     QString defaultPath =
         m_sessionStateStore.lastFileDialogDirectory(labelqt::services::FileDialogScope::ExportProofreadingReport);
     const QString baseName = QFileInfo(m_currentProject.filePath()).completeBaseName();
-    const QString fileName = baseName.isEmpty() ? QStringLiteral("proofreading-report.html")
-                                                : QStringLiteral("%1-proofreading-report.html").arg(baseName);
+    const QString extension = pdf ? QStringLiteral(".pdf") : QStringLiteral(".html");
+    const QString fileName = (baseName.isEmpty() ? QStringLiteral("proofreading-report")
+                                                 : QStringLiteral("%1-proofreading-report").arg(baseName)) +
+                             extension;
     defaultPath = defaultPath.isEmpty() ? fileName : QDir(defaultPath).filePath(fileName);
 
     const QString path = QFileDialog::getSaveFileName(this, tr("Export proofreading report"), defaultPath,
-                                                      tr("HTML files (*.html);;All files (*)"));
+                                                      pdf ? tr("PDF files (*.pdf)") : tr("HTML files (*.html)"));
     if (path.isEmpty()) {
         return;
     }
@@ -642,7 +656,7 @@ void ProofreadChangesDialog::exportReport()
     }
     const std::optional<std::expected<void, QString>> result = runProofreadReportExportTask(
         this, QString(), tr("Exporting proofreading report..."), tr("Abort"), path, changesToExport, m_beforeProject,
-        m_currentProject, reportTexts(), reportFilterDescription(), options);
+        m_currentProject, reportTexts(), reportFilterDescription(), options, pdf);
     if (!result.has_value()) {
         return;
     }
@@ -910,35 +924,8 @@ void ProofreadChangesDialog::updateManualPairs()
 
 labelqt::services::ProofreadReportTexts ProofreadChangesDialog::reportTexts() const
 {
-    return {
-        .title = tr("Proofreading Report"),
-        .generatedAt = tr("Generated at"),
-        .totalChanges = tr("Total changes"),
-        .page = tr("Page"),
-        .label = tr("Label"),
-        .changeType = tr("Change Type"),
-        .summary = tr("Summary"),
-        .textDifference = tr("Text Difference"),
-        .groupChange = tr("Group Change"),
-        .markerChange = tr("Marker Change"),
-        .orderChange = tr("Order Change"),
-        .before = m_labels.leftProjectTitle,
-        .after = m_labels.rightProjectTitle,
-        .added = tr("Added"),
-        .deleted = tr("Deleted"),
-        .modified = tr("Modified"),
-        .text = tr("text"),
-        .format = tr("format"),
-        .group = tr("group"),
-        .marker = tr("marker"),
-        .order = tr("order"),
-        .noTextChange = tr("No text change."),
-        .filter = tr("Filters"),
-        .review = tr("Review"),
-        .manualPair = tr("Manual pair"),
-        .reviewStates = {tr("Unseen"), tr("Reviewed"), tr("Needs confirmation")},
-        .comment = tr("Comment"),
-    };
+    return labelqt::services::ProofreadReportService::defaultTexts(m_labels.leftProjectTitle,
+                                                                   m_labels.rightProjectTitle);
 }
 
 void ProofreadChangesDialog::syncPreviewCanvases(ImageCanvas* sourceCanvas, int zoomPercent, QPointF normalizedCenter)

@@ -62,7 +62,8 @@ bool LabelSelectionController::selectSingle(int sourceIndex)
 bool LabelSelectionController::selectSingle(int sourceIndex, SelectionOptions options)
 {
     const QScopedValueRollback selectionOrigin(m_activeSelectionOrigin, options.origin);
-    if (m_model == nullptr || m_tableView == nullptr || m_canvas == nullptr || !m_updateDetails ||
+    if (m_model == nullptr || m_tableView == nullptr || m_canvas == nullptr ||
+        !m_model->labelContext().isSourceIndexVisible(sourceIndex) || !m_updateDetails ||
         !m_updateDetails(sourceIndex)) {
         clearSelection(options.origin);
         return false;

@@ -98,8 +98,8 @@ FileRenameTransaction::decodeRecoveryRecord(const QJsonObject& object)
     record.before = std::move(*decodedBefore);
     record.after = std::move(*decodedAfter);
     try {
-        labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(record.before), record.projectPath);
-        labelqt::core::LabelPlusDocument::parse(QString::fromUtf8(record.after), record.projectPath);
+        labelqt::core::LabelPlusDocument::readFromBytes(record.before, record.projectPath);
+        labelqt::core::LabelPlusDocument::readFromBytes(record.after, record.projectPath);
     }
     catch (const std::exception&) {
         return std::unexpected(invalidRecord());
@@ -170,6 +170,16 @@ std::expected<void, QString> FileRenameTransaction::apply()
     if (m_finished || m_recordWritten || m_steps.size() > BoundedJsonIo::RecordItems ||
         m_projectBefore.size() > BoundedJsonIo::SnapshotBytes || m_projectAfter.size() > BoundedJsonIo::SnapshotBytes)
         return std::unexpected(invalidRecord());
+    QStringList directories;
+    if (!m_recoveryPath.isEmpty())
+        directories.append(QFileInfo(m_recoveryPath).absolutePath());
+    for (const auto& step : std::as_const(m_steps)) {
+        directories.append(QFileInfo(step.move.source).absolutePath());
+        directories.append(QFileInfo(step.move.target).absolutePath());
+    }
+    const auto locked = m_directoryLocks.acquire(directories);
+    if (!locked)
+        return locked;
     if (!m_recoveryPath.isEmpty()) {
         const auto recovered = checkRecoveryDirectory(QFileInfo(m_recoveryPath).absolutePath());
         if (!recovered)
@@ -248,6 +258,7 @@ QStringList FileRenameTransaction::rollback()
                             "Recovery mapping retained at %1. Do not discard the remaining temporary files.")
                             .arg(m_recoveryPath));
     }
+    m_directoryLocks.release();
     return failures;
 }
 
@@ -256,6 +267,7 @@ void FileRenameTransaction::commit()
     m_finished = true;
     if (m_recordWritten)
         QFile::remove(m_recoveryPath);
+    m_directoryLocks.release();
 }
 
 QString FileRenameTransaction::recoveryPath() const

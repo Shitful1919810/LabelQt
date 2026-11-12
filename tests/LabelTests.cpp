@@ -2791,10 +2791,9 @@ private slots:
         const QString html = labelqt::services::TextDiffHtmlRenderer::renderInlineDiff(
             QStringLiteral("第一行\n第二行"), QStringLiteral("第一行第二行"), QStringLiteral("No text change."));
 
-        QVERIFY(html.contains(QStringLiteral("↵")));
+        QVERIFY(html.contains(QStringLiteral("<img alt=\"[LF]\"")));
         QVERIFY(html.contains(QStringLiteral("<br/>")));
-        QVERIFY(html.contains(QStringLiteral("background:#7f1d1d")));
-        QVERIFY(html.contains(QStringLiteral("text-decoration:none")));
+        QVERIFY(html.contains(QStringLiteral("data:image/png;base64,")));
     }
 
     void textDiffHtmlRendererRendersReorderedPhraseInline()
@@ -2827,7 +2826,7 @@ private slots:
                                                                                        QStringLiteral("No text change."));
 
         QVERIFY(!html.contains(QStringLiteral("margin-bottom")));
-        QVERIFY(html.contains(QStringLiteral("↵")));
+        QVERIFY(html.contains(QStringLiteral("<img alt=\"[LF]\"")));
         QVERIFY(html.contains(QStringLiteral("background:#14532d")));
         QVERIFY(html.contains(QStringLiteral("background:#7f1d1d")));
     }

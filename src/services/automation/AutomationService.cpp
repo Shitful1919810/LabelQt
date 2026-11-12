@@ -395,7 +395,12 @@ bool AutomationRunner::isRunning() const noexcept
 
 void AutomationRunner::startNextCandidate()
 {
-    while (m_candidateIndex < m_pythonCandidates.size()) {
+    if (m_cancelRequested) {
+        m_lastFailure.error = QStringLiteral("Automation script was canceled.");
+        finishWithResult(m_lastFailure);
+        return;
+    }
+    if (m_candidateIndex < m_pythonCandidates.size()) {
         const AutomationPythonCommand command = m_pythonCandidates.at(m_candidateIndex);
         ++m_candidateIndex;
 
@@ -410,18 +415,17 @@ void AutomationRunner::startNextCandidate()
         else {
             startProcess(command, m_scriptArguments, RunPhase::RunScript);
         }
-        if (m_process != nullptr && m_process->state() != QProcess::NotRunning) {
-            return;
-        }
+        return;
     }
 
     m_lastFailure.error = AutomationPythonResolver::unavailableError(m_pythonCandidates, m_lastFailure.error);
     finishWithResult(m_lastFailure);
 }
 
-void AutomationRunner::startProcess(const AutomationPythonCommand& command, QStringList arguments, RunPhase phase)
+void AutomationRunner::startProcess(AutomationPythonCommand command, QStringList arguments, RunPhase phase)
 {
     if (m_process != nullptr) {
+        m_process->disconnect(this);
         m_process->deleteLater();
         m_process = nullptr;
     }
@@ -450,14 +454,10 @@ void AutomationRunner::startProcess(const AutomationPythonCommand& command, QStr
     connect(m_process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
             &AutomationRunner::handleFinished);
 
+    // Startup participates in the same asynchronous failure/timeout path as script execution.
+    // In particular, FailedToStart has no finished() signal, including after requirements installation.
+    m_timeoutTimer->start(automationTimeoutMs);
     m_process->start(command.program, arguments);
-    if (m_process->waitForStarted(1000)) {
-        m_timeoutTimer->start(automationTimeoutMs);
-        return;
-    }
-
-    m_lastFailure.error = QStringLiteral("Failed to start %1: %2").arg(command.displayText, m_process->errorString());
-    emit standardErrorReceived(m_lastFailure.error + QLatin1Char('\n'));
 }
 
 void AutomationRunner::handleStarted()
@@ -535,12 +535,17 @@ void AutomationRunner::handleFinished(int exitCode, QProcess::ExitStatus exitSta
     finishWithResult(result);
 }
 
-void AutomationRunner::handleError()
+void AutomationRunner::handleError(QProcess::ProcessError error)
 {
-    if (m_process == nullptr || m_process->state() != QProcess::NotRunning) {
+    if (m_process == nullptr || sender() != m_process || !m_running) {
         return;
     }
     m_lastFailure.error = m_process->errorString();
+    if (error == QProcess::FailedToStart) {
+        m_timeoutTimer->stop();
+        emit standardErrorReceived(m_lastFailure.error + QLatin1Char('\n'));
+        startNextCandidate();
+    }
 }
 
 void AutomationRunner::handleTimeout()

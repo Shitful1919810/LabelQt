@@ -60,7 +60,7 @@ private:
     void applyFilters();
     void restoreTableColumnWidths();
     void saveTableColumnWidths() const;
-    void exportReport();
+    void exportReport(bool pdf);
     int changeIndexForRow(int row) const;
     void scheduleDetailsUpdate(int row);
     void updateDetails(int row);

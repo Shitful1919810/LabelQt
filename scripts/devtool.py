@@ -133,6 +133,9 @@ MODULE_TOPICS = (
             "src/services/proofread/TextDiffService.*",
             "src/services/proofread/TextDiffHtmlRenderer.*",
             "src/services/proofread/ProofreadReportService.*",
+            "src/services/proofread/ProofreadReportContent.h",
+            "src/services/proofread/ProofreadPdfReport.cpp",
+            "src/services/transfer/ProofreadReportShareService.*",
             "src/services/proofread/ReviewSessionService.*",
             "src/services/proofread/ReviewRoundService.*",
             "src/services/proofread/ReviewRoundEditService.*",
@@ -146,9 +149,9 @@ MODULE_TOPICS = (
         notes=(
             "工程对比、页匹配和 label 对齐属于 services，UI 只展示结构化结果。",
             "校对入口流程属于 ProofreadingController，表格状态只通过 model/proxy 维护。",
-            "HTML 报告导出属于 ProofreadReportService。",
+            "HTML/PDF 报告共享内容规则；导出属于 ProofreadReportService，移动分享通过 ProofreadReportShareService。",
         ),
-        docs=("docs/proofreading-diff.md", "docs/proofreading-rounds.md"),
+        docs=("docs/proofreading-diff.md", "docs/proofreading-rounds.md", "docs/proofreading-reports.md"),
     ),
     ModuleTopic(
         name="automation",

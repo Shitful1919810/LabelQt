@@ -1,20 +1,22 @@
 #include "services/proofread/ProofreadReportService.h"
+#include "services/proofread/ProofreadReportContent.h"
 
 #include "services/proofread/ReviewChangeClassifier.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
 
 #include "core/AtomicFileWriter.h"
+#include "services/io/ImagePageCache.h"
 #include <QBuffer>
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QImage>
-#include <QImageReader>
 #include <QSet>
 
 #include <algorithm>
 #include <utility>
 
 namespace labelqt::services {
-namespace {
+namespace report {
 
 QString escaped(QString text)
 {
@@ -85,16 +87,16 @@ QString textDiffHtml(const ReviewChange& change, const ProofreadReportTexts& tex
     return escaped(texts.noTextChange);
 }
 
-QString compressedImageDataUrl(const QString& imagePath, const ProofreadReportOptions& options)
+QImage loadImage(const QString& imagePath, const ProofreadReportOptions& options)
 {
-    QImageReader reader(imagePath);
-    reader.setAutoTransform(true);
-    const QSize sourceSize = reader.size();
-    if (sourceSize.isValid() && options.maxImageWidth > 0 && sourceSize.width() > options.maxImageWidth) {
-        reader.setScaledSize(sourceSize.scaled(options.maxImageWidth, options.maxImageWidth, Qt::KeepAspectRatio));
-    }
+    if (imagePath.isEmpty())
+        return {};
+    const int extent = std::clamp(options.maxImageWidth, 1, 2048);
+    return ImagePageCache::previewLoader(32 * 1024 * 1024)(imagePath, QSize(extent, extent)).image;
+}
 
-    const QImage image = reader.read();
+QString compressedImageDataUrl(const QImage& image, const ProofreadReportOptions& options)
+{
     if (image.isNull()) {
         return {};
     }
@@ -114,20 +116,13 @@ struct ReportImage {
     QSize size;
 };
 
-QSize imageSize(const QString& imagePath)
-{
-    QImageReader reader(imagePath);
-    reader.setAutoTransform(true);
-    const QSize size = reader.size();
-    return size.isValid() ? size : QSize(4, 3);
-}
-
 ReportImage reportImageForEntry(const labelqt::core::ImageEntry* image, const ProofreadReportOptions& options)
 {
     if (image == nullptr) {
         return {};
     }
-    return {.source = compressedImageDataUrl(image->path, options), .size = imageSize(image->path)};
+    const auto preview = loadImage(image->path, options);
+    return {.source = compressedImageDataUrl(preview, options), .size = preview.size()};
 }
 
 QString cssString(QString text)
@@ -224,10 +219,9 @@ QVector<QVector<int>> groupedChanges(const QVector<ReviewChange>& changes)
     return rows;
 }
 
-QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndexes,
-                        const QVector<ReviewChange>& changes, const labelqt::core::Project& beforeProject,
-                        const labelqt::core::Project& currentProject, const ProofreadReportTexts& texts,
-                        const ProofreadReportOptions& options)
+QPair<const core::ImageEntry*, const core::ImageEntry*> imagesForChanges(
+    const QVector<int>& changeIndexes, const QVector<ReviewChange>& changes,
+    const core::Project& beforeProject, const core::Project& currentProject)
 {
     const labelqt::core::ImageEntry* beforeImage = nullptr;
     const labelqt::core::ImageEntry* afterImage = nullptr;
@@ -249,6 +243,54 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
     if (afterImage == nullptr) {
         afterImage = beforeImage;
     }
+    return {beforeImage, afterImage};
+}
+
+QVector<Marker> markersForChanges(const QVector<int>& indexes, const QVector<ReviewChange>& changes, bool before)
+{
+    QVector<Marker> markers;
+    for (const int index : indexes) {
+        const auto& change = changes.at(index);
+        if ((before && change.kind == ReviewChangeKind::Added) ||
+            (!before && change.kind == ReviewChangeKind::Deleted) ||
+            (change.kind == ReviewChangeKind::Comment &&
+             (before ? change.baselineLabelIndex : change.currentLabelIndex) < 0))
+            continue;
+        markers.append({clampedPosition(before ? change.baseline.position : change.current.position),
+                        labelNumber(before ? beforeLabelIndex(change) : afterLabelIndex(change)),
+                        change.kind});
+    }
+    return markers;
+}
+
+QString detailsHtml(const ReviewChange& change, const ProofreadReportTexts& texts,
+                    const ProofreadReportOptions& options)
+{
+    QString details = textDiffHtml(change, texts);
+    if (change.manuallyMatched)
+        details += QStringLiteral("<p>%1</p>").arg(escaped(texts.manualPair));
+    if (options.includeReview) {
+        const auto annotation = options.annotations.value(ReviewSessionService::fingerprint(change));
+        const QString color = annotation.status == ReviewStatus::Reviewed ? QStringLiteral("#299c68")
+                              : annotation.status == ReviewStatus::NeedsConfirmation ? QStringLiteral("#d69a19")
+                                                                                     : QStringLiteral("#db505c");
+        details += QStringLiteral("<p><strong><span style=\"color:%1\">%2: %3</span></strong></p>")
+            .arg(color, escaped(texts.review), escaped(texts.reviewStates.value(static_cast<int>(annotation.status))));
+        if (!annotation.note.isEmpty())
+            details += QStringLiteral("<div style=\"white-space:pre-wrap\">%1</div>").arg(escaped(annotation.note));
+    }
+    if (!change.noteText.isEmpty())
+        details += QStringLiteral("<div style=\"white-space:pre-wrap\"><strong>%1</strong><br>%2</div>")
+            .arg(escaped(texts.comment), escaped(change.noteText));
+    return details;
+}
+
+QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndexes,
+                        const QVector<ReviewChange>& changes, const core::Project& beforeProject,
+                        const core::Project& currentProject, const ProofreadReportTexts& texts,
+                        const ProofreadReportOptions& options)
+{
+    const auto [beforeImage, afterImage] = imagesForChanges(changeIndexes, changes, beforeProject, currentProject);
 
     const bool sameImage = beforeImage != nullptr && afterImage != nullptr && beforeImage->path == afterImage->path;
     const ReportImage beforeReportImage = reportImageForEntry(beforeImage, options);
@@ -274,36 +316,24 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
         html += QStringLiteral("<div class=\"image-pair\"><div class=\"image-frame\"><h3>%1</h3>"
                                "<div class=\"image-overlay image-before\">")
                     .arg(escaped(texts.before));
-        for (const int changeIndex : changeIndexes) {
-            const ReviewChange& change = changes.at(changeIndex);
-            if (change.kind == ReviewChangeKind::Added ||
-                (change.kind == ReviewChangeKind::Comment && change.baselineLabelIndex < 0)) {
-                continue;
-            }
-            const QPointF position = clampedPosition(change.baseline.position);
+        for (const auto& marker : markersForChanges(changeIndexes, changes, true)) {
             html += QStringLiteral("<span class=\"marker %1\" style=\"left:%2%;top:%3%\">%4</span>")
-                        .arg(markerClass(change.kind == ReviewChangeKind::Deleted ? ReviewChangeKind::Deleted
+                        .arg(markerClass(marker.kind == ReviewChangeKind::Deleted ? ReviewChangeKind::Deleted
                                                                                   : ReviewChangeKind::Modified))
-                        .arg(position.x() * 100.0, 0, 'f', 2)
-                        .arg(position.y() * 100.0, 0, 'f', 2)
-                        .arg(escaped(labelNumber(beforeLabelIndex(change))));
+                        .arg(marker.position.x() * 100.0, 0, 'f', 2)
+                        .arg(marker.position.y() * 100.0, 0, 'f', 2)
+                        .arg(escaped(marker.number));
         }
         html += QStringLiteral("</div></div><div class=\"image-frame\"><h3>%1</h3>"
                                "<div class=\"image-overlay image-after\">")
                     .arg(escaped(texts.after));
-        for (const int changeIndex : changeIndexes) {
-            const ReviewChange& change = changes.at(changeIndex);
-            if (change.kind == ReviewChangeKind::Deleted ||
-                (change.kind == ReviewChangeKind::Comment && change.currentLabelIndex < 0)) {
-                continue;
-            }
-            const QPointF position = clampedPosition(change.current.position);
+        for (const auto& marker : markersForChanges(changeIndexes, changes, false)) {
             html += QStringLiteral("<span class=\"marker %1\" style=\"left:%2%;top:%3%\">%4</span>")
-                        .arg(markerClass(change.kind == ReviewChangeKind::Added ? ReviewChangeKind::Added
+                        .arg(markerClass(marker.kind == ReviewChangeKind::Added ? ReviewChangeKind::Added
                                                                                 : ReviewChangeKind::Modified))
-                        .arg(position.x() * 100.0, 0, 'f', 2)
-                        .arg(position.y() * 100.0, 0, 'f', 2)
-                        .arg(escaped(labelNumber(afterLabelIndex(change))));
+                        .arg(marker.position.x() * 100.0, 0, 'f', 2)
+                        .arg(marker.position.y() * 100.0, 0, 'f', 2)
+                        .arg(escaped(marker.number));
         }
         html += QStringLiteral("</div></div></div>");
     }
@@ -318,24 +348,7 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
                      escaped(texts.textDifference));
     for (const int changeIndex : changeIndexes) {
         const ReviewChange& change = changes.at(changeIndex);
-        QString details = textDiffHtml(change, texts);
-        if (change.manuallyMatched)
-            details += QStringLiteral("<p>%1</p>").arg(escaped(texts.manualPair));
-        if (options.includeReview) {
-            const auto annotation = options.annotations.value(ReviewSessionService::fingerprint(change));
-            const QString color = annotation.status == ReviewStatus::Reviewed            ? QStringLiteral("#299c68")
-                                  : annotation.status == ReviewStatus::NeedsConfirmation ? QStringLiteral("#d69a19")
-                                                                                         : QStringLiteral("#db505c");
-            details +=
-                QStringLiteral("<p style=\"border-left:4px solid %1;padding-left:8px\"><strong>%2: %3</strong></p>")
-                    .arg(color, escaped(texts.review),
-                         escaped(texts.reviewStates.value(static_cast<int>(annotation.status))));
-            if (!annotation.note.isEmpty())
-                details += QStringLiteral("<div style=\"white-space:pre-wrap\">%1</div>").arg(escaped(annotation.note));
-        }
-        if (!change.noteText.isEmpty())
-            details += QStringLiteral("<div style=\"white-space:pre-wrap\"><strong>%1</strong><br>%2</div>")
-                           .arg(escaped(texts.comment), escaped(change.noteText));
+        const QString details = detailsHtml(change, texts, options);
         html += QStringLiteral("<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td></tr>")
                     .arg(escaped(labelNumber(change.labelIndex)), escaped(changeKindText(change, texts)),
                          escaped(changeSummary(change, texts)), details);
@@ -345,6 +358,43 @@ QString pageSectionHtml(const QString& pageName, const QVector<int>& changeIndex
 }
 
 } // namespace
+
+using namespace report;
+
+ProofreadReportTexts ProofreadReportService::defaultTexts(const QString& before, const QString& after)
+{
+    return {
+        .title = QCoreApplication::translate("ProofreadChangesDialog", "Proofreading Report"),
+        .generatedAt = QCoreApplication::translate("ProofreadChangesDialog", "Generated at"),
+        .totalChanges = QCoreApplication::translate("ProofreadChangesDialog", "Total changes"),
+        .page = QCoreApplication::translate("ProofreadChangesDialog", "Page"),
+        .label = QCoreApplication::translate("ProofreadChangesDialog", "Label"),
+        .changeType = QCoreApplication::translate("ProofreadChangesDialog", "Change Type"),
+        .summary = QCoreApplication::translate("ProofreadChangesDialog", "Summary"),
+        .textDifference = QCoreApplication::translate("ProofreadChangesDialog", "Text Difference"),
+        .groupChange = QCoreApplication::translate("ProofreadChangesDialog", "Group Change"),
+        .markerChange = QCoreApplication::translate("ProofreadChangesDialog", "Marker Change"),
+        .orderChange = QCoreApplication::translate("ProofreadChangesDialog", "Order Change"),
+        .before = before,
+        .after = after,
+        .added = QCoreApplication::translate("ProofreadChangesDialog", "Added"),
+        .deleted = QCoreApplication::translate("ProofreadChangesDialog", "Deleted"),
+        .modified = QCoreApplication::translate("ProofreadChangesDialog", "Modified"),
+        .text = QCoreApplication::translate("ProofreadChangesDialog", "text"),
+        .format = QCoreApplication::translate("ProofreadChangesDialog", "format"),
+        .group = QCoreApplication::translate("ProofreadChangesDialog", "group"),
+        .marker = QCoreApplication::translate("ProofreadChangesDialog", "marker"),
+        .order = QCoreApplication::translate("ProofreadChangesDialog", "order"),
+        .noTextChange = QCoreApplication::translate("ProofreadChangesDialog", "No text change."),
+        .filter = QCoreApplication::translate("ProofreadChangesDialog", "Filters"),
+        .review = QCoreApplication::translate("ProofreadChangesDialog", "Review"),
+        .manualPair = QCoreApplication::translate("ProofreadChangesDialog", "Manual pair"),
+        .reviewStates = {QCoreApplication::translate("ProofreadChangesDialog", "Unseen"),
+                         QCoreApplication::translate("ProofreadChangesDialog", "Reviewed"),
+                         QCoreApplication::translate("ProofreadChangesDialog", "Needs confirmation")},
+        .comment = QCoreApplication::translate("ProofreadChangesDialog", "Comment"),
+    };
+}
 
 QString ProofreadReportService::htmlReport(const QVector<ReviewChange>& changes,
                                            const labelqt::core::Project& beforeProject,

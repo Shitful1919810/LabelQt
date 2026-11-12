@@ -41,6 +41,106 @@ class MobileWorkspaceTests : public QObject {
     }
 
 private slots:
+    void reshareChecksPublishedFileWithoutSavingOrExporting_data()
+    {
+        QTest::addColumn<bool>("pdf");
+        QTest::addColumn<QString>("invalidatedBy");
+        QTest::newRow("zip-removed") << false << QString("removed");
+        QTest::newRow("pdf-expired") << true << QString("expired");
+        QTest::newRow("zip-empty") << false << QString("empty");
+#ifdef Q_OS_UNIX
+        QTest::newRow("pdf-symlink") << true << QString("symlink");
+        QTest::newRow("zip-parent-symlink") << false << QString("parent-symlink");
+#endif
+    }
+
+    void reshareChecksPublishedFileWithoutSavingOrExporting()
+    {
+        QFETCH(bool, pdf);
+        QFETCH(QString, invalidatedBy);
+        QTemporaryDir root;
+        const auto path = createInput(root.path());
+        MobileDocument document;
+        MobileWorkspaceController workspace(document, root.filePath("app"));
+        QVERIFY(!workspace.shareLastExport());
+        workspace.importLocal(QUrl::fromLocalFile(path));
+        QTRY_VERIFY(!workspace.busy());
+        QVERIFY(workspace.openWorkspace(workspace.workspaces()->entries().first().id));
+        MobileReviewController review(document.controller(), document.undoStack());
+        QVERIFY(review.startRound());
+        QVERIFY(review.addNote(document.pageId(), {}, "Report fixture comment"));
+        QSignalSpy ready(&workspace, &MobileWorkspaceController::exportReady);
+        QVERIFY(pdf ? workspace.exportProofreadingPdf("report", false) : workspace.exportProject("project"));
+        QVERIFY(!workspace.shareLastExport());
+        QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 15000);
+        QVERIFY2(!workspace.lastExport().isEmpty(), qPrintable(workspace.message()));
+        QCOMPARE(ready.count(), 1);
+        const auto exported = workspace.lastExport();
+        QVERIFY(!exported.isEmpty());
+        WorkspaceStorageService storage(root.filePath("app"));
+        const auto validated = storage.validateSharedFile(exported);
+        QVERIFY(validated);
+        QCOMPARE(*validated, exported);
+        QVERIFY(!storage.validateSharedFile(path));
+        const auto wrongSuffix = QFileInfo(exported).dir().filePath("private.txt");
+        QVERIFY(QFile::copy(exported, wrongSuffix));
+        QVERIFY(!storage.validateSharedFile(wrongSuffix));
+        QVERIFY(QFile::remove(wrongSuffix));
+        const auto invalidBatch = root.filePath("app/outgoing/not-a-uuid");
+        QVERIFY(QDir().mkpath(invalidBatch));
+        const auto misplaced = QDir(invalidBatch).filePath("report.pdf");
+        QVERIFY(QFile::copy(exported, misplaced));
+        QVERIFY(!storage.validateSharedFile(misplaced));
+        QVERIFY(QFile::remove(misplaced));
+        QVERIFY(QDir().rmdir(invalidBatch));
+        QFile original(exported);
+        QVERIFY(original.open(QIODevice::ReadOnly));
+        const auto bytes = original.readAll();
+        original.close();
+        const auto modified = QFileInfo(exported).lastModified();
+        const auto revision = document.controller().revisions().revision();
+        document.selectLabel(document.controller().project().images()[0].labels[0].id().toString());
+        document.updateText("Uncommitted newer draft");
+        workspace.showMessage("Share chooser unavailable");
+        QVERIFY(workspace.shareLastExport());
+        QCOMPARE(ready.count(), 2);
+        QCOMPARE(ready.last().first().toString(), exported);
+        QVERIFY(!workspace.busy());
+        QVERIFY(workspace.message().isEmpty());
+        QCOMPARE(document.controller().revisions().revision(), revision);
+        QCOMPARE(document.controller().project().images()[0].labels[0].text(), "Original");
+        QCOMPARE(document.textDraft(), "Uncommitted newer draft");
+        QCOMPARE(QFileInfo(exported).lastModified(), modified);
+        QVERIFY(original.open(QIODevice::ReadOnly));
+        QCOMPARE(original.readAll(), bytes);
+        original.close();
+        if (invalidatedBy == "expired") {
+            QVERIFY(WorkspaceStorageService(root.filePath("app")).cleanDisposableFiles(
+                QDateTime::currentDateTimeUtc().addDays(8)));
+            QVERIFY(!QFileInfo::exists(exported));
+        }
+        else if (invalidatedBy == "parent-symlink") {
+            const QString batch = QFileInfo(exported).dir().absolutePath();
+            const auto moved = root.filePath("moved-batch");
+            QVERIFY(QDir().rename(batch, moved));
+            QVERIFY(QFile::link(moved, batch));
+        }
+        else {
+            QVERIFY(QFile::remove(exported));
+            if (invalidatedBy == "symlink")
+                QVERIFY(QFile::link(path, exported));
+            else if (invalidatedBy == "empty") {
+                QFile empty(exported);
+                QVERIFY(empty.open(QIODevice::WriteOnly));
+            }
+        }
+        QVERIFY(!workspace.shareLastExport());
+        QCOMPARE(ready.count(), 2);
+        QVERIFY(!storage.validateSharedFile(exported));
+        QVERIFY(workspace.lastExport().isEmpty());
+        QVERIFY(!workspace.message().isEmpty());
+    }
+
     void classicProjectDeleteEditAndZipRoundTrip()
     {
         QTemporaryDir root;
@@ -170,8 +270,11 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(workspace.workspaces()->rowCount(), 1, 10000);
         QVERIFY(workspace.openWorkspace(workspace.workspaces()->entries().first().id));
         MobileReviewController review(document.controller(), document.undoStack());
+        connect(&review, &MobileReviewController::edited, &document, &MobileDocument::refresh);
         review.startRound();
-        QVERIFY(review.addNote(document.pageId(), {}, "Local-only proofreading note"));
+        QVERIFY(workspace.workspaces()->index(0).data(MobileWorkspaceModel::ReviewActiveRole).toBool());
+        const auto noteText = QStringLiteral("校对批注：空格、换行\n日本語 & <tag>");
+        QVERIFY(review.addNote(document.pageId(), {}, noteText));
         document.selectLabel(document.controller().project().images().first().labels.first().id().toString());
         document.updateText(QStringLiteral("Export snapshot"));
         QVERIFY(workspace.exportProject(workspace.suggestedShareName()));
@@ -179,6 +282,12 @@ private slots:
         document.updateText(QStringLiteral("Newer edit"));
         QVERIFY(document.save());
         QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 10000);
+        QVERIFY(workspace.workspaces()->index(0).data(MobileWorkspaceModel::ReviewActiveRole).toBool());
+        const auto listed = ProjectTransferService(root.filePath("app")).listWorkspaces();
+        QCOMPARE(listed.size(), 1);
+        QVERIFY(listed.first().reviewActive);
+        QVERIFY(workspace.renameWorkspace(listed.first().id, "Renamed"));
+        QVERIFY(workspace.workspaces()->index(0).data(MobileWorkspaceModel::ReviewActiveRole).toBool());
         QVERIFY2(!workspace.lastExport().isEmpty(), qPrintable(workspace.message()));
         QVERIFY(workspace.message().isEmpty());
         const auto unpacked = root.filePath("shared");
@@ -186,11 +295,16 @@ private slots:
         transfer::extractZip(workspace.lastExport(), unpacked, {});
         const auto shared =
             labelqt::core::LabelPlusDocument::loadFromFile(QDir(unpacked).filePath("project/project.txt"));
-        QVERIFY(shared.commentLines().isEmpty());
-        QVERIFY(shared.sourceName().isEmpty());
+        const auto sharedRound = ReviewRoundService::read(shared);
+        QVERIFY(sharedRound && sharedRound->has_value());
         const auto localRound = ReviewRoundService::read(document.controller().project());
         QVERIFY(localRound && localRound->has_value());
-        QCOMPARE((**localRound).notes.first().text, "Local-only proofreading note");
+        QCOMPARE((**localRound).notes.first().text, noteText);
+        QCOMPARE((**sharedRound).id, (**localRound).id);
+        QCOMPARE((**sharedRound).notes.first().id, (**localRound).notes.first().id);
+        QCOMPARE((**sharedRound).notes.first().text, (**localRound).notes.first().text);
+        QCOMPARE(shared.images().first().id, document.controller().project().images().first().id);
+        QVERIFY(!(**sharedRound).after);
         ProjectTransferService recipient(root.filePath("recipient"));
         const auto imported = recipient.importFile(workspace.lastExport());
         QVERIFY2(imported.has_value(), qPrintable(imported ? QString{} : imported.error()));
@@ -198,6 +312,72 @@ private slots:
         exported.loadFromFile(imported->projectPath);
         QCOMPARE(exported.project().images().first().labels.first().text(), QStringLiteral("Export snapshot"));
         QCOMPARE(document.controller().project().images().first().labels.first().text(), QStringLiteral("Newer edit"));
+        const auto received = ReviewRoundService::read(exported.project());
+        QVERIFY(received && received->has_value());
+        QCOMPARE((**received).notes.first().pageId, exported.project().images().first().id);
+        QVERIFY(imported->reviewActive);
+        review.completeRound();
+        QVERIFY(!workspace.workspaces()->index(0).data(MobileWorkspaceModel::ReviewActiveRole).toBool());
+        document.undo();
+        QVERIFY(workspace.workspaces()->index(0).data(MobileWorkspaceModel::ReviewActiveRole).toBool());
+        document.redo();
+        QVERIFY(!workspace.workspaces()->index(0).data(MobileWorkspaceModel::ReviewActiveRole).toBool());
+        review.resolveNote(review.notes().first().toMap().value("key").toString(), true);
+        QVERIFY(workspace.exportProject("completed"));
+        QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 10000);
+        const auto completedImport = recipient.importFile(workspace.lastExport());
+        QVERIFY(completedImport);
+        exported.loadFromFile(completedImport->projectPath);
+        const auto completed = ReviewRoundService::read(exported.project());
+        QVERIFY(completed && completed->has_value() && (**completed).after);
+        QVERIFY((**completed).notes.first().resolved);
+        QCOMPARE((**completed).notes.first().id, (**localRound).notes.first().id);
+        QCOMPARE((**completed).after->images().first().labels.first().text(), "Newer edit");
+        QCOMPARE((**completed).before.images().first().labels.first().text(), "Original");
+    }
+
+    void pdfSharingUsesRoundSnapshotAndSerializedStorage()
+    {
+        QTemporaryDir root;
+        const auto path = createInput(root.path());
+        MobileDocument document;
+        MobileWorkspaceController workspace(document, root.filePath("app"));
+        workspace.importLocal(QUrl::fromLocalFile(path));
+        QTRY_VERIFY(!workspace.busy());
+        QCOMPARE(workspace.workspaces()->rowCount(), 1);
+        const auto id = workspace.workspaces()->entries().first().id;
+        QVERIFY(workspace.openWorkspace(id));
+        MobileReviewController review(document.controller(), document.undoStack());
+        connect(&review, &MobileReviewController::edited, &document, &MobileDocument::refresh);
+        QVERIFY(review.startRound());
+        QVERIFY(review.addNote(document.pageId(), {}, "PDF comment"));
+        QSignalSpy ready(&workspace, &MobileWorkspaceController::exportReady);
+        QVERIFY(!workspace.exportProofreadingPdf("../invalid", false));
+        QVERIFY(!workspace.busy());
+        QVERIFY(workspace.suggestedReportName().endsWith(".pdf"));
+        QVERIFY(workspace.exportProofreadingPdf("review", true));
+        QVERIFY(workspace.reportExporting());
+        QVERIFY(!workspace.deleteWorkspace(id));
+        QVERIFY(!workspace.exportProject("concurrent"));
+        document.selectLabel(document.controller().project().images().first().labels.first().id().toString());
+        document.updateText("Edited during export");
+        QVERIFY(document.save());
+        QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 15000);
+        QCOMPARE(ready.size(), 1);
+        QVERIFY(workspace.lastExport().endsWith("/review.pdf"));
+        QFile pdf(workspace.lastExport());
+        QVERIFY(pdf.open(QIODevice::ReadOnly));
+        QVERIFY(pdf.readAll().startsWith("%PDF-"));
+        QVERIFY(workspace.exportProofreadingPdf("cancel", false));
+        workspace.cancelReportExport();
+        QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 15000);
+        QCOMPARE(ready.size(), 1);
+        QVERIFY(workspace.lastExport().isEmpty());
+        QVERIFY(!workspace.reportExporting());
+        QCOMPARE(document.controller().project().images().first().labels.first().text(), "Edited during export");
+        QVERIFY(workspace.exportProject("after-pdf"));
+        QTRY_VERIFY_WITH_TIMEOUT(!workspace.busy(), 15000);
+        QVERIFY(workspace.lastExport().endsWith(".zip"));
     }
 
     void receivedArchiveKeepsDisplayNameAcrossReopen()
@@ -312,6 +492,20 @@ private slots:
         QCOMPARE(kept.data(MobileWorkspaceModel::TitleRole).toString(), "Updated");
         model.replace({{"d", "Updated", {}, {}, {}}});
         QCOMPARE(kept.row(), 0);
+        QSignalSpy reset(&model, &QAbstractItemModel::modelReset);
+        QSignalSpy changed(&model, &QAbstractItemModel::dataChanged);
+        auto entries = model.entries();
+        entries[0].diagnostic = "Cannot inspect <broken> project";
+        model.replace(entries);
+        QCOMPARE(kept.data(MobileWorkspaceModel::DiagnosticRole).toString(), entries[0].diagnostic);
+        QCOMPARE(model.roleNames().value(MobileWorkspaceModel::DiagnosticRole), QByteArray("diagnostic"));
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(changed.first()[2].value<QList<int>>().contains(MobileWorkspaceModel::DiagnosticRole));
+        entries[0].diagnostic.clear();
+        model.replace(entries);
+        QVERIFY(kept.data(MobileWorkspaceModel::DiagnosticRole).toString().isEmpty());
+        QCOMPARE(changed.count(), 2);
+        QCOMPARE(reset.count(), 0);
         model.replace({});
         QVERIFY(!kept.isValid());
     }
@@ -365,5 +559,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(MobileWorkspaceTests)
+QTEST_MAIN(MobileWorkspaceTests)
 #include "MobileWorkspaceTests.moc"

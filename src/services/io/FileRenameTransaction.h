@@ -1,5 +1,7 @@
 #pragma once
 
+#include "services/io/RenameDirectoryLocks.h"
+
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -20,6 +22,7 @@ public:
     struct RecoveryMove {
         QString source, target, temporary;
         QByteArray digest;
+        bool operator==(const RecoveryMove&) const = default;
     };
     struct RecoveryRecord {
         int version{0};
@@ -60,6 +63,7 @@ private:
     QString m_projectPath;
     QByteArray m_projectBefore;
     QByteArray m_projectAfter;
+    RenameDirectoryLocks m_directoryLocks;
     bool m_finished{false};
     bool m_recordWritten{false};
 };

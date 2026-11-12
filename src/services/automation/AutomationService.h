@@ -115,10 +115,10 @@ private:
     };
 
     void startNextCandidate();
-    void startProcess(const AutomationPythonCommand& command, QStringList arguments, RunPhase phase);
+    void startProcess(AutomationPythonCommand command, QStringList arguments, RunPhase phase);
     void handleStarted();
     void handleFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void handleError();
+    void handleError(QProcess::ProcessError error);
     void handleTimeout();
     void appendProcessOutput();
     void finishWithResult(AutomationRunResult result);

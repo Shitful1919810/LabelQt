@@ -50,6 +50,8 @@ add_library(LabelQtTransfer STATIC
     ../services/transfer/TransferSupport.cpp
     ../services/transfer/TransferArchive.cpp
     ../services/transfer/WorkspaceStorageService.cpp
+    ../services/transfer/ProofreadReportShareService.cpp
+    ../services/transfer/ProofreadReportShareService.h
 )
 target_link_libraries(LabelQtTransfer PUBLIC LabelQtShared PRIVATE ${LABELQT_ARCHIVE_TARGET})
 if(ANDROID)
@@ -60,6 +62,7 @@ labelqt_enable_warnings(LabelQtTransfer)
 
 add_library(LabelQtMobilePresentation STATIC
     MobileDocument.cpp MobileDocument.h
+    MobileSearchController.cpp MobileSearchController.h
     MobileLabelModel.cpp MobileLabelModel.h
     MobileWorkspaceController.cpp MobileWorkspaceController.h
     MobileWorkspaceModel.cpp MobileWorkspaceModel.h
@@ -84,8 +87,11 @@ set_source_files_properties(qml/IconButton.qml PROPERTIES QT_RESOURCE_ALIAS Icon
 set_source_files_properties(qml/SubmitDialog.qml PROPERTIES QT_RESOURCE_ALIAS SubmitDialog.qml)
 set_source_files_properties(qml/ScrollDialog.qml PROPERTIES QT_RESOURCE_ALIAS ScrollDialog.qml)
 set_source_files_properties(qml/AboutDialog.qml PROPERTIES QT_RESOURCE_ALIAS AboutDialog.qml)
+set_source_files_properties(qml/InspectionPanel.qml PROPERTIES QT_RESOURCE_ALIAS InspectionPanel.qml)
+set_source_files_properties(qml/ReviewNotesPanel.qml PROPERTIES QT_RESOURCE_ALIAS ReviewNotesPanel.qml)
+set_source_files_properties(qml/ReviewNoteDialog.qml PROPERTIES QT_RESOURCE_ALIAS ReviewNoteDialog.qml)
 set_source_files_properties(qml/WorkspaceBrowser.qml PROPERTIES QT_RESOURCE_ALIAS WorkspaceBrowser.qml)
-set(LABELQT_MOBILE_ICONS menu undo-2 redo-2 ellipsis chevron-left chevron-right maximize x keyboard trash-2)
+set(LABELQT_MOBILE_ICONS menu undo-2 redo-2 ellipsis chevron-left chevron-right maximize x keyboard trash-2 locate-fixed)
 set(LABELQT_MOBILE_ICON_FILES)
 foreach(icon IN LISTS LABELQT_MOBILE_ICONS)
     set(path "qml/icons/${icon}.svg")
@@ -96,7 +102,7 @@ set_source_files_properties(qml/icons/LICENSE PROPERTIES QT_RESOURCE_ALIAS "icon
 qt_add_qml_module(LabelQtMobile
     URI LabelQt.Mobile VERSION 1.0
     QML_FILES qml/Main.qml qml/ProjectCanvas.qml qml/IconButton.qml qml/SubmitDialog.qml qml/WorkspaceBrowser.qml
-        qml/ScrollDialog.qml qml/AboutDialog.qml
+        qml/ScrollDialog.qml qml/AboutDialog.qml qml/InspectionPanel.qml qml/ReviewNotesPanel.qml qml/ReviewNoteDialog.qml
     RESOURCES ${LABELQT_MOBILE_ICON_FILES} qml/icons/LICENSE
 )
 if(Qt6LinguistTools_FOUND)

@@ -23,6 +23,7 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <utility>
 #include <zlib.h>
@@ -615,12 +616,111 @@ private slots:
         QVERIFY(sparse.open(QIODevice::WriteOnly));
         QVERIFY(sparse.resize(WorkspaceStorageService::shareCacheLimit));
         sparse.close();
+        bool generated = false;
+        bool estimated = false;
+        for (const auto& name : {"new.zip", "new.pdf"}) {
+            const auto rejected = WorkspaceStorageService(root).createSharedFile(
+                name,
+                [&](const QString&) -> std::expected<void, QString> {
+                    generated = true;
+                    return {};
+                },
+                {},
+                [&] {
+                    estimated = true;
+                    return 1;
+                });
+            QVERIFY(!rejected);
+            QVERIFY(rejected.error().contains("2 GiB"));
+        }
+        QVERIFY(!generated);
+        QVERIFY(!estimated);
         const auto result = transfer.exportZip(project, "new.zip");
         QVERIFY(!result);
         QVERIFY(result.error().contains("2 GiB"));
         QCOMPARE(QDir(QDir(root).filePath("outgoing")).entryList(QDir::Files), QStringList{"reserved.zip"});
         QCOMPARE(QDir(root).entryList({".staging-*"}, QDir::Dirs | QDir::Hidden).size(), 0);
         QCOMPARE(transfer.listWorkspaces().size(), 1);
+    }
+
+    void exportSpacePreflightAndReserve()
+    {
+        QTemporaryDir directory;
+        const auto project = fixture(directory.filePath("source"));
+        const auto root = directory.filePath("app");
+        const auto imported = ProjectTransferService(root).importFile(project.filePath());
+        QVERIFY(imported);
+        const auto original = get(imported->projectPath);
+        const qint64 estimate = transfer::estimateZipStagingBytes(project, {});
+        const qint64 reserve = WorkspaceStorageService::saveSpaceReserve;
+        qint64 available = 0;
+        WorkspaceStorageService storage(root, [&](const QString& path) {
+            if (path != root)
+                qFatal("Storage must be checked on the export filesystem");
+            return available;
+        });
+        int calls = 0;
+        const auto generate = [&](const QString& path) -> std::expected<void, QString> {
+            ++calls;
+            put(path, "complete export");
+            return {};
+        };
+        for (const qint64 free : {qint64(-1), reserve - 1, reserve + estimate - 1}) {
+            available = free;
+            const auto result = storage.createSharedFile("space.zip", generate, {}, [&] { return estimate; });
+            QVERIFY(!result);
+            QCOMPARE(calls, 0);
+            QCOMPARE(get(imported->projectPath), original);
+            QCOMPARE(QDir(root).entryList({".staging-*"}, QDir::Dirs | QDir::Hidden).size(), 0);
+        }
+        available = reserve + estimate;
+        const auto result = storage.createSharedFile("space.zip", generate, {}, [&] { return estimate; });
+        QVERIFY2(result, qPrintable(result ? QString{} : result.error()));
+        QCOMPARE(calls, 1);
+        QCOMPARE(get(*result), "complete export");
+        QVERIFY(
+            !storage.createSharedFile("overflow.zip", generate, {}, [] { return std::numeric_limits<qint64>::max(); }));
+        QVERIFY(!storage.createSharedFile("invalid.zip", generate, {}, [] { return qint64(-1); }));
+        QCOMPARE(calls, 1);
+        // Space consumed by another writer during generation must prevent publication too.
+        const auto depleted = storage.createSharedFile(
+            "depleted.pdf",
+            [&](const QString& path) -> std::expected<void, QString> {
+                put(path, "complete but not publishable");
+                available = reserve - 1;
+                return {};
+            },
+            {}, [] { return 1024; });
+        QVERIFY(!depleted);
+        QCOMPARE(QDir(QDir(root).filePath("outgoing")).entryList(QDir::Dirs | QDir::NoDotAndDotDot).size(), 1);
+        QCOMPARE(QDir(root).entryList({".staging-*"}, QDir::Dirs | QDir::Hidden).size(), 0);
+        QCOMPARE(get(imported->projectPath), original);
+    }
+
+    void zipSpaceEstimateIncludesHistoryAndVerification()
+    {
+        QTemporaryDir directory;
+        auto project = fixture(directory.filePath("source"));
+        const auto plain = transfer::estimateZipStagingBytes(project, {});
+        ReviewRound round;
+        round.before = ReviewRoundService::snapshot(project);
+        round.before.images()[0].path = directory.filePath("source/history.png");
+        put(round.before.images()[0].path, QByteArray(4096, 'x'));
+        project.setCommentLines(ProjectMetadataService::rewriteCommentLines(
+            {}, {{"proofreading", ReviewRoundService::encode(round, project.filePath())}}));
+        const auto historical = transfer::estimateZipStagingBytes(project, {});
+        QVERIFY(historical >= plain + 3 * 4096); // Source copy + verified copy + worst-case ZIP.
+        QCOMPARE(transfer::estimateZipStagingBytes(project, {}, LabelPlusDocument::CommentPolicy::Omit), plain);
+        round.after = round.before;
+        project.setCommentLines(ProjectMetadataService::rewriteCommentLines(
+            {}, {{"proofreading", ReviewRoundService::encode(round, project.filePath())}}));
+        QCOMPARE(transfer::estimateZipStagingBytes(project, {}), historical);
+        // A live alias is another materialized file even when its source bytes are identical.
+        auto alias = project.images().first();
+        alias.name = "alias.png";
+        alias.id = QUuid::createUuid();
+        project.images().append(alias);
+        QVERIFY(transfer::estimateZipStagingBytes(project, {}) > historical);
     }
 
     void oldWorkspaceManifestStillLoads()
@@ -1049,17 +1149,33 @@ private slots:
         noPublication(service, directory.filePath("app"));
     }
 
-    void listingRejectsOverBudgetSavedWorkspace()
+    void listingKeepsOverBudgetSavedWorkspace()
     {
         QTemporaryDir directory;
-        auto project = withLabelCounts(fixture(directory.filePath("source")), {3});
+        auto project = withLabelCounts(fixture(directory.filePath("source")), {2000});
         LabelPlusDocument::saveToFile(project, project.filePath());
         const auto root = directory.filePath("app");
         const auto imported = ProjectTransferService(root).importFile(project.filePath());
         QVERIFY(imported.has_value());
+        auto saved = LabelPlusDocument::loadFromFile(imported->projectPath);
+        saved.images()[0].labels.append(Label("new local edit", "dialogue", {0.2, 0.3}));
+        ReviewRound round;
+        round.before = ReviewRoundService::snapshot(saved);
+        saved.setCommentLines(ProjectMetadataService::rewriteCommentLines(
+            saved.commentLines(), {{"proofreading", ReviewRoundService::encode(round, saved.filePath())}}));
+        LabelPlusDocument::saveToFile(saved, saved.filePath());
         TransferLimits limits;
         limits.pageLabels = 2;
-        QVERIFY(ProjectTransferService(root, limits).listWorkspaces().isEmpty());
+        limits.projectLabels = 2;
+        limits.textBytes = 1;
+        limits.entries = 1;
+        const auto entries = ProjectTransferService(root, limits).listWorkspaces();
+        QCOMPARE(entries.size(), 1);
+        QCOMPARE(entries.first().id, imported->id);
+        QVERIFY(entries.first().diagnostic.isEmpty());
+        QVERIFY(entries.first().reviewActive);
+        QVERIFY(!ProjectTransferService(root).exportZip(saved));
+        QVERIFY(!ProjectTransferService(root).importFile(saved.filePath()));
         QVERIFY(QFileInfo::exists(imported->projectPath));
     }
 
@@ -1186,6 +1302,47 @@ private slots:
         QCOMPARE(loaded.images().first().labels.first().text(), text);
         QCOMPARE(get(loaded.images().first().path), "mapped image");
         QCOMPARE(get(project.filePath()), bytes);
+    }
+
+    void invalidEncodedImports_data()
+    {
+        QTest::addColumn<QByteArray>("bytes");
+        QTest::addColumn<bool>("archive");
+        const auto text = QString::fromUtf8(document()) + "----------------[1]----------------[0.2,0.3,1]\ntext";
+        for (const bool archive : {false, true}) {
+            const auto suffix = archive ? QByteArray("-zip") : QByteArray("-txt");
+            for (const auto invalid : {"ff", "c080", "eda080", "f4908080", "e282"}) {
+                const auto bytes = text.toUtf8() + QByteArray::fromHex(invalid);
+                QTest::newRow((QByteArray("utf8-") + invalid + suffix).constData()) << bytes << archive;
+                QTest::newRow((QByteArray("utf8-bom-") + invalid + suffix).constData())
+                    << (QByteArray::fromHex("efbbbf") + bytes) << archive;
+            }
+            for (const auto encoding : {QStringConverter::Utf16LE, QStringConverter::Utf16BE, QStringConverter::Utf32LE,
+                                        QStringConverter::Utf32BE}) {
+                QStringEncoder encoder(encoding, QStringConverter::Flag::WriteBom);
+                QByteArray bytes = encoder.encode(text);
+                bytes.chop(1);
+                QTest::newRow((QByteArray(QStringConverter::nameForEncoding(encoding)) + suffix).constData())
+                    << bytes << archive;
+            }
+        }
+    }
+
+    void invalidEncodedImports()
+    {
+        QFETCH(QByteArray, bytes);
+        QFETCH(bool, archive);
+        QTemporaryDir directory;
+        const auto path = directory.filePath(archive ? "input.zip" : "input.txt");
+        QByteArray source = bytes;
+        if (archive)
+            source = zip({{"work.txt", bytes}});
+        put(path, source);
+        ProjectTransferService service(directory.filePath("app"));
+        const auto result = service.importFile(path);
+        QVERIFY(!result);
+        noPublication(service, directory.filePath("app"));
+        QCOMPARE(get(path), source);
     }
 
     void invalidBomEncodedInputDoesNotPublish()
@@ -1528,7 +1685,7 @@ private slots:
         noPublication(service, directory.filePath("app"));
     }
 
-    void listingIgnoresCorruptAndUnpublishedWorkspaces()
+    void listingKeepsDamagedContentButIgnoresUnpublishedWorkspaces()
     {
         QTemporaryDir directory;
         auto project = fixture(directory.filePath("source"));
@@ -1539,10 +1696,34 @@ private slots:
         put(QDir(root).filePath(".staging-import-abandoned/candidate/project/project.txt"), document());
         put(QDir(root).filePath("workspaces/not-a-workspace/project/project.txt"), document());
         QCOMPARE(service.listWorkspaces().size(), 1);
-        put(imported->projectPath, "corrupt");
-        QCOMPARE(service.listWorkspaces().size(), 0);
+        const auto invalidRound = document({"page.png"}, {{"proofreading", QJsonObject{{"version", 999}}}});
+        auto damagedMetadata = invalidRound;
+        damagedMetadata.replace("# payload=", "# payload=!");
+        for (const auto& bytes : {QByteArray("corrupt"), invalidRound, damagedMetadata}) {
+            put(imported->projectPath, bytes);
+            const auto entries = service.listWorkspaces();
+            QCOMPARE(entries.size(), 1);
+            QCOMPARE(entries.first().id, imported->id);
+            QCOMPARE(entries.first().title, imported->title);
+            QVERIFY(!entries.first().reviewActive);
+            QVERIFY(!entries.first().diagnostic.isEmpty());
+            QCOMPARE(get(imported->projectPath), bytes);
+        }
+        // The optional content scan budget must not be an availability limit either.
+        QFile large(imported->projectPath);
+        QVERIFY(large.open(QIODevice::WriteOnly));
+        QVERIFY(large.resize(TransferLimits{}.textBytes + 1));
+        large.close();
+        const auto oversized = service.listWorkspaces();
+        QCOMPARE(oversized.size(), 1);
+        QVERIFY(oversized.first().diagnostic.contains("too large"));
         QVERIFY(QFileInfo::exists(imported->projectPath));
         QCOMPARE(get(project.filePath()), LabelPlusDocument::serialize(project).toUtf8());
+        const auto manifest =
+            QFileInfo(QFileInfo(imported->projectPath).absolutePath()).absolutePath() + "/workspace.json";
+        put(manifest, "invalid manifest");
+        QVERIFY(service.listWorkspaces().isEmpty());
+        QVERIFY(QFileInfo::exists(imported->projectPath));
     }
 
     void failedPublicationPreservesExistingWorkspace()

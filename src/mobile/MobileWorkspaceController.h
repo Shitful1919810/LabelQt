@@ -5,6 +5,8 @@
 #include "services/transfer/ProjectTransferService.h"
 #include <QFutureWatcher>
 #include <QTimer>
+#include <atomic>
+#include <memory>
 
 namespace labelqt::mobile {
 
@@ -15,6 +17,8 @@ class MobileWorkspaceController final : public QObject {
     Q_PROPERTY(QString message READ message NOTIFY changed)
     Q_PROPERTY(QString lastExport READ lastExport NOTIFY changed)
     Q_PROPERTY(QString suggestedShareName READ suggestedShareName NOTIFY changed)
+    Q_PROPERTY(QString suggestedReportName READ suggestedReportName NOTIFY changed)
+    Q_PROPERTY(bool reportExporting READ reportExporting NOTIFY changed)
 public:
     MobileWorkspaceController(MobileDocument& document, QString root, QObject* parent = nullptr);
     ~MobileWorkspaceController() override;
@@ -38,6 +42,11 @@ public:
     void importReceived(const QString& path, const QString& displayName = {});
     Q_INVOKABLE bool openWorkspace(const QString& id);
     Q_INVOKABLE bool exportProject(const QString& fileName);
+    Q_INVOKABLE bool exportProofreadingPdf(const QString& fileName, bool currentPage);
+    Q_INVOKABLE bool shareLastExport();
+    Q_INVOKABLE void cancelReportExport();
+    bool reportExporting() const { return m_busy && bool(m_reportCancel); }
+    QString suggestedReportName() const;
     Q_INVOKABLE bool renameWorkspace(const QString& id, const QString& title);
     Q_INVOKABLE bool deleteWorkspace(const QString& id);
     QString suggestedShareName() const;
@@ -62,6 +71,8 @@ private:
     void import(Input input);
     void startNextImport();
     void startMaintenance();
+    void refreshActiveReview();
+    bool activeReview();
     enum class Operation { Import, Export, Maintenance };
     Operation m_operation = Operation::Maintenance;
     QTimer m_cleanupTimer;
@@ -73,5 +84,9 @@ private:
     QString m_message;
     QString m_lastExport;
     bool m_busy = false;
+    std::shared_ptr<std::atomic_bool> m_reportCancel;
+    QUuid m_reviewSession;
+    QStringList m_reviewComments;
+    bool m_reviewActive = false;
 };
 } // namespace labelqt::mobile

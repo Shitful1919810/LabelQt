@@ -7,7 +7,6 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QRegularExpression>
-#include <QStringDecoder>
 
 namespace labelqt::services::transfer {
 QString ioError(const QString& path)
@@ -154,18 +153,8 @@ QByteArray copyFile(const QString& from, const QString& to, qint64 limit, qint64
 core::Project readProject(const QString& path, const TransferLimits& limits)
 {
     const auto bytes = readBounded(path, limits.textBytes);
-    // Match LabelPlusDocument's Qt BOM detection, but reject incomplete/invalid input rather than
-    // accepting replacement characters. Keep the bounded byte snapshot; never reopen the source.
-    const auto encoding = QStringConverter::encodingForData(bytes).value_or(QStringConverter::Utf8);
-    QStringDecoder decoder(encoding, QStringConverter::Flag::Stateless);
-    const QString text = decoder.decode(bytes);
-    // Some Qt versions do not flag a truncated UTF-32 code unit even with Stateless decoding.
-    const int unitBytes = encoding == QStringConverter::Utf32LE || encoding == QStringConverter::Utf32BE   ? 4
-                          : encoding == QStringConverter::Utf16LE || encoding == QStringConverter::Utf16BE ? 2
-                                                                                                           : 1;
-    require(bytes.size() % unitBytes == 0 && !decoder.hasError() && !text.contains(QChar::Null),
-            QCoreApplication::translate("LabelPlusDocument", "Invalid LabelPlus document structure."));
-    return core::LabelPlusDocument::parse(text, path);
+    // Retain the bounded byte snapshot; encoding/format rules belong to the shared reader.
+    return core::LabelPlusDocument::readFromBytes(bytes, path).project;
 }
 
 void Names::add(const QString& path, bool directory)

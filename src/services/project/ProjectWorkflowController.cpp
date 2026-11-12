@@ -1,9 +1,12 @@
 #include "services/project/ProjectWorkflowController.h"
 
 #include "core/LabelPlusDocument.h"
+#include "services/io/FileRenameTransaction.h"
 #include "services/project/ProjectImageRenameService.h"
 #include "services/project/ProjectLocationService.h"
 #include "services/project/ProjectPageOrderService.h"
+
+#include <QFileInfo>
 
 #include <utility>
 
@@ -46,6 +49,9 @@ ProjectWorkflowController::mergedProjectPreview(const ProjectMergePlan& mergePla
 void ProjectWorkflowController::saveProject(const labelqt::core::Project& project, const QString& path) const
 {
     ProjectFileTransaction transaction(path);
+    const auto recovered = FileRenameTransaction::checkRecoveryDirectory(QFileInfo(path).absolutePath());
+    if (!recovered)
+        throw std::runtime_error(recovered.error().toStdString());
     const auto expected = FileRevision::read(path);
     if (!expected)
         throw std::runtime_error(expected.error().toStdString());

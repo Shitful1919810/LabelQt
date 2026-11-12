@@ -18,6 +18,8 @@ public:
     static bool isValidGroupName(const QString& group);
     static Project loadFromFile(const QString& filePath);
     static LoadedProjectDocument readFromFile(const QString& filePath);
+    // Decode and hash the same byte snapshot, without reopening its source.
+    static LoadedProjectDocument readFromBytes(const QByteArray& bytes, const QString& filePath);
     static void saveToFile(const Project& project, const QString& filePath);
 
     static Project parse(const QString& content, const QString& filePath);

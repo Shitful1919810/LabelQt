@@ -11,6 +11,7 @@ struct ProjectTextQuery {
     int lastPage{-1};
     bool allGroups{true};
     QSet<QString> groups;
+    qsizetype maxMatches{-1}; // Negative means unlimited (desktop replacement workflows).
 };
 struct ProjectTextMatch {
     int imageIndex{-1};
@@ -29,6 +30,7 @@ struct LabelTextReplacement {
 struct ProjectTextSearchResult {
     QByteArray revision;
     QVector<ProjectTextMatch> matches;
+    bool truncated{false};
 };
 class ProjectTextSearchService final {
 public:

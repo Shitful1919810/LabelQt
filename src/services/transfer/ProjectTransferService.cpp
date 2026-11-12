@@ -14,8 +14,10 @@
 #include <QImageReader>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QSet>
 #include <QTemporaryDir>
 #include <QUuid>
+#include <algorithm>
 
 namespace labelqt::services {
 namespace {
@@ -355,10 +357,23 @@ materialize(const Project& source, const QString& destination, bool copyImages, 
     return files;
 }
 
-WorkspaceInfo readWorkspace(const QString& directory, const TransferLimits& limits)
+WorkspaceInfo readWorkspace(const QString& directory)
 {
     auto info = readWorkspaceInfo(directory);
-    validateProject(readProject(info.projectPath, limits), limits);
+    try {
+        // Bound optional list decoration without imposing transfer eligibility on local data.
+        // In particular, editing past a label limit must not remove a saved workspace's entry.
+        const TransferLimits inspection;
+        require(QFileInfo(info.projectPath).size() <= inspection.textBytes,
+                ProjectTransferService::tr("The project is too large to inspect in the workspace list."));
+        const auto project = readProject(info.projectPath, inspection);
+        const auto round = ReviewRoundService::read(project);
+        require(round.has_value(), round ? QString{} : round.error());
+        info.reviewActive = *round && !(**round).after;
+    }
+    catch (const std::exception& error) {
+        info.diagnostic = QString::fromUtf8(error.what());
+    }
     return info;
 }
 
@@ -397,6 +412,49 @@ Project archiveProject(const QString& directory, const QStringList& files, const
 }
 } // namespace
 
+qint64 transfer::estimateZipStagingBytes(const core::Project& project, const TransferLimits& limits,
+                                         core::LabelPlusDocument::CommentPolicy comments)
+{
+    checkLimits(limits);
+    auto candidate = project;
+    if (comments == core::LabelPlusDocument::CommentPolicy::Omit)
+        candidate.setCommentLines({});
+    const auto metadata = validateProject(candidate, limits);
+    const auto base = QFileInfo(project.filePath()).absolutePath();
+    QSet<QString> copiedPaths;
+    qint64 imageBytes = 0;
+    int files = 1;
+    const auto countFile = [&](const QString& path) {
+        const QFileInfo info(path);
+        require(info.exists(), ProjectTransferService::tr("A required image is missing: %1").arg(path));
+        require(info.isFile(), ioError(path));
+        require(info.size() <= limits.fileBytes && info.size() <= limits.totalBytes - imageBytes,
+                ProjectTransferService::tr("Transfer size limit exceeded."));
+        require(++files <= limits.entries, ProjectTransferService::tr("Transfer entry limit exceeded."));
+        imageBytes += info.size();
+        copiedPaths.insert(path);
+    };
+    // Live aliases each produce a file; history reuses the first existing source copy.
+    for (const auto& image : candidate.images())
+        countFile(containedReference(base, image.path, limits));
+    const auto round = metadata.value("proofreading").toObject();
+    for (const auto& key : {"before", "after"}) {
+        for (const auto& value : round.value(key).toObject().value("pages").toArray()) {
+            const auto reference = value.toObject().value("path").toString();
+            if (reference.isEmpty())
+                continue;
+            const auto path = containedReference(base, reference, limits);
+            if (!copiedPaths.contains(path))
+                countFile(path);
+        }
+    }
+    // The relocated TXT is bounded by materialize(). Include both full trees, a conservative
+    // deflate/container allowance, and the archive itself at their simultaneous peak.
+    const qint64 payload = std::min(limits.totalBytes, imageBytes + std::min(limits.textBytes, limits.fileBytes));
+    const qint64 archive = std::min(limits.inputBytes, payload + payload / 100 + qint64(files) * 16384 + 65536);
+    return 2 * payload + archive;
+}
+
 ProjectTransferService::ProjectTransferService(QString root, TransferLimits limits)
     : m_root(std::move(root)), m_limits(limits)
 {
@@ -406,17 +464,16 @@ QVector<WorkspaceInfo> ProjectTransferService::listWorkspaces() const
 {
     QVector<WorkspaceInfo> result;
     try {
-        checkLimits(m_limits);
         const auto directory = QDir(privateRoot(m_root, false)).filePath("workspaces");
         noLinks(directory);
         const QDir workspaces(directory);
         for (const auto& name :
              workspaces.entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks, QDir::Name)) {
             try {
-                result.append(readWorkspace(workspaces.filePath(name), m_limits));
+                result.append(readWorkspace(workspaces.filePath(name)));
             }
             catch (const std::exception&) {
-                // A corrupt/incomplete workspace is not a usable project; leave it intact for recovery.
+                // Invalid manifests/unsafe paths cannot define a workspace. Never delete their evidence.
             }
         }
     }
@@ -488,7 +545,10 @@ std::expected<WorkspaceInfo, QString> ProjectTransferService::importFile(QString
         writeFile(QDir(candidate).filePath("workspace.json"), manifest);
         const auto published = QDir(workspaces).filePath(id);
         require(QDir().rename(candidate, published), tr("Cannot publish the imported workspace."));
-        return readWorkspaceInfo(published);
+        auto info = readWorkspaceInfo(published);
+        const auto round = ReviewRoundService::read(project);
+        info.reviewActive = round && *round && !(**round).after;
+        return info;
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));
@@ -502,37 +562,27 @@ std::expected<QString, QString> ProjectTransferService::exportZip(const core::Pr
         checkLimits(m_limits);
         const auto checkedName = WorkspaceStorageService::archiveFileName(std::move(fileName));
         require(checkedName.has_value(), checkedName ? QString{} : checkedName.error());
-        const auto root = privateRoot(m_root, true);
-        const auto outgoing = QDir(root).filePath("outgoing");
-        makeDirectory(outgoing);
-        QTemporaryDir stage(QDir(root).filePath(".staging-export-XXXXXX"));
-        require(stage.isValid(), tr("Cannot create transfer staging directory."));
-        const auto projectDir = stage.filePath("project");
-        makeDirectory(projectDir);
-        auto files = materialize(project, projectDir, true, true, m_limits, comments);
-        for (auto& file : files)
-            file.prepend("project/");
-        const auto archive = stage.filePath("output.zip");
-        writeZip(stage.path(), files, archive, m_limits);
-        // Read back the complete artifact, including CRCs, before making it visible to sharing callers.
-        const auto verification = stage.filePath("verification");
-        makeDirectory(verification);
-        auto verified = extractZip(archive, verification, m_limits);
-        files.sort();
-        verified.sort();
-        require(files == verified, tr("ZIP verification failed."));
-        validateProject(readProject(QDir(verification).filePath("project/project.txt"), m_limits), m_limits);
-        require(QFile::setPermissions(archive, QFileDevice::ReadOwner), tr("Cannot protect the outgoing ZIP."));
-        require(
-            QFileInfo(archive).size() <= WorkspaceStorageService::shareCacheLimit - shareCacheSize(root),
-            tr("The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire."));
-        const auto candidate = stage.filePath("share");
-        makeDirectory(candidate);
-        require(QDir().rename(archive, QDir(candidate).filePath(*checkedName)), tr("Cannot publish the outgoing ZIP."));
-        const auto output = QDir(outgoing).filePath(QUuid::createUuid().toString(QUuid::WithoutBraces));
-        // Same-filesystem rename; QFile's cross-filesystem copy fallback is not used for publication.
-        require(QDir().rename(candidate, output), tr("Cannot publish the outgoing ZIP."));
-        return QDir(output).filePath(*checkedName);
+        return WorkspaceStorageService(m_root).createSharedFile(
+            *checkedName,
+            [&](const QString& archive) -> std::expected<void, QString> {
+                const auto stagePath = QFileInfo(archive).absolutePath();
+                const auto projectDir = QDir(stagePath).filePath("project");
+                makeDirectory(projectDir);
+                auto files = materialize(project, projectDir, true, true, m_limits, comments);
+                for (auto& file : files)
+                    file.prepend("project/");
+                writeZip(stagePath, files, archive, m_limits);
+                // Read back the complete artifact, including CRCs, before making it visible to sharing callers.
+                const auto verification = QDir(stagePath).filePath("verification");
+                makeDirectory(verification);
+                auto verified = extractZip(archive, verification, m_limits);
+                files.sort();
+                verified.sort();
+                require(files == verified, tr("ZIP verification failed."));
+                validateProject(readProject(QDir(verification).filePath("project/project.txt"), m_limits), m_limits);
+                return {};
+            },
+            {}, [&] { return estimateZipStagingBytes(project, m_limits, comments); });
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));

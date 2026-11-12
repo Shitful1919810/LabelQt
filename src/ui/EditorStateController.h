@@ -7,6 +7,7 @@
 class CanvasLabelTextEditController;
 class QPlainTextEdit;
 class QTableView;
+class QModelIndex;
 
 class EditorStateController final : public QObject {
     Q_OBJECT
@@ -27,6 +28,7 @@ public:
                       std::function<void()> editTableText, std::function<void()> openCanvasTextEditor);
 
     Mode activeMode() const;
+    bool hasActiveLabelTextEditor(int imageIndex, int sourceIndex, const QModelIndex& tableIndex) const;
     void commitActive();
     void restoreAfterNavigation(Mode mode, bool hasCurrentLabel);
 

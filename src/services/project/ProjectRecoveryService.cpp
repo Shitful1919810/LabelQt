@@ -17,7 +17,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSet>
-#include <QTextStream>
 #include <algorithm>
 #include <exception>
 
@@ -149,12 +148,7 @@ std::expected<labelqt::core::Project, QString> ProjectRecoveryService::preview(c
         QCryptographicHash::hash(*bytes, QCryptographicHash::Sha256) != entry.digest)
         return std::unexpected(QCoreApplication::translate("ProjectRecoveryService", "The backup cannot be verified."));
     try {
-        QTextStream stream(*bytes);
-        stream.setEncoding(QStringConverter::Utf8);
-        const auto text = stream.readAll();
-        if (stream.status() != QTextStream::Ok)
-            return std::unexpected(invalidBackup());
-        return labelqt::core::LabelPlusDocument::parse(text, entry.snapshotPath);
+        return labelqt::core::LabelPlusDocument::readFromBytes(*bytes, entry.snapshotPath).project;
     }
     catch (const std::exception& error) {
         return std::unexpected(QString::fromUtf8(error.what()));
@@ -195,11 +189,17 @@ bool ProjectRecoveryService::hasNewerRecovery(const QString& projectPath,
             const auto snapshot = preview(entry);
             if (!snapshot)
                 continue;
-            const auto output = ProjectLocationService::forOutput(*snapshot, projectPath);
-            const auto restoredDigest = QCryptographicHash::hash(
-                labelqt::core::LabelPlusDocument::serialize(output).toUtf8(), QCryptographicHash::Sha256);
-            if (!disk || restoredDigest != disk->sha256)
-                return true;
+            try {
+                const auto output = ProjectLocationService::forOutput(*snapshot, projectPath);
+                const auto restoredDigest = QCryptographicHash::hash(
+                    labelqt::core::LabelPlusDocument::serialize(output).toUtf8(), QCryptographicHash::Sha256);
+                if (!disk || restoredDigest != disk->sha256)
+                    return true;
+            }
+            catch (const std::exception&) {
+                // A readable snapshot may exceed serialization budgets after metadata regeneration.
+                // Keep it discoverable for manual recovery without interrupting project opening.
+            }
         }
     }
     return false;
@@ -245,15 +245,28 @@ std::expected<void, QString> ProjectRecoveryService::recoverFiles(const QString&
                 "ProjectRecoveryService",
                 "Recovery is ambiguous or files have changed. No automatic recovery is possible."));
         };
-        const auto record = recoveryDetails(recordPath);
-        if (!record || !record->canRecover)
+        const auto initialRecord = recoveryDetails(recordPath);
+        if (!initialRecord || !initialRecord->canRecover)
             return unsafe();
-        const QString& project = record->projectPath;
-        const auto& before = record->before;
-        const auto& after = record->after;
+        const QString& project = initialRecord->projectPath;
         if (QFileInfo(project).isSymLink() || !QFileInfo(project).isFile())
             return unsafe();
         ProjectFileTransaction transaction(project);
+        QStringList directories{QFileInfo(recordPath).absolutePath()};
+        for (const auto& move : initialRecord->moves)
+            for (const auto& path : {move.source, move.target, move.temporary})
+                directories.append(QFileInfo(path).absolutePath());
+        RenameDirectoryLocks directoryLocks;
+        const auto locked = directoryLocks.acquire(directories);
+        if (!locked)
+            return locked;
+        const auto record = recoveryDetails(recordPath);
+        if (!record || !record->canRecover || record->projectPath != project ||
+            record->before != initialRecord->before || record->after != initialRecord->after ||
+            record->moves != initialRecord->moves)
+            return unsafe();
+        const auto& before = record->before;
+        const auto& after = record->after;
         const auto revision = FileRevision::read(project);
         if (!revision || !revision->exists ||
             (revision->sha256 != QCryptographicHash::hash(before, QCryptographicHash::Sha256) &&

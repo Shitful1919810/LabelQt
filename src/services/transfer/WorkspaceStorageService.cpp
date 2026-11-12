@@ -8,6 +8,8 @@
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QStorageInfo>
+#include <QTemporaryDir>
 #include <QUuid>
 #include <algorithm>
 
@@ -30,6 +32,22 @@ QString workspacePath(const QString& root, const QString& id)
 bool disposableDirectory(const QFileInfo& entry, const QDateTime& cutoff)
 {
     return entry.isDir() && !entry.isSymLink() && entry.lastModified() < cutoff;
+}
+
+std::expected<QString, QString> outputName(QString name, const QString& suffix, const QString& error)
+{
+    try {
+        name = name.trimmed();
+        require(!name.isEmpty(), error);
+        if (!name.endsWith(suffix, Qt::CaseInsensitive))
+            name += suffix;
+        require(!name.contains('/') && name.size() > suffix.size(), error);
+        relativePath(name, {});
+        return name;
+    }
+    catch (const std::exception&) {
+        return std::unexpected(error);
+    }
 }
 } // namespace
 
@@ -101,18 +119,84 @@ qint64 shareCacheSize(const QString& root)
 
 std::expected<QString, QString> WorkspaceStorageService::archiveFileName(QString name)
 {
+    return outputName(std::move(name), ".zip", tr("Enter a valid ZIP file name without folders or reserved characters."));
+}
+
+std::expected<QString, QString> WorkspaceStorageService::pdfFileName(QString name)
+{
+    return outputName(std::move(name), ".pdf", tr("Enter a valid PDF file name without folders or reserved characters."));
+}
+
+std::expected<QString, QString> WorkspaceStorageService::validateSharedFile(const QString& path) const
+{
+    const auto error = tr("The last export is no longer available. Export the project or report again.");
     try {
-        name = name.trimmed();
-        require(!name.isEmpty(), tr("Enter a valid ZIP file name without folders or reserved characters."));
-        if (!name.endsWith(".zip", Qt::CaseInsensitive))
-            name += ".zip";
-        require(!name.contains('/') && name.size() > 4,
-                tr("Enter a valid ZIP file name without folders or reserved characters."));
-        relativePath(name, {});
-        return name;
+        const auto outgoing = QDir(privateRoot(m_root, false)).filePath("outgoing");
+        const QFileInfo file(path);
+        const QDir batch = file.dir();
+        require(file.isAbsolute() && QFileInfo(batch.absolutePath()).dir().absolutePath() == outgoing &&
+                    validId(batch.dirName()),
+                error);
+        noLinks(path);
+        require(file.isFile() && file.isReadable() && file.size() > 0 &&
+                    file.canonicalFilePath() == file.absoluteFilePath() &&
+                    (file.suffix().compare("zip", Qt::CaseInsensitive) == 0 ||
+                     file.suffix().compare("pdf", Qt::CaseInsensitive) == 0),
+                error);
+        return file.absoluteFilePath();
     }
     catch (const std::exception&) {
-        return std::unexpected(tr("Enter a valid ZIP file name without folders or reserved characters."));
+        return std::unexpected(error);
+    }
+}
+
+std::expected<QString, QString> WorkspaceStorageService::createSharedFile(
+    const QString& fileName, const std::function<std::expected<void, QString>(const QString&)>& write,
+    const std::function<bool()>& canceled, const std::function<qint64()>& estimatePeakBytes) const
+{
+    try {
+        const auto name =
+            fileName.endsWith(".pdf", Qt::CaseInsensitive) ? pdfFileName(fileName) : archiveFileName(fileName);
+        require(name.has_value(), name ? QString{} : name.error());
+        const auto root = privateRoot(m_root, true);
+        const auto cacheFull = ProjectTransferService::tr(
+            "The share cache is full (2 GiB). Exports are retained for seven days; try again after they expire.");
+        require(!canceled || !canceled(), tr("Export canceled."));
+        require(shareCacheSize(root) < shareCacheLimit, cacheFull);
+        const auto checkSpace = [&](qint64 estimate) {
+            const QStorageInfo storage(root);
+            const qint64 available = m_availableBytes ? m_availableBytes(root)
+                                     : storage.isValid() && storage.isReady() && !storage.isReadOnly()
+                                         ? storage.bytesAvailable()
+                                         : -1;
+            require(available >= 0, tr("Cannot determine available storage for export."));
+            require(estimate >= 0 && available >= saveSpaceReserve && estimate <= available - saveSpaceReserve,
+                    tr("Not enough storage for export staging while keeping 256 MiB available for project saves."));
+        };
+        checkSpace(0);
+        checkSpace(estimatePeakBytes ? estimatePeakBytes() : shareCacheLimit);
+        const auto outgoing = QDir(root).filePath("outgoing");
+        makeDirectory(outgoing);
+        QTemporaryDir stage(QDir(root).filePath(".staging-export-XXXXXX"));
+        require(stage.isValid(), tr("Cannot create report staging directory."));
+        const auto filePath = stage.filePath("payload");
+        const auto result = write(filePath);
+        require(result.has_value(), result ? QString{} : result.error());
+        require(!canceled || !canceled(), tr("Export canceled."));
+        noLinks(filePath);
+        require(QFileInfo(filePath).isFile() && QFileInfo(filePath).size() > 0, tr("The exported file is empty."));
+        require(QFileInfo(filePath).size() <= shareCacheLimit - shareCacheSize(root), cacheFull);
+        checkSpace(0);
+        require(QFile::setPermissions(filePath, QFileDevice::ReadOwner), tr("Cannot protect the exported file."));
+        const auto candidate = stage.filePath("share");
+        makeDirectory(candidate);
+        require(QDir().rename(filePath, QDir(candidate).filePath(*name)), tr("Cannot publish the exported file."));
+        const auto output = QDir(outgoing).filePath(QUuid::createUuid().toString(QUuid::WithoutBraces));
+        require(QDir().rename(candidate, output), tr("Cannot publish the exported file."));
+        return QDir(output).filePath(*name);
+    }
+    catch (const std::exception& error) {
+        return std::unexpected(QString::fromUtf8(error.what()));
     }
 }
 

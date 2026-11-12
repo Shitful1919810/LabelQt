@@ -11,10 +11,12 @@
 #include <QQmlEngine>
 #include <QQmlError>
 #include <QQuickItem>
+#include <QQuickImageProvider>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <QSGTextureProvider>
 #include <QScopeGuard>
+#include <QSemaphore>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -66,6 +68,22 @@ void pointerRows()
     QTest::newRow("mouse") << false;
     QTest::newRow("touch") << true;
 }
+
+class DelayedImageProvider final : public QQuickImageProvider {
+public:
+    DelayedImageProvider() : QQuickImageProvider(QQuickImageProvider::Image, ForceAsynchronousImageLoading) {}
+    QImage requestImage(const QString&, QSize* size, const QSize&) override
+    {
+        started.store(true);
+        release.tryAcquire(1, 10000);
+        QImage image(600, 900, QImage::Format_RGB32);
+        image.fill(Qt::white);
+        *size = image.size();
+        return image;
+    }
+    std::atomic_bool started{false};
+    QSemaphore release;
+};
 
 // Destroy the component before its window/engine, and those before the model. Child references
 // are guarded because a model reset destroys the Repeater's marker objects synchronously.
@@ -599,6 +617,80 @@ private slots:
         QCoreApplication::sendEvent(&m_host->window, &zoomOut);
         QTest::qWait(frameDelay);
         QVERIFY(qAbs(m_host->image->width() - fitWidth) < 0.01);
+    }
+
+    void focusSelectedCentersMarkerWithoutZoomingOrEditing()
+    {
+        const QPointF point(320, 240);
+        QWheelEvent zoom(point, m_host->window.mapToGlobal(point.toPoint()), {}, {0, 1200}, Qt::NoButton,
+                         Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(&m_host->window, &zoom);
+        QTest::qWait(frameDelay);
+        const auto size = m_host->image->size();
+        QSignalSpy moved(m_host->canvas.get(), SIGNAL(labelMoved(QString, double, double)));
+        QVERIFY(QMetaObject::invokeMethod(m_host->canvas.get(), "focusSelected"));
+        QTest::qWait(frameDelay);
+        QCOMPARE(m_host->image->size(), size);
+        const auto center = m_host->markerCenter(0);
+        QVERIFY(qAbs(center.x() - 320) <= 1);
+        QVERIFY(qAbs(center.y() - 240) <= 1);
+        QCOMPARE(moved.count(), 0);
+    }
+
+    void delayedFocusIsBoundToSourceAndSelection_data()
+    {
+        QTest::addColumn<QString>("change");
+        for (const auto* change : {"none", "selection", "source", "source-return", "reset", "replacement"})
+            QTest::newRow(change) << QString::fromLatin1(change);
+    }
+
+    void delayedFocusIsBoundToSourceAndSelection()
+    {
+        QFETCH(QString, change);
+        auto* provider = new DelayedImageProvider;
+        m_host->engine.addImageProvider("delayed", provider);
+        const auto unblock = qScopeGuard([provider] { provider->release.release(3); });
+        auto* canvas = m_host->canvas.get();
+        canvas->setProperty("selectedLabel", labelKey(m_host->labels[1]));
+        canvas->setProperty("imageSource", QUrl("image://delayed/page"));
+        QTRY_VERIFY(provider->started.load());
+        QVERIFY(!m_host->image->isVisible());
+        QSignalSpy moved(canvas, SIGNAL(labelMoved(QString, double, double)));
+        QVERIFY(QMetaObject::invokeMethod(canvas, "focusSelected"));
+        QTest::qWait(frameDelay);
+        QVERIFY(!m_host->image->isVisible());
+        if (change == "selection") {
+            canvas->setProperty("selectedLabel", labelKey(m_host->labels[0]));
+            canvas->setProperty("selectedLabel", labelKey(m_host->labels[1]));
+        }
+        else if (change == "source" || change == "source-return") {
+            canvas->setProperty("imageSource", fixtureUrl("landscape.png"));
+            if (change == "source-return")
+                canvas->setProperty("imageSource", QUrl("image://delayed/page"));
+        }
+        else if (change == "reset") {
+            QVERIFY(QMetaObject::invokeMethod(canvas, "resetView"));
+        }
+        else if (change == "replacement") {
+            // A later request supersedes the first, even with the same source still loading.
+            m_host->labels[0].setPosition({0.2, 0.25});
+            m_host->refresh();
+            canvas->setProperty("selectedLabel", labelKey(m_host->labels[0]));
+            QVERIFY(QMetaObject::invokeMethod(canvas, "focusSelected"));
+        }
+        provider->release.release(3);
+        QTRY_VERIFY(m_host->image->isVisible());
+        QTest::qWait(frameDelay * 2);
+        const QPoint center(320, 240);
+        if (change == "none" || change == "replacement") {
+            const int row = change == "none" ? 1 : 0;
+            QVERIFY((m_host->markerCenter(row) - center).manhattanLength() <= 2);
+        }
+        else {
+            QVERIFY((m_host->imagePoint(0.5, 0.5) - center).manhattanLength() <= 2);
+            QVERIFY((m_host->markerCenter(1) - center).manhattanLength() > 20);
+        }
+        QCOMPARE(moved.count(), 0);
     }
 
     void missingImageDoesNotEmitEdits()

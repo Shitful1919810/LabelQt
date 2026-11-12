@@ -2876,6 +2876,26 @@ Last error: %1</source>
         <source>Pages: %1; Changes: %2; Summaries: %3</source>
         <translation>ページ：%1；変更：%2；概要：%3</translation>
     </message>
+    <message>
+        <source>Export HTML report...</source>
+        <translation>HTML レポートを書き出す...</translation>
+    </message>
+    <message>
+        <source>Export PDF report...</source>
+        <translation>PDF レポートを書き出す...</translation>
+    </message>
+    <message>
+        <source>HTML files (*.html)</source>
+        <translation>HTML ファイル (*.html)</translation>
+    </message>
+    <message>
+        <source>PDF files (*.pdf)</source>
+        <translation>PDF ファイル (*.pdf)</translation>
+    </message>
+    <message>
+        <source>Export report...</source>
+        <translation>レポートを書き出す...</translation>
+    </message>
 </context>
 <context>
     <name>main</name>
@@ -3598,6 +3618,22 @@ Missing images: %2</source>
         <source>The project changed while this dialog was open. Please try again.</source>
         <translation>ダイアログを開いている間にプロジェクトが変更されました。やり直してください。</translation>
     </message>
+    <message>
+        <source>Completed comments are read-only. Start a new round to add or edit comments.</source>
+        <translation>完了した注釈は読み取り専用です。追加・編集するには新しい校正を開始してください。</translation>
+    </message>
+    <message>
+        <source>The note text must not be empty.</source>
+        <translation>注釈本文は空にできません。</translation>
+    </message>
+    <message>
+        <source>The proofreading note no longer exists.</source>
+        <translation>校正注釈は存在しません。</translation>
+    </message>
+    <message>
+        <source>The note target no longer exists.</source>
+        <translation>注釈の参照先は存在しません。</translation>
+    </message>
 </context>
 <context>
     <name>ReviewRoundService</name>
@@ -3796,6 +3832,62 @@ Missing images: %2</source>
         <source>Undo</source>
         <translation>元に戻す</translation>
     </message>
+    <message>
+        <source>Find and Review</source>
+        <translation>検索・校正</translation>
+    </message>
+    <message>
+        <source>Locate marker</source>
+        <translation>マーカーの位置へ</translation>
+    </message>
+    <message>
+        <source>The ZIP includes comments, proofreading records and their referenced images. LabelQt on PC or Android can continue the review.</source>
+        <translation>ZIP にはコメント、校正記録、参照画像が含まれます。PC または Android 版 LabelQt で校正を続けられます。</translation>
+    </message>
+    <message>
+        <source>Finish this review?</source>
+        <translation>この校正を完了しますか？</translation>
+    </message>
+    <message>
+        <source>Freeze the reviewed text and comment bodies? You can still resolve comments and change their linked labels.</source>
+        <translation>校正済み本文と注釈本文を確定しますか？注釈の解決状態と関連ラベルは引き続き変更できます。</translation>
+    </message>
+    <message>
+        <source>The previous round and its notes will be replaced. Share a ZIP first to keep a copy.</source>
+        <translation>前回の校正と注釈が置き換えられます。保存するには先に ZIP を共有し、コピーを保管してください。</translation>
+    </message>
+    <message>
+        <source>All pages in this round</source>
+        <translation>今回の校正の全ページ</translation>
+    </message>
+    <message>
+        <source>Cancel export</source>
+        <translation>書き出しを中止</translation>
+    </message>
+    <message>
+        <source>Current page only</source>
+        <translation>現在のページのみ</translation>
+    </message>
+    <message>
+        <source>PDF file name</source>
+        <translation>PDF ファイル名</translation>
+    </message>
+    <message>
+        <source>Preparing PDF report...</source>
+        <translation>PDF レポートを作成中...</translation>
+    </message>
+    <message>
+        <source>Share proofreading PDF</source>
+        <translation>校正 PDF を共有</translation>
+    </message>
+    <message>
+        <source>The PDF includes text differences, images and comments. It does not replace the editable project ZIP.</source>
+        <translation>PDF にはテキストの差分、画像、注釈が含まれます。編集可能なプロジェクト ZIP の代わりにはなりません。</translation>
+    </message>
+    <message>
+        <source>Share last export</source>
+        <translation>前回の書き出しを共有</translation>
+    </message>
 </context>
 <context>
     <name>MobileReviewController</name>
@@ -3862,6 +3954,14 @@ Missing images: %2</source>
     <message>
         <source>Unable to read the proofreading round.</source>
         <translation>校正ラウンドを読み込めません。</translation>
+    </message>
+    <message>
+        <source>The project changed while this dialog was open. Close it and try again.</source>
+        <translation>ダイアログを開いている間にプロジェクトが変更されました。閉じてからやり直してください。</translation>
+    </message>
+    <message>
+        <source>Edit proofreading comments</source>
+        <translation>校正注釈を編集</translation>
     </message>
 </context>
 <context>
@@ -4009,6 +4109,10 @@ Missing images: %2</source>
         <source>ZIP verification failed.</source>
         <translation>ZIP の検証に失敗しました。</translation>
     </message>
+    <message>
+        <source>The project is too large to inspect in the workspace list.</source>
+        <translation>プロジェクトが大きすぎるため、一覧で詳細な状態を確認できません。</translation>
+    </message>
 </context>
 <context>
     <name>labelqt::mobile::MobileDocument</name>
@@ -4054,6 +4158,10 @@ Missing images: %2</source>
     <message>
         <source>The workspace is no longer available.</source>
         <translation>このワークスペースは利用できなくなりました。</translation>
+    </message>
+    <message>
+        <source>Preparing PDF report...</source>
+        <translation>PDF レポートを作成中...</translation>
     </message>
 </context>
 <context>
@@ -4129,6 +4237,42 @@ Missing images: %2</source>
         <source>Some temporary files could not be removed. Cleanup will be retried later.</source>
         <translation>一部の一時ファイルを削除できませんでした。後で再試行します。</translation>
     </message>
+    <message>
+        <source>Cannot create report staging directory.</source>
+        <translation>書き出し用の一時フォルダーを作成できません。</translation>
+    </message>
+    <message>
+        <source>Cannot protect the exported file.</source>
+        <translation>書き出したファイルを保護できません。</translation>
+    </message>
+    <message>
+        <source>Cannot publish the exported file.</source>
+        <translation>書き出したファイルを公開できません。</translation>
+    </message>
+    <message>
+        <source>Enter a valid PDF file name without folders or reserved characters.</source>
+        <translation>フォルダーや予約文字を含まない有効な PDF ファイル名を入力してください。</translation>
+    </message>
+    <message>
+        <source>Export canceled.</source>
+        <translation>書き出しを中止しました。</translation>
+    </message>
+    <message>
+        <source>The exported file is empty.</source>
+        <translation>書き出したファイルが空です。</translation>
+    </message>
+    <message>
+        <source>Cannot determine available storage for export.</source>
+        <translation>書き出しに利用できる空き容量を確認できません。</translation>
+    </message>
+    <message>
+        <source>Not enough storage for export staging while keeping 256 MiB available for project saves.</source>
+        <translation>書き出し用の一時ファイルとプロジェクト保存用の 256 MiB を確保する空き容量がありません。</translation>
+    </message>
+    <message>
+        <source>The last export is no longer available. Export the project or report again.</source>
+        <translation>前回書き出したファイルを利用できません。プロジェクトまたはレポートを再度書き出してください。</translation>
+    </message>
 </context>
 <context>
     <name>SubmitDialog</name>
@@ -4142,6 +4286,10 @@ Missing images: %2</source>
     <message>
         <source>No local projects</source>
         <translation>ローカルプロジェクトはありません</translation>
+    </message>
+    <message>
+        <source>Review in progress</source>
+        <translation>校正中</translation>
     </message>
 </context>
 <context>
@@ -4157,6 +4305,180 @@ Missing images: %2</source>
     <message>
         <source>Author: %1</source>
         <translation>作者：%1</translation>
+    </message>
+</context>
+<context>
+    <name>InspectionPanel</name>
+    <message>
+        <source>Clear search</source>
+        <translation>検索をクリア</translation>
+    </message>
+    <message>
+        <source>Review in progress</source>
+        <translation>校正中</translation>
+    </message>
+    <message>
+        <source>Completed review</source>
+        <translation>校正完了</translation>
+    </message>
+    <message>
+        <source>Results</source>
+        <translation>検索結果</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>注釈</translation>
+    </message>
+    <message>
+        <source>First %1 matches; narrow the search.</source>
+        <translation>最初の %1 件を表示中。検索範囲を絞ってください。</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewNoteDialog</name>
+    <message>
+        <source>Proofreading comment</source>
+        <translation>校正注釈</translation>
+    </message>
+    <message>
+        <source>Selected label</source>
+        <translation>選択中のラベル</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>現在のページ</translation>
+    </message>
+    <message>
+        <source>Completed comments are read-only. Their resolved status and linked label can still be changed.</source>
+        <translation>完了した注釈本文は読み取り専用です。解決状態と関連ラベルは変更できます。</translation>
+    </message>
+    <message>
+        <source>Comment</source>
+        <translation>注釈</translation>
+    </message>
+</context>
+<context>
+    <name>ReviewNotesPanel</name>
+    <message>
+        <source>All pages</source>
+        <translation>すべてのページ</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>現在のページ</translation>
+    </message>
+    <message>
+        <source>All comments</source>
+        <translation>すべての注釈</translation>
+    </message>
+    <message>
+        <source>Unresolved</source>
+        <translation>未解決</translation>
+    </message>
+    <message>
+        <source>Resolved</source>
+        <translation>解決済み</translation>
+    </message>
+    <message>
+        <source>Missing target</source>
+        <translation>参照先なし</translation>
+    </message>
+    <message>
+        <source>No comments in this view.</source>
+        <translation>この条件に一致する注釈はありません。</translation>
+    </message>
+    <message>
+        <source>Label comment</source>
+        <translation>ラベル注釈</translation>
+    </message>
+    <message>
+        <source>Page comment</source>
+        <translation>ページ注釈</translation>
+    </message>
+    <message>
+        <source>Comment actions</source>
+        <translation>注釈の操作</translation>
+    </message>
+    <message>
+        <source>Go to target</source>
+        <translation>参照先へ移動</translation>
+    </message>
+    <message>
+        <source>Attach to selected label</source>
+        <translation>選択中のラベルに関連付け</translation>
+    </message>
+    <message>
+        <source>Delete comment</source>
+        <translation>注釈を削除</translation>
+    </message>
+    <message>
+        <source>Delete this comment?</source>
+        <translation>この注釈を削除しますか？</translation>
+    </message>
+    <message>
+        <source>Attach this comment to the selected label? Its original quote will be preserved.</source>
+        <translation>この注釈を選択中のラベルに関連付けますか？元の引用文は保持されます。</translation>
+    </message>
+</context>
+<context>
+    <name>labelqt::mobile::MobileSearchController</name>
+    <message>
+        <source>Search failed.</source>
+        <translation>検索に失敗しました。</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadPdfReport</name>
+    <message>
+        <source>Cannot finish PDF output.</source>
+        <translation>PDF の出力を完了できません。</translation>
+    </message>
+    <message>
+        <source>Cannot initialize PDF output.</source>
+        <translation>PDF の出力を初期化できません。</translation>
+    </message>
+    <message>
+        <source>Cannot write PDF page.</source>
+        <translation>PDF のページを書き込めません。</translation>
+    </message>
+    <message>
+        <source>Image unavailable</source>
+        <translation>画像を表示できません</translation>
+    </message>
+    <message>
+        <source>Report export canceled.</source>
+        <translation>レポートの書き出しを中止しました。</translation>
+    </message>
+    <message>
+        <source>Too many changes. Export a smaller page range.</source>
+        <translation>変更が多すぎます。書き出すページ範囲を狭めてください。</translation>
+    </message>
+</context>
+<context>
+    <name>ProofreadReportShareService</name>
+    <message>
+        <source>All pages</source>
+        <translation>すべてのページ</translation>
+    </message>
+    <message>
+        <source>Completed draft</source>
+        <translation>校正完了稿</translation>
+    </message>
+    <message>
+        <source>Current draft</source>
+        <translation>現在の翻訳</translation>
+    </message>
+    <message>
+        <source>Current page</source>
+        <translation>現在のページ</translation>
+    </message>
+    <message>
+        <source>No proofreading round exists.</source>
+        <translation>校正が開始されていません。</translation>
+    </message>
+    <message>
+        <source>Original draft</source>
+        <translation>元の翻訳</translation>
     </message>
 </context>
 </TS>

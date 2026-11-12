@@ -2,6 +2,7 @@
 
 #include <QFutureWatcher>
 #include <QImageReader>
+#include <QPointer>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
@@ -185,8 +186,13 @@ void ImagePageCache::finishLoad(ImagePageLoadResult result)
         storeInCache(result);
     }
 
+    const QPointer<ImagePageCache> guard(this);
+    const auto generation = m_generation;
     for (quint64 requestId : pendingLoad.requestIds) {
         emit imageLoaded(requestId, result);
+        // A receiver may close the owner or clear the cache while handling the first result.
+        if (!guard || m_generation != generation)
+            return;
     }
 }
 

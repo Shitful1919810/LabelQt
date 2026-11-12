@@ -22,6 +22,10 @@ QVariant MobileWorkspaceModel::data(const QModelIndex& index, int role) const
         return entry.title;
     case ModifiedRole:
         return entry.modifiedAt;
+    case ReviewActiveRole:
+        return entry.reviewActive;
+    case DiagnosticRole:
+        return entry.diagnostic;
     default:
         return {};
     }
@@ -29,7 +33,8 @@ QVariant MobileWorkspaceModel::data(const QModelIndex& index, int role) const
 
 QHash<int, QByteArray> MobileWorkspaceModel::roleNames() const
 {
-    return {{KeyRole, "workspaceKey"}, {TitleRole, "workspaceTitle"}, {ModifiedRole, "modifiedAt"}};
+    return {{KeyRole, "workspaceKey"}, {TitleRole, "workspaceTitle"}, {ModifiedRole, "modifiedAt"},
+            {ReviewActiveRole, "reviewActive"}, {DiagnosticRole, "diagnostic"}};
 }
 
 void MobileWorkspaceModel::replace(QVector<services::WorkspaceInfo> entries)
@@ -52,8 +57,9 @@ void MobileWorkspaceModel::replace(QVector<services::WorkspaceInfo> entries)
         else {
             const auto previous = m_entries.at(row);
             m_entries[row] = incoming;
-            if (previous.title != incoming.title || previous.modifiedAt != incoming.modifiedAt)
-                emit dataChanged(index(row), index(row), {TitleRole, ModifiedRole});
+            if (previous.title != incoming.title || previous.modifiedAt != incoming.modifiedAt ||
+                previous.reviewActive != incoming.reviewActive || previous.diagnostic != incoming.diagnostic)
+                emit dataChanged(index(row), index(row), {TitleRole, ModifiedRole, ReviewActiveRole, DiagnosticRole});
         }
         ++row;
     }
@@ -76,6 +82,16 @@ void MobileWorkspaceModel::refreshSavedTime(const QString& projectPath)
             emit dataChanged(index(row), index(row), {ModifiedRole});
         }
         break;
+    }
+}
+
+void MobileWorkspaceModel::setReviewActive(const QString& projectPath, bool active)
+{
+    for (int row = 0; row < rowCount(); ++row) {
+        if (m_entries.at(row).projectPath != projectPath || m_entries.at(row).reviewActive == active)
+            continue;
+        m_entries[row].reviewActive = active;
+        emit dataChanged(index(row), index(row), {ReviewActiveRole});
     }
 }
 } // namespace labelqt::mobile

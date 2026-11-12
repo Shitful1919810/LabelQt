@@ -16,6 +16,15 @@ ApplicationWindow {
     property int panel: 0
     property int canvasTool: 0
     readonly property bool editingText: editor.activeFocus && mobileDocument.selectedLabel.length > 0 && panel !== 2
+    // Focus can outlive the Android keyboard. Compact only while it is visible or space is constrained.
+    readonly property bool compactEditor: editingText && (Qt.inputMethod.visible || contentItem.height < 480)
+
+    function selectCanvasTool(tool) {
+        if (!finishEditing()) return
+        canvas.forceActiveFocus()
+        Qt.inputMethod.hide()
+        canvasTool = tool
+    }
 
     function finishEditing() {
         Qt.inputMethod.commit()
@@ -39,8 +48,12 @@ ApplicationWindow {
     }
     function changeReviewState() {
         if (!finishEditing()) return
-        if (mobileReview.roundState === "active") mobileReview.completeRound()
-        else if (mobileReview.roundState === "completed") newRoundDialog.open()
+        mobileReview.clearError()
+        newRoundDialog.token = mobileReview.editToken()
+        if (mobileReview.roundState === "active" || mobileReview.roundState === "completed") {
+            newRoundDialog.completing = mobileReview.roundState === "active"
+            newRoundDialog.open()
+        }
         else mobileReview.startRound()
     }
 
@@ -93,11 +106,13 @@ ApplicationWindow {
                 onClicked: actions.open()
                 Menu {
                     id: actions
-                    MenuItem { text: qsTr("Save"); visible: mobileDocument.opened; enabled: mobileDocument.opened; onTriggered: if (window.finishEditing()) mobileDocument.save() }
+                    objectName: "projectActionsMenu"
+                    MenuItem { text: qsTr("Save"); visible: mobileDocument.opened; height: visible ? implicitHeight : 0; enabled: mobileDocument.opened; onTriggered: if (window.finishEditing()) mobileDocument.save() }
                     MenuItem {
                         objectName: "shareZipAction"
                         text: qsTr("Share ZIP")
                         visible: mobileDocument.opened
+                        height: visible ? implicitHeight : 0
                         enabled: mobileDocument.opened && !workspaceController.busy
                         onTriggered: {
                             if (window.finishEditing()) {
@@ -107,7 +122,30 @@ ApplicationWindow {
                             }
                         }
                     }
-                    MenuItem { text: qsTr("Groups"); visible: mobileDocument.opened; enabled: mobileDocument.opened; onTriggered: groupsDialog.open() }
+                    MenuItem { text: qsTr("Groups"); visible: mobileDocument.opened; height: visible ? implicitHeight : 0; enabled: mobileDocument.opened; onTriggered: groupsDialog.open() }
+                    MenuItem {
+                        objectName: "shareLastExportAction"
+                        text: qsTr("Share last export")
+                        visible: workspaceController.lastExport.length > 0
+                        height: visible ? implicitHeight : 0
+                        enabled: visible && !workspaceController.busy
+                        onTriggered: workspaceController.shareLastExport()
+                    }
+                    MenuItem {
+                        objectName: "sharePdfAction"
+                        text: qsTr("Share proofreading PDF")
+                        visible: mobileDocument.opened
+                        height: visible ? implicitHeight : 0
+                        enabled: mobileDocument.opened && !workspaceController.busy
+                            && (mobileReview.roundState === "active" || mobileReview.roundState === "completed")
+                        onTriggered: {
+                            if (!window.finishEditing()) return
+                            workspaceController.clearMessage()
+                            reportName.text = workspaceController.suggestedReportName
+                            reportScope.currentIndex = 0
+                            reportDialog.open()
+                        }
+                    }
                     MenuItem { objectName: "aboutAction"; text: qsTr("About"); onTriggered: aboutDialog.open() }
                 }
             }
@@ -118,6 +156,12 @@ ApplicationWindow {
         anchors.fill: parent
         spacing: 0
         ProgressBar { Layout.fillWidth: true; visible: workspaceController.busy; indeterminate: true }
+        RowLayout {
+            visible: workspaceController.reportExporting
+            Layout.fillWidth: true
+            Label { text: qsTr("Preparing PDF report..."); Layout.fillWidth: true; wrapMode: Text.Wrap }
+            IconButton { iconName: "x"; text: qsTr("Cancel export"); onClicked: workspaceController.cancelReportExport() }
+        }
         Frame {
             Layout.fillWidth: true
             visible: errorText.text.length > 0
@@ -139,7 +183,8 @@ ApplicationWindow {
             }
         }
         RowLayout {
-            visible: mobileDocument.opened && !window.editingText
+            objectName: "pageNavigation"
+            visible: mobileDocument.opened && !window.compactEditor && window.panel !== 2
             Layout.fillWidth: true
             IconButton { iconName: "chevron-left"; text: qsTr("Previous page"); enabled: mobileDocument.pageIndex > 0; onClicked: if (window.finishEditing()) mobileDocument.setPage(mobileDocument.pageIndex - 1) }
             ComboBox {
@@ -151,13 +196,14 @@ ApplicationWindow {
             IconButton { iconName: "chevron-right"; text: qsTr("Next page"); enabled: mobileDocument.pageIndex + 1 < mobileDocument.pageNames.length; onClicked: if (window.finishEditing()) mobileDocument.setPage(mobileDocument.pageIndex + 1) }
         }
         TabBar {
-            visible: mobileDocument.opened && !window.editingText
+            objectName: "mainTabs"
+            visible: mobileDocument.opened && !window.compactEditor
             Layout.fillWidth: true
             currentIndex: window.panel
             onCurrentIndexChanged: { window.finishEditing(); window.panel = currentIndex }
             TabButton { text: qsTr("Image") }
             TabButton { text: qsTr("Labels") }
-            TabButton { text: qsTr("Review") }
+            TabButton { text: qsTr("Find and Review") }
         }
         Item {
             Layout.fillWidth: true
@@ -181,7 +227,7 @@ ApplicationWindow {
             Layout.fillHeight: true
             spacing: 1
             ColumnLayout {
-                visible: window.wide || window.panel === 0 || window.editingText
+                visible: window.wide || window.panel === 0 || window.compactEditor
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: window.width * 0.6
@@ -200,17 +246,18 @@ ApplicationWindow {
                     onLabelMoved: (key, x, y) => mobileDocument.moveLabel(key, x, y)
                 }
                 RowLayout {
-                    visible: !window.editingText
+                    objectName: "canvasTools"
+                    visible: !window.compactEditor || window.canvasTool !== 0
                     Layout.alignment: Qt.AlignHCenter
                     ButtonGroup { id: tools }
-                    Button { text: qsTr("Browse"); checkable: true; checked: window.canvasTool === 0; ButtonGroup.group: tools; onClicked: window.canvasTool = 0 }
-                    Button { text: qsTr("Add"); checkable: true; checked: window.canvasTool === 1; ButtonGroup.group: tools; onClicked: window.canvasTool = 1 }
-                    Button { text: qsTr("Move"); checkable: true; checked: window.canvasTool === 2; ButtonGroup.group: tools; onClicked: window.canvasTool = 2 }
+                    Button { objectName: "browseTool"; text: qsTr("Browse"); checkable: true; checked: window.canvasTool === 0; ButtonGroup.group: tools; onClicked: window.selectCanvasTool(0) }
+                    Button { text: qsTr("Add"); checkable: true; checked: window.canvasTool === 1; ButtonGroup.group: tools; onClicked: window.selectCanvasTool(1) }
+                    Button { text: qsTr("Move"); checkable: true; checked: window.canvasTool === 2; ButtonGroup.group: tools; onClicked: window.selectCanvasTool(2) }
                     IconButton { iconName: "maximize"; text: qsTr("Fit image"); onClicked: canvas.resetView() }
                 }
             }
             ListView {
-                visible: window.wide || (window.panel === 1 && !window.editingText)
+                visible: window.wide || (window.panel === 1 && !window.compactEditor)
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: window.width * 0.4
@@ -228,50 +275,46 @@ ApplicationWindow {
                     onClicked: if (window.finishEditing()) mobileDocument.selectLabel(labelKey)
                     contentItem: ColumnLayout {
                         Label { text: "#" + markerNumber + "  " + groupName; textFormat: Text.PlainText; font.pixelSize: 12; color: markerColor }
-                        Label { text: labelText || qsTr("Empty label"); textFormat: Text.PlainText; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight; Layout.fillWidth: true }
+                        Label { visible: labelText.trim().length > 0; text: labelText; textFormat: Text.PlainText; wrapMode: Text.Wrap; maximumLineCount: 3; elide: Text.ElideRight; Layout.fillWidth: true }
+                        Label {
+                            visible: labelText.trim().length === 0
+                            text: qsTr("Empty label")
+                            font.bold: true
+                            padding: 6
+                            background: Rectangle { color: "transparent"; border.color: palette.mid; radius: 3 }
+                        }
                     }
                 }
             }
         }
-        ColumnLayout {
+        InspectionPanel {
             visible: mobileDocument.opened && window.panel === 2
             Layout.fillWidth: true
             Layout.fillHeight: true
-            RowLayout {
-                Layout.fillWidth: true
-                Button { text: mobileReview.roundState === "active" ? qsTr("Finish review") : qsTr("Start review"); enabled: !mobileReview.busy && mobileReview.roundState !== "invalid"; onClicked: window.changeReviewState() }
-                Button { text: qsTr("Changes"); enabled: !mobileReview.busy && mobileReview.roundState !== "none"; onClicked: if (window.finishEditing()) mobileReview.calculateChanges() }
-                Button { text: qsTr("Note"); enabled: mobileReview.roundState === "active"; onClicked: noteDialog.open() }
+            document: mobileDocument
+            search: mobileSearch
+            review: mobileReview
+            finishEditing: window.finishEditing
+            onRoundRequested: window.changeReviewState()
+            onNoteRequested: noteDialog.createNote()
+            onEditNoteRequested: note => noteDialog.showNote(note)
+            onTargetRequested: (pageKey, labelKey) => {
+                if (window.finishEditing() && mobileDocument.navigateToLabel(pageKey, labelKey)) {
+                    window.panel = 0
+                    Qt.inputMethod.hide()
+                    if (labelKey.length > 0) canvas.focusSelected()
+                }
             }
-            BusyIndicator { running: mobileReview.busy; visible: running; Layout.alignment: Qt.AlignHCenter }
-            ScrollView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                contentWidth: availableWidth
-                ColumnLayout {
-                    width: parent.width
-                    Repeater {
-                        model: mobileReview.notes
-                        delegate: CheckDelegate {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            text: modelData.pageName + ": " + modelData.text
-                            checked: modelData.resolved
-                            onClicked: if (window.finishEditing()) mobileReview.resolveNote(modelData.key, checked)
-                        }
-                    }
-                    Repeater {
-                        model: mobileReview.changes
-                        delegate: Frame {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            ColumnLayout {
-                                anchors.fill: parent
-                                Label { text: modelData.pageName + "  #" + modelData.number; textFormat: Text.PlainText; Layout.fillWidth: true; elide: Text.ElideMiddle }
-                                Label { text: modelData.html; textFormat: Text.RichText; wrapMode: Text.Wrap; Layout.fillWidth: true }
-                            }
-                        }
-                    }
+            onMatchRequested: row => {
+                if (!window.finishEditing()) return
+                const match = mobileSearch.results[row]
+                if (mobileSearch.navigate(row)) {
+                    window.panel = 1
+                    Qt.inputMethod.hide()
+                    Qt.callLater(() => {
+                        if (window.panel === 1 && mobileDocument.selectedLabel === match.labelKey)
+                            editor.select(match.start, match.start + match.length)
+                    })
                 }
             }
         }
@@ -279,17 +322,29 @@ ApplicationWindow {
             id: editorPanel
             visible: mobileDocument.selectedLabel.length > 0 && window.panel !== 2
             Layout.fillWidth: true
-            padding: window.editingText ? 4 : 12
+            padding: window.compactEditor ? 4 : 12
             ColumnLayout {
                 anchors.fill: parent
                 RowLayout {
-                    visible: !window.editingText
+                    visible: !window.compactEditor
+                    IconButton {
+                        objectName: "focusMarkerButton"
+                        iconName: "locate-fixed"
+                        text: qsTr("Locate marker")
+                        onClicked: {
+                            if (!window.finishEditing()) return
+                            window.panel = 0
+                            canvas.forceActiveFocus()
+                            Qt.inputMethod.hide()
+                            canvas.focusSelected()
+                        }
+                    }
                     ComboBox { model: mobileDocument.groups; currentIndex: model.indexOf(mobileDocument.selectedGroup); Layout.fillWidth: true; onActivated: if (window.finishEditing()) mobileDocument.setGroup(currentText) }
                     IconButton { iconName: "trash-2"; text: qsTr("Delete label"); onClicked: deleteDialog.open() }
                 }
                 ScrollView {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: window.editingText ? Math.min(104, Math.max(64, window.contentItem.height * 0.27)) : Math.min(150, Math.max(70, window.height * 0.16))
+                    Layout.preferredHeight: window.compactEditor ? Math.min(104, Math.max(64, window.contentItem.height * 0.27)) : Math.min(150, Math.max(70, window.height * 0.16))
                     Layout.maximumHeight: Layout.preferredHeight
                     clip: true
                     TextArea {
@@ -297,6 +352,7 @@ ApplicationWindow {
                         objectName: "labelTextEditor"
                         wrapMode: TextEdit.Wrap
                         selectByMouse: true
+                        persistentSelection: true
                         text: mobileDocument.textDraft
                         onTextChanged: if (activeFocus && !inputMethodComposing) mobileDocument.updateText(text)
                         onInputMethodComposingChanged: if (!inputMethodComposing && activeFocus) mobileDocument.updateText(text)
@@ -362,8 +418,30 @@ ApplicationWindow {
             width: parent.width
             Label { text: qsTr("ZIP file name"); Layout.fillWidth: true }
             TextField { id: shareName; objectName: "shareZipName"; Layout.fillWidth: true; selectByMouse: true }
-            Label { text: qsTr("The ZIP excludes comments and proofreading records. They remain in the local project."); Layout.fillWidth: true; wrapMode: Text.Wrap }
+            Label { text: qsTr("The ZIP includes comments, proofreading records and their referenced images. LabelQt on PC or Android can continue the review."); Layout.fillWidth: true; wrapMode: Text.Wrap }
             Label { text: mobileDocument.error || workspaceController.message; textFormat: Text.PlainText; visible: text.length > 0; wrapMode: Text.Wrap; Layout.fillWidth: true }
+        }
+    }
+    SubmitDialog {
+        id: reportDialog
+        objectName: "sharePdfDialog"
+        parent: Overlay.overlay
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(window.width - 32, 440)
+        title: qsTr("Share proofreading PDF")
+        onSubmitRequested: if (window.finishEditing() && workspaceController.exportProofreadingPdf(reportName.text, reportScope.currentIndex === 1)) accept()
+        ColumnLayout {
+            Layout.fillWidth: true
+            Label { text: qsTr("PDF file name"); Layout.fillWidth: true }
+            TextField { id: reportName; objectName: "reportFileName"; Layout.fillWidth: true; selectByMouse: true }
+            ComboBox { id: reportScope; Layout.fillWidth: true; model: [qsTr("All pages in this round"), qsTr("Current page only")] }
+            Label {
+                text: qsTr("The PDF includes text differences, images and comments. It does not replace the editable project ZIP.")
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            Label { text: mobileDocument.error || workspaceController.message; visible: text.length > 0; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
         }
     }
     SubmitDialog {
@@ -402,21 +480,30 @@ ApplicationWindow {
             Label { text: mobileDocument.error || workspaceController.message; textFormat: Text.PlainText; visible: text.length > 0; wrapMode: Text.Wrap; Layout.fillWidth: true }
         }
     }
-    ScrollDialog {
+    SubmitDialog {
         id: newRoundDialog
+        objectName: "reviewRoundDialog"
+        property bool completing: false
+        property string token
         modal: true
         anchors.centerIn: parent
         width: Math.min(window.width - 32, 440)
-        title: qsTr("Start a new review?")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        onAccepted: if (window.finishEditing()) mobileReview.startRound(true)
+        title: completing ? qsTr("Finish this review?") : qsTr("Start a new review?")
+        onSubmitRequested: {
+            if (!window.finishEditing()) return
+            const success = completing ? mobileReview.completeRound(token) : mobileReview.startRound(true, token)
+            if (success) accept()
+        }
         ColumnLayout {
             Layout.fillWidth: true
             Label {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: qsTr("The previous round and its notes will be replaced. Shared ZIPs do not retain this information.")
+                text: newRoundDialog.completing
+                    ? qsTr("Freeze the reviewed text and comment bodies? You can still resolve comments and change their linked labels.")
+                    : qsTr("The previous round and its notes will be replaced. Share a ZIP first to keep a copy.")
             }
+            Label { text: mobileReview.error; visible: text.length > 0; textFormat: Text.PlainText; wrapMode: Text.Wrap; Layout.fillWidth: true }
         }
     }
     ScrollDialog {
@@ -428,27 +515,14 @@ ApplicationWindow {
         standardButtons: Dialog.Ok | Dialog.Cancel
         onAccepted: if (window.finishEditing()) mobileDocument.deleteSelected()
     }
-    SubmitDialog {
+    ReviewNoteDialog {
         id: noteDialog
-        modal: true
-        property string targetPage
-        property string targetLabel
+        parent: Overlay.overlay
+        document: mobileDocument
+        review: mobileReview
+        finishEditing: window.finishEditing
         anchors.centerIn: parent
         width: Math.min(window.width - 32, 440)
-        title: qsTr("Review note")
-        onOpened: { targetPage = mobileDocument.pageId; targetLabel = mobileDocument.selectedLabel }
-        onSubmitRequested: {
-            if (window.finishEditing() && mobileReview.addNote(targetPage, targetLabel, noteText.text)) {
-                noteText.clear()
-                accept()
-            }
-        }
-        onRejected: noteText.clear()
-        ColumnLayout {
-            width: parent.width
-            TextArea { id: noteText; Layout.fillWidth: true; Layout.minimumHeight: 120; wrapMode: TextEdit.Wrap; placeholderText: qsTr("Note for the selected label or current page") }
-            Label { text: mobileReview.error; textFormat: Text.PlainText; visible: text.length > 0; wrapMode: Text.Wrap; Layout.fillWidth: true }
-        }
     }
     Dialog {
         id: groupsDialog

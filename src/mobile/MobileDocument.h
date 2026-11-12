@@ -109,6 +109,7 @@ public:
     Q_INVOKABLE bool commitText();
     Q_INVOKABLE void setPage(int index);
     Q_INVOKABLE void selectLabel(const QString& key);
+    Q_INVOKABLE bool navigateToLabel(const QString& pageKey, const QString& labelKey);
     Q_INVOKABLE void updateText(const QString& text);
     Q_INVOKABLE void addLabel(qreal x, qreal y);
     Q_INVOKABLE void moveLabel(const QString& key, qreal x, qreal y);

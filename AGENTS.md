@@ -50,6 +50,8 @@ See `docs/devtools.md` for the current helper commands.
 - Keep desktop Widgets and Android Qt Quick/QML as separate frontends over shared C++ services. Do not shrink
   `MainWindow` into a mobile UI or duplicate editing, undo, proofreading and persistence rules in QML/JNI.
 - Keep platform-independent logic under `src/core`.
+- Decode external project bytes through `LabelPlusDocument::readFromBytes`; do not add permissive UTF-8 or
+  QTextStream parsing paths that silently replace damaged text. Keep serialization validity symmetric with reading.
 - Put project workflow, session state, OS, archive, OCR and process integration under `src/services`.
 - Keep desktop Qt UI classes under `src/ui`; mobile presentation and Android bridges follow
   `src/mobile` and `src/platform/android` boundaries in the Android plan.
@@ -76,9 +78,10 @@ See `docs/devtools.md` for the current helper commands.
   not filesystem paths; never pass them to local path canonicalization, lock files or rename transactions.
 - Keep local save, recovery checkpoint, export and handoff-to-another-app as distinct states. Never report a QQ transfer
   as delivered based on a chooser or Activity callback. Do not overwrite the original imported external files.
-- Android sharing writes a comment-free TXT with current-page images only. Apply this policy to the export copy,
-  not local persistence or import. Omit generated metadata as well as ordinary comments and sourceName; never
-  describe shared ZIPs as backups of proofreading rounds or notes.
+- Android sharing preserves TXT comments and the shared compressed LabelQtMetadata format, including proofreading
+  rounds, notes, resolved/reviewed states and stable identities. Package current and historical referenced images
+  with shared transfer/path validation; fail rather than silently discard records or publish incomplete archives.
+  Mutate only the detached export snapshot. Never introduce a mobile-only note codec or disclose private app files.
 - Share project ZIPs through Android's standard intents and narrowly scoped read-only FileProvider access. Receiving
   from QQ and manual system-picker import must use the same bounded, validated import service. Never scan QQ's private
   directories, request all-files access as a workaround, or implement archive parsing in UI/JNI code.
@@ -90,6 +93,10 @@ See `docs/devtools.md` for the current helper commands.
   retain thin Widgets/Quick adapters and desktop regression coverage. Do not create hidden Widgets to reuse controllers.
 - Mobile touch interaction must not require hover, right-click or modifier keys. Define gesture cancellation and IME
   composition behavior, and test rotation, keyboard resizing, background process death and delayed results.
+- Text focus can outlive the Android IME. Do not hide navigation based on focus alone; armed add/move tools must
+  always retain an accessible exit. Tool changes share editor commit and focus handoff rules.
+- PDF reports use the shared ProofreadReportService renderer, never a mobile-only diff or screenshot implementation.
+  Publish PDF and ZIP through the same serialized share-cache transaction; PDFs are reports, not editable imports.
 - Disabling mobile Python must not remove shared identity/version/commit infrastructure or break desktop automation.
 - New QML text uses `qsTr()`/`qsTranslate()` and all four translations. Keep translation extraction/checks covering
   QML as well as C++ and verify runtime contexts, especially namespaced QObject classes.
@@ -118,6 +125,10 @@ See `docs/devtools.md` for the current helper commands.
   duplicating active-editor detection.
 - Keep preference subpage table logic in focused widgets such as `GroupStyleEditorWidget` and
   `AutomationShortcutEditorWidget`; do not grow large table-building blocks back into `PreferenceDialog`.
+- Commit table edits to the document synchronously before navigation/save. Defer only view refresh, validate
+  session/page/label identity, and preserve newer selection/editor drafts; use `EditorStateController` for editor checks.
+- Image rename/recovery must use both the project write transaction and `RenameDirectoryLocks`, acquiring the
+  project lock first and directory locks in canonical sorted order. Hold them through commit or rollback.
 - Current-page label changes should update table/marker state in place and must not reload the image unless the current image actually changes.
 - Model/view changes, especially drag/drop or filtering in table/list models, should include Qt model tests with
   `QAbstractItemModelTester` where practical.

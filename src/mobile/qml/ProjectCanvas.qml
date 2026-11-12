@@ -22,6 +22,7 @@ Item {
     function resetView() {
         if (!view)
             return;
+        cancelFocusRequest();
         cancelInteraction();
         view.zoom = 1;
         view.centerX = 0.5;
@@ -30,6 +31,39 @@ Item {
 
     function clamp(value, low, high) {
         return Math.max(low, Math.min(high, value));
+    }
+
+    function focusSelected() {
+        cancelFocusRequest();
+        if (!view || selectedLabel.length === 0 || imageSource.toString().length === 0)
+            return false;
+        cancelInteraction();
+        view.focusSource = imageSource;
+        view.focusKey = selectedLabel;
+        Qt.callLater(root.applyPendingFocus);
+        return true;
+    }
+
+    function cancelFocusRequest() {
+        if (view) {
+            view.focusSource = "";
+            view.focusKey = "";
+        }
+    }
+
+    function applyPendingFocus() {
+        if (!view || view.focusKey.length === 0)
+            return;
+        if (view.focusSource !== imageSource || view.focusKey !== selectedLabel) {
+            cancelFocusRequest();
+            return;
+        }
+        const marker = markerForKey(view.focusKey);
+        if (!view.ready || !marker)
+            return;
+        cancelFocusRequest();
+        view.centerX = marker.positionX;
+        view.centerY = marker.positionY;
     }
 
     function constrainView() {
@@ -83,6 +117,7 @@ Item {
     function tapAt(point) {
         if (view.blockEdits || !view.ready)
             return;
+        cancelFocusRequest();
         const hits = hitMarkers(point);
         if (hits.length === 1) {
             labelTapped(hits[0].key);
@@ -118,6 +153,7 @@ Item {
     }
 
     function beginDrag(point) {
+        cancelFocusRequest();
         cancelDrag();
         // A finger left over from a pinch is not a new pan or marker gesture.
         // The next fresh press clears blockEdits through TapHandler.
@@ -172,6 +208,7 @@ Item {
     function zoomAt(point, zoom) {
         if (!view.ready)
             return;
+        cancelFocusRequest();
         const anchor = normalized(point);
         view.zoom = clamp(zoom, 1, 8);
         view.centerX = anchor.x - (point.x - width / 2) / view.imageWidth;
@@ -190,8 +227,11 @@ Item {
 
     onImageSourceChanged: resetView()
     onLabelModelChanged: cancelInteraction()
-    onSelectedLabelChanged: if (view && view.moveKey !== selectedLabel)
-        cancelDrag()
+    onSelectedLabelChanged: {
+        cancelFocusRequest();
+        if (view && view.moveKey !== selectedLabel)
+            cancelDrag();
+    }
     onToolModeChanged: cancelInteraction()
     onWidthChanged: {
         cancelInteraction();
@@ -212,6 +252,9 @@ Item {
 
         property size previewSize: Qt.size(0, 0)
         readonly property bool ready: page.status === Image.Ready && previewSize.width > 0 && previewSize.height > 0 && root.width > 0 && root.height > 0
+        onReadyChanged: if (ready) Qt.callLater(root.applyPendingFocus)
+        property url focusSource
+        property string focusKey: ""
         readonly property real fit: ready ? Math.min(Math.max(1, root.width - 16) / previewSize.width, Math.max(1, root.height - 16) / previewSize.height) : 0
         readonly property real imageWidth: previewSize.width * fit * zoom
         readonly property real imageHeight: previewSize.height * fit * zoom
@@ -264,6 +307,8 @@ Item {
         mipmap: true
         visible: view.ready
         onStatusChanged: {
+            if (status === Image.Error)
+                root.cancelFocusRequest();
             if (status !== Image.Ready) {
                 view.previewSize = Qt.size(0, 0);
                 root.cancelInteraction();
@@ -279,6 +324,7 @@ Item {
     Repeater {
         id: markers
         model: root.labelModel
+        onItemAdded: Qt.callLater(root.applyPendingFocus)
         onItemRemoved: root.cancelInteraction()
 
         delegate: CanvasMarker {}

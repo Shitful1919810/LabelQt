@@ -54,6 +54,8 @@ void ImagePageViewController::clear()
 
 void ImagePageViewController::displayCurrentImage()
 {
+    // A new display request supersedes any restoration scheduled for the previous target.
+    m_pendingViewRestore.reset();
     if (m_canvas == nullptr || m_cache == nullptr || !m_projectProvider || !m_currentImageIndexProvider) {
         return;
     }

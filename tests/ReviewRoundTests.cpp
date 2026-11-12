@@ -97,6 +97,44 @@ struct Host {
 class ReviewRoundTests final : public QObject {
     Q_OBJECT
 private slots:
+    void sharedNoteCommandsPreserveFrozenAuthorship()
+    {
+        Host host;
+        auto round = host.round();
+        const auto& page = std::as_const(host.project()).images().first();
+        const auto target = page.labels.first().id();
+        using Op = ReviewNoteEdit::Operation;
+        QVERIFY(ReviewRoundEditService::editNote(round, host.project(),
+            {.operation = Op::Add, .pageId = page.id, .labelId = target, .text = "Comment"}));
+        const auto id = round.notes.first().id;
+        QCOMPARE(round.notes.first().quote, "hello");
+        QVERIFY(ReviewRoundEditService::editNote(round, host.project(),
+            {.operation = Op::Edit, .noteId = id, .text = "Revised comment"}));
+        QVERIFY(ReviewRoundEditService::editNote(round, host.project(),
+            {.operation = Op::Relink, .noteId = id, .pageId = page.id, .labelId = page.labels.last().id()}));
+        QCOMPARE(round.notes.first().labelId, target);
+        QCOMPARE(round.notes.first().quote, "hello");
+        QVERIFY(host.commit(round));
+        round = ReviewRoundService::complete(round, host.project());
+        QVERIFY(host.commit(round));
+        const auto frozen = ReviewRoundService::encode(round, host.project().filePath());
+        for (const auto operation : {Op::Add, Op::Edit, Op::Remove})
+            QVERIFY(!ReviewRoundEditService::editNote(round, host.project(),
+                {.operation = operation, .noteId = id, .pageId = page.id, .labelId = target, .text = "Blocked"}));
+        QCOMPARE(ReviewRoundService::encode(round, host.project().filePath()), frozen);
+        QVERIFY(ReviewRoundEditService::editNote(round, host.project(),
+            {.operation = Op::Resolve, .noteId = id, .resolved = true}));
+        QVERIFY(ReviewRoundEditService::editNote(round, host.project(),
+            {.operation = Op::Relink, .noteId = id, .pageId = page.id, .labelId = target}));
+        QVERIFY(host.commit(round));
+        QVERIFY(round.notes.first().resolved);
+        QCOMPARE(round.notes.first().text, "Revised comment");
+        const auto changed = ReviewRoundService::encode(round, host.project().filePath());
+        QVERIFY(!ReviewRoundEditService::editNote(round, host.project(),
+            {.operation = Op::Relink, .noteId = id, .pageId = page.id, .labelId = QUuid::createUuid()}));
+        QCOMPARE(ReviewRoundService::encode(round, host.project().filePath()), changed);
+    }
+
     void recordRoundTripDoesNotChangeClassicBody()
     {
         Host host;

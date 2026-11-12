@@ -14,6 +14,9 @@ WorkspaceInfo readWorkspaceInfo(const QString& directory);
 QByteArray workspaceManifest(const WorkspaceInfo& info);
 QString privateRoot(const QString& root, bool create);
 qint64 shareCacheSize(const QString& root);
+qint64 estimateZipStagingBytes(const core::Project& project, const TransferLimits& limits,
+                              core::LabelPlusDocument::CommentPolicy comments =
+                                  core::LabelPlusDocument::CommentPolicy::Preserve);
 
 // Internal helpers throw only across the service's expected-returning boundary.
 QString ioError(const QString& path);

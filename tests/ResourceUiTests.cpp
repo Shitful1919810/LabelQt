@@ -89,6 +89,43 @@ class ResourceUiTests final : public QObject {
     Q_OBJECT
 
 private slots:
+    void imageCompletionStopsAfterReceiverInvalidatesCache_data()
+    {
+        QTest::addColumn<bool>("destroy");
+        QTest::newRow("clear") << false;
+        QTest::newRow("destroy") << true;
+    }
+
+    void imageCompletionStopsAfterReceiverInvalidatesCache()
+    {
+        QFETCH(bool, destroy);
+        using labelqt::services::ImagePageCache;
+        QTemporaryDir directory;
+        QImage image(16, 16, QImage::Format_RGB32);
+        image.fill(Qt::white);
+        const auto path = directory.filePath("page.png");
+        QVERIFY(image.save(path));
+        auto gate = std::make_shared<DecodeGate>();
+        ReleaseDecoders release{gate};
+        auto cache = std::make_unique<ImagePageCache>(gatedLoader(gate));
+        int notifications = 0;
+        connect(cache.get(), &ImagePageCache::imageLoaded, this, [&] {
+            ++notifications;
+            if (destroy)
+                cache.reset();
+            else
+                cache->clear();
+        });
+        cache->requestImage(path, QSize(16, 16));
+        cache->requestImage(path, QSize(16, 16));
+        QTRY_COMPARE(gate->started.load(), 1);
+        gate->permits.release();
+        QTRY_COMPARE(notifications, 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(notifications, 1);
+        QCOMPARE(bool(cache), !destroy);
+    }
+
     void imageLoadPolicies_data()
     {
         QTest::addColumn<QString>("extension");

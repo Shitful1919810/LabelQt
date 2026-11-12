@@ -732,8 +732,7 @@ void MainWindow::createCentralWidget()
     });
     connect(m_labelView, &QTableView::customContextMenuRequested, this, &MainWindow::showLabelContextMenu);
     connect(m_textEdit, &QPlainTextEdit::textChanged, this, &MainWindow::updateCurrentLabelText);
-    connect(m_labelModel, &LabelTableModel::labelEditRequested, this, &MainWindow::updateLabelFromTable,
-            Qt::QueuedConnection);
+    connect(m_labelModel, &LabelTableModel::labelEditRequested, this, &MainWindow::updateLabelFromTable);
     connect(m_labelModel, &LabelTableModel::labelsReorderRequested, this, &MainWindow::reorderLabels);
     connect(m_labelTextDelegate, &LabelTextDelegate::editorHeightHintChanged, this,
             [this](const QPersistentModelIndex& index, QWidget* editor, int height) {
@@ -1134,26 +1133,25 @@ void MainWindow::openRecentProjectFromAction()
         return;
     }
 
-    if (!promptToSaveIfDirty()) {
-        return;
-    }
-    saveProjectSessionState();
-
     const QString path = action->data().toString();
     if (path.isEmpty()) {
         return;
     }
 
-    if (!QFileInfo::exists(path)) {
-        QTimer::singleShot(0, this, [this, path]() {
+    // Saving can rebuild this menu too, so leave the action's trigger stack first.
+    QTimer::singleShot(0, this, [this, path]() {
+        if (isProjectEditingBlocked() || !promptToSaveIfDirty()) {
+            return;
+        }
+        saveProjectSessionState();
+        if (!QFileInfo::exists(path)) {
             m_sessionStateStore.removeRecentProjectPath(path);
             updateRecentProjectsMenu();
             showMainWindowWarning(this, tr("Open failed"), tr("%1 does not exist.").arg(path));
-        });
-        return;
-    }
-
-    QTimer::singleShot(0, this, [this, path]() { openProjectFile(path); });
+            return;
+        }
+        openProjectFile(path);
+    });
 }
 
 void MainWindow::openPreferences()
@@ -1934,27 +1932,62 @@ void MainWindow::updateLabelFromTable(int sourceIndex, int column, QVariant newV
     commitPendingTextEdit();
 
     labelqt::core::ImageEntry* image = currentImage();
-    if (image == nullptr || sourceIndex < 0 || sourceIndex >= image->labels.size()) {
+    if (image == nullptr || sourceIndex < 0 || sourceIndex >= image->labels.size() ||
+        m_labelEditController == nullptr) {
         return;
     }
 
-    if (column == LabelTableModel::TextColumn && m_labelEditController != nullptr) {
-        if (m_canvas != nullptr) {
-            m_canvas->clearLabelTextPreview(sourceIndex);
-        }
+    const auto session = m_projectController.documentSession();
+    const auto pageId = image->id;
+    const auto labelId = image->labels.at(sourceIndex).id();
+    const bool updateDetails = sourceIndex != m_suppressedTableCommitSelectionSourceIndex;
+    // Commit to the document before navigation/save; defer view resets until commitData returns.
+    if (column == LabelTableModel::TextColumn) {
         m_labelEditController->setLabelText(m_currentImageIndex, sourceIndex, newValue.toString());
-        m_labelModel->labelChanged(sourceIndex);
-        refreshCanvasLabels();
+        m_canvas->clearLabelTextPreview(sourceIndex);
     }
-    if (column == LabelTableModel::GroupColumn && m_labelEditController != nullptr) {
+    else if (column == LabelTableModel::GroupColumn) {
         m_labelEditController->setLabelGroup(m_currentImageIndex, sourceIndex, newValue.toString());
-        refreshLabelViews();
+    }
+    else {
+        return;
     }
 
-    const bool commitStillTargetsCurrentSelection = m_currentLabelIndex < 0 || sourceIndex == m_currentLabelIndex;
-    if (commitStillTargetsCurrentSelection && sourceIndex != m_suppressedTableCommitSelectionSourceIndex) {
-        selectLabel(sourceIndex);
-    }
+    QTimer::singleShot(0, this, [this, session, pageId, labelId, column, updateDetails]() {
+        const auto* page = currentImage();
+        if (m_projectController.documentSession() != session || page == nullptr || page->id != pageId) {
+            return;
+        }
+        const auto it = std::find_if(page->labels.cbegin(), page->labels.cend(),
+                                     [labelId](const auto& label) { return label.id() == labelId; });
+        if (it == page->labels.cend()) {
+            return;
+        }
+        const int index = static_cast<int>(it - page->labels.cbegin());
+        if (column == LabelTableModel::TextColumn) {
+            const bool hasEditor = m_editorStateController->hasActiveLabelTextEditor(
+                m_currentImageIndex, index,
+                m_labelModel->index(m_labelModel->rowForSourceIndex(index), LabelTableModel::TextColumn));
+            // dataChanged would reset a replacement editor to the committed text.
+            if (!hasEditor) {
+                m_labelModel->labelChanged(index);
+            }
+            refreshCanvasLabels();
+            if (updateDetails && index == m_currentLabelIndex && !hasEditor &&
+                m_editorStateController->activeMode() == EditorStateController::Mode::None) {
+                const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
+                updateCurrentLabelDetails(index);
+            }
+        }
+        else {
+            const auto selection = selectedLabelIndexes();
+            const int primary = m_currentLabelIndex;
+            const QScopedValueRollback updatingUi(m_isUpdatingUi, true);
+            refreshLabelViews();
+            m_labelSelectionController->selectIndexes(selection, primary,
+                                                      {LabelSelectionController::SelectionOrigin::Programmatic, false});
+        }
+    });
 }
 
 void MainWindow::previewLabelTextFromTableEditor(QPersistentModelIndex index, const QString& text)
@@ -1983,7 +2016,8 @@ void MainWindow::clearLabelTextPreviewFromTableEditor(QPersistentModelIndex inde
     }
 
     const int sourceIndex = m_labelModel->sourceIndexForRow(index.row());
-    if (sourceIndex >= 0) {
+    if (sourceIndex >= 0 &&
+        !m_editorStateController->hasActiveLabelTextEditor(m_currentImageIndex, sourceIndex, index)) {
         m_canvas->clearLabelTextPreview(sourceIndex);
     }
 }
@@ -2260,17 +2294,25 @@ void MainWindow::selectAdjacentVisibleLabelFromShortcut(bool previous)
             return;
         }
 
+        const auto session = m_projectController.documentSession();
+        const auto& targetPage = project().images().at(target.imageIndex);
+        const auto pageId = targetPage.id;
+        const auto labelId = targetPage.labels.at(target.labelIndex).id();
         m_suppressedTableCommitSelectionSourceIndex = navigationLabelIndex;
         m_isTableEditorShortcutNavigation = true;
         commitActiveTextInput();
-        QTimer::singleShot(0, this, [this, target]() {
+        QTimer::singleShot(0, this, [this, target, session, pageId, labelId]() {
+            if (m_projectController.documentSession() != session) {
+                return;
+            }
             if (target.imageIndex < 0 || target.imageIndex >= project().images().size()) {
                 m_suppressedTableCommitSelectionSourceIndex = -1;
                 m_isTableEditorShortcutNavigation = false;
                 return;
             }
             const labelqt::core::ImageEntry& image = project().images().at(target.imageIndex);
-            if (target.labelIndex < 0 || target.labelIndex >= image.labels.size() ||
+            if (image.id != pageId || target.labelIndex < 0 || target.labelIndex >= image.labels.size() ||
+                image.labels.at(target.labelIndex).id() != labelId ||
                 !isLabelVisibleByGroupFilter(image.labels.at(target.labelIndex))) {
                 m_suppressedTableCommitSelectionSourceIndex = -1;
                 m_isTableEditorShortcutNavigation = false;
@@ -2278,7 +2320,10 @@ void MainWindow::selectAdjacentVisibleLabelFromShortcut(bool previous)
             }
             selectLabelAndCenter(target.imageIndex, target.labelIndex);
             editCurrentLabelText();
-            QTimer::singleShot(0, this, [this]() {
+            QTimer::singleShot(0, this, [this, session]() {
+                if (m_projectController.documentSession() != session) {
+                    return;
+                }
                 m_suppressedTableCommitSelectionSourceIndex = -1;
                 m_isTableEditorShortcutNavigation = false;
             });
@@ -2432,6 +2477,11 @@ void MainWindow::refreshProjectUi()
 void MainWindow::detachProjectViewsFromProjectData()
 {
     closeCanvasLabelTextEditor();
+    m_suppressedTableCommitSelectionSourceIndex = -1;
+    m_isTableEditorShortcutNavigation = false;
+    if (m_imagePageViewController != nullptr) {
+        m_imagePageViewController->clear();
+    }
     resetPendingTextEdit();
     m_isUpdatingUi = true;
     if (m_labelView != nullptr && m_labelView->selectionModel() != nullptr) {

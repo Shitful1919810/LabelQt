@@ -2,6 +2,7 @@
 #include "core/ProjectMetadataService.h"
 #include <QCoreApplication>
 #include <QJsonArray>
+#include <algorithm>
 #include <stdexcept>
 
 namespace labelqt::services {
@@ -43,6 +44,51 @@ ReviewEditToken ReviewRoundEditService::token(ProjectController& controller)
 {
     const auto& revisions = controller.revisions();
     return {revisions.session(), revisions.revision()};
+}
+
+std::expected<void, QString> ReviewRoundEditService::editNote(ReviewRound& round, const labelqt::core::Project& project,
+                                                              const ReviewNoteEdit& edit)
+{
+    using Operation = ReviewNoteEdit::Operation;
+    const auto error = [](const char* message) {
+        return std::unexpected(QCoreApplication::translate("ReviewRoundEditService", message));
+    };
+    if (round.after && edit.operation != Operation::Resolve && edit.operation != Operation::Relink)
+        return error(QT_TRANSLATE_NOOP("ReviewRoundEditService",
+                                       "Completed comments are read-only. Start a new round to add or edit comments."));
+    if ((edit.operation == Operation::Add || edit.operation == Operation::Edit) && edit.text.trimmed().isEmpty())
+        return error(QT_TRANSLATE_NOOP("ReviewRoundEditService", "The note text must not be empty."));
+    auto note =
+        std::find_if(round.notes.begin(), round.notes.end(), [&](const auto& item) { return item.id == edit.noteId; });
+    if (edit.operation != Operation::Add && note == round.notes.end())
+        return error(QT_TRANSLATE_NOOP("ReviewRoundEditService", "The proofreading note no longer exists."));
+    if (edit.operation == Operation::Add || edit.operation == Operation::Relink) {
+        const auto target = ReviewRoundService::locate(project, edit.pageId, edit.labelId);
+        if (edit.pageId.isNull() || target.first < 0 || (!edit.labelId.isNull() && target.second < 0) ||
+            (edit.operation == Operation::Relink && edit.labelId.isNull()))
+            return error(QT_TRANSLATE_NOOP("ReviewRoundEditService", "The note target no longer exists."));
+        if (edit.operation == Operation::Relink) {
+            note->associatedPageId = edit.pageId;
+            note->associatedLabelId = edit.labelId;
+        }
+        else {
+            ProofreadNote added;
+            added.pageId = edit.pageId;
+            added.labelId = edit.labelId;
+            added.pageName = project.images().at(target.first).name;
+            if (target.second >= 0)
+                added.quote = project.images().at(target.first).labels.at(target.second).text();
+            added.text = edit.text;
+            round.notes.append(std::move(added));
+        }
+    }
+    else if (edit.operation == Operation::Edit)
+        note->text = edit.text;
+    else if (edit.operation == Operation::Remove)
+        round.notes.erase(note);
+    else if (edit.operation == Operation::Resolve)
+        note->resolved = edit.resolved;
+    return {};
 }
 
 std::expected<void, QString> ReviewRoundEditService::commit(ProjectController& controller,

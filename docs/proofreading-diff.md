@@ -23,7 +23,7 @@ LabelQt 在可信的同一工程身份谱系内优先按页面与 Label UUID 比
 - `LabelSequenceDiffService`：只负责一页内的 label 序列对齐，输出旧 label 和新 label 的对应关系，以及新增、删除和移动信息。
 - `TextDiffService`：只负责单个已匹配 label 的文本内部差异切分。它使用 `diff-match-patch`，失败时退化为整段删除/插入，不能把异常抛到 UI 层。
 - `TextDiffHtmlRenderer`：把 `TextDiffService` 的结构化结果渲染为可嵌入对话框或报告的 HTML 片段。
-- `ProofreadReportService`：生成校对 HTML 报告，不弹文件选择窗口或读取 UI 状态。报告按左右页面配对分组，双图展示 marker；轮次使用“原译稿 / 校对稿”，外部比较使用“当前工程 / 目标工程”。压缩图像以内嵌 base64 写入单个 HTML，两侧路径相同时只嵌入一次。页面级或失联批注不生成无依据的 marker，同名删除页和新增页不能混为同一配对。
+- `ProofreadReportService`：生成校对 HTML/PDF 报告，不弹文件选择窗口或读取 UI 状态。报告按左右页面配对分组，双图展示 marker；轮次使用原译稿与校对稿，外部比较使用“当前工程 / 目标工程”。HTML 图像内嵌 base64，同路径只嵌入一次；PDF 原生分页并按图片对释放预览资源。页面级或失联批注不生成无依据的 marker，同名删除页和新增页不能混为同一配对。共享内容及事务边界见 [报告设计](proofreading-reports.md)。
 - `ProofreadChangesDialog`：展示 `ReviewChange`，接收服务层的完整比较计划；人工配对调用同一计划，不能由 UI 从差异行反推页面关系。预览标签直接取左右快照。
 
 这个边界很重要：UI 不应该知道 label 如何匹配，编辑控制器也不应该承担 diff 逻辑。
@@ -161,13 +161,15 @@ LabelQt 在可信的同一工程身份谱系内优先按页面与 Label UUID 比
 - 改页内 label 匹配策略时优先修改 `LabelSequenceDiffService`，不要把 label 匹配条件散落到 UI 或 `ProjectComparisonService`。
 - 新增 diff 展示字段时，先扩展 `ReviewChange`，再让对话框展示。
 - 单个 label 的文本内部切分仍由 `TextDiffService` 处理，HTML 展示由 `TextDiffHtmlRenderer` 处理，不要把文本 diff、HTML 生成和 label 序列 diff 混在一起。
-- `TextDiffHtmlRenderer` 会把换行符渲染成可见的 `↵` 标记再换行，使新增或删除换行在校对窗口和 HTML 报告里都能被看见。
+- `TextDiffHtmlRenderer` 将真实换行渲染为内嵌 PNG 回车箭头后再换行；灰/绿/红分别表示未变/新增/删除。
+  图标不依赖系统的 `↵` 字形，Qt Quick、Widgets、HTML/PDF 共用，避免 Android 缺字方框。
+  图片以 data URL 内嵌，无外部文件或网络依赖；每种状态只生成一次，可供并发报告任务复用。
 - 校对报告导出逻辑应继续放在 `ProofreadReportService`，对话框只负责收集保存路径和本地化文案。报告图像压缩和内嵌策略属于服务层，不应散落到 UI。
 - 身份与代次由 `ProjectIdentityService` 管理，校对服务不另建身份系统。
 
 ## 变更筛选与摘要分类
 
-校对变更窗口可以同时按页面、变更类型和摘要项过滤。三个过滤条件取交集；导出 HTML 校对报告时只导出当前过滤后仍可见的变更。
+校对变更窗口可以同时按页面、变更类型和摘要项过滤。三个过滤条件取交集；导出 HTML/PDF 校对报告时只导出当前过滤后仍可见的变更。
 
 摘要项由 `ReviewChangeClassifier` 统一计算，UI 表格和 `ProofreadReportService` 不应各自重新判断：
 

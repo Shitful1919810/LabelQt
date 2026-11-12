@@ -2,15 +2,52 @@
 
 #include "services/proofread/TextDiffService.h"
 
+#include <QBuffer>
+#include <QImage>
+#include <QPainter>
+#include <QPainterPath>
+
+#include <array>
+
 namespace labelqt::services {
 namespace {
 
-QString newlineMarkerHtml(const QString& style)
+QString newlineImage(const QColor& background)
 {
-    return QStringLiteral(
-               "<span style=\"display:inline-block;border-radius:3px;padding:0 3px;margin:0 2px;"
-               "font-size:85%;line-height:1.15;text-decoration:none;%1\">↵</span><br/>")
-        .arg(style);
+    // Inline PNG works in Quick/Widgets rich text, browsers and PDF without a symbol font or external resource.
+    QImage image(56, 48, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.scale(4, 4);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(background);
+    painter.drawRoundedRect(QRectF(0, 0, 14, 12), 2, 2);
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(Qt::white, 1.25, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    QPainterPath arrow;
+    arrow.moveTo(10.5, 2.5);
+    arrow.lineTo(10.5, 7);
+    arrow.lineTo(3.5, 7);
+    arrow.moveTo(5.5, 4.5);
+    arrow.lineTo(3, 7);
+    arrow.lineTo(5.5, 9.5);
+    painter.drawPath(arrow);
+    painter.end();
+    QByteArray png;
+    QBuffer buffer(&png);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "PNG");
+    return QStringLiteral("<img alt=\"[LF]\" width=\"14\" height=\"12\" src=\"data:image/png;base64,%1\"/><br/>")
+        .arg(QString::fromLatin1(png.toBase64()));
+}
+
+QString newlineMarkerHtml(TextDiffOperation operation)
+{
+    // Immutable function-local initialization is safe for concurrent report workers.
+    static const std::array markers{newlineImage(QColor("#475569")), newlineImage(QColor("#14532d")),
+                                    newlineImage(QColor("#7f1d1d"))};
+    return markers.at(static_cast<size_t>(operation));
 }
 
 QString styledSpan(const QString& text, const QString& style)
@@ -24,7 +61,7 @@ QString styledSpan(const QString& text, const QString& style)
     return QStringLiteral("<span style=\"%1\">%2</span>").arg(style, text.toHtmlEscaped());
 }
 
-QString escapedDiffText(const QString& text, const QString& textStyle, const QString& newlineStyle)
+QString escapedDiffText(const QString& text, const QString& textStyle, TextDiffOperation operation)
 {
     QString html;
     QString segment;
@@ -32,7 +69,7 @@ QString escapedDiffText(const QString& text, const QString& textStyle, const QSt
         if (ch == QLatin1Char('\n')) {
             html += styledSpan(segment, textStyle);
             segment.clear();
-            html += newlineMarkerHtml(newlineStyle);
+            html += newlineMarkerHtml(operation);
             continue;
         }
         segment.append(ch);
@@ -64,18 +101,16 @@ QString TextDiffHtmlRenderer::renderInlineDiff(const QString& beforeText, const 
         }
         switch (chunk.operation) {
         case TextDiffOperation::Equal:
-            html += escapedDiffText(chunk.text, {}, QStringLiteral("border:1px solid rgba(148,163,184,.85);"
-                                                                   "color:#e5e7eb;background:rgba(15,23,42,.65);"));
+            html += escapedDiffText(chunk.text, {}, chunk.operation);
             break;
         case TextDiffOperation::Delete:
             html += escapedDiffText(chunk.text,
                                     QStringLiteral("background:#7f1d1d;color:#ffffff;"
                                                    "text-decoration:line-through;"),
-                                    QStringLiteral("border:1px solid #fca5a5;color:#ffffff;background:#7f1d1d;"));
+                                    chunk.operation);
             break;
         case TextDiffOperation::Insert:
-            html += escapedDiffText(chunk.text, QStringLiteral("background:#14532d;color:#ffffff;"),
-                                    QStringLiteral("border:1px solid #86efac;color:#ffffff;background:#14532d;"));
+            html += escapedDiffText(chunk.text, QStringLiteral("background:#14532d;color:#ffffff;"), chunk.operation);
             break;
         }
     }

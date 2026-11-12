@@ -46,9 +46,13 @@ public:
     {
         setError({});
     }
-    Q_INVOKABLE void startRound(bool replaceCompleted = false);
-    Q_INVOKABLE void completeRound();
-    Q_INVOKABLE bool addNote(QString pageId, QString labelId, QString text);
+    Q_INVOKABLE QString editToken() const;
+    Q_INVOKABLE bool startRound(bool replaceCompleted = false, QString expectedToken = {});
+    Q_INVOKABLE bool completeRound(QString expectedToken = {});
+    Q_INVOKABLE bool addNote(QString pageId, QString labelId, QString text, QString expectedToken = {});
+    Q_INVOKABLE bool updateNote(QString noteId, QString text, QString expectedToken);
+    Q_INVOKABLE bool removeNote(QString noteId, QString expectedToken);
+    Q_INVOKABLE bool relinkNote(QString noteId, QString pageId, QString labelId, QString expectedToken);
     Q_INVOKABLE void resolveNote(QString noteId, bool resolved);
     Q_INVOKABLE void calculateChanges();
 
@@ -61,7 +65,9 @@ signals:
 private:
     using Round = std::optional<labelqt::services::ReviewRound>;
     using Result = std::expected<QVariantList, QString>;
-    bool edit(const QString& description, const std::function<QString(Round&)>& mutate);
+    bool edit(const QString& description, const std::function<QString(Round&)>& mutate,
+              const QString& expectedToken = {});
+    bool editNote(const labelqt::services::ReviewNoteEdit& edit, const QString& expectedToken = {});
     void setError(QString error);
     labelqt::services::ProjectController& m_controller;
     labelqt::core::UndoStack& m_undo;

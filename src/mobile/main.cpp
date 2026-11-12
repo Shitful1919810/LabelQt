@@ -1,6 +1,7 @@
 #include "core/AppPreferences.h"
 #include "core/TranslationManager.h"
 #include "mobile/MobileDocument.h"
+#include "mobile/MobileSearchController.h"
 #include "mobile/MobileReviewController.h"
 #include "mobile/MobileWorkspaceController.h"
 #include "platform/android/AndroidFileBridge.h"
@@ -43,6 +44,7 @@ int main(int argc, char* argv[])
     }
 
     labelqt::mobile::MobileDocument document;
+    labelqt::mobile::MobileSearchController search(document);
     document.setGroupStyles(preferences.groupStyles());
     labelqt::mobile::MobileWorkspaceController workspace(document, workspaceRoot);
     labelqt::platform::AndroidFileBridge files;
@@ -71,6 +73,7 @@ int main(int argc, char* argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("mobileDocument", &document);
+    engine.rootContext()->setContextProperty("mobileSearch", &search);
     engine.rootContext()->setContextProperty("workspaceController", &workspace);
     engine.rootContext()->setContextProperty("androidFiles", &files);
     engine.rootContext()->setContextProperty("mobileReview", &review);

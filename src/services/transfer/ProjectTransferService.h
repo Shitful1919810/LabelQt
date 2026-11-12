@@ -54,7 +54,9 @@ class ProjectTransferService final {
 public:
     explicit ProjectTransferService(QString root, TransferLimits limits = {});
 
-    // Invalid directories are skipped; an inaccessible/unsafe root yields an empty list. No writes.
+    // Listing is independent of import/export limits. Safe manifests remain listed even when
+    // TXT inspection fails; diagnostic describes that failure and reviewActive is then false.
+    // Invalid manifests/unsafe paths are skipped; an inaccessible root yields an empty list. No writes.
     QVector<WorkspaceInfo> listWorkspaces() const;
     // The one-argument form copies referenced adjacent local images when present. Android callers
     // staging only a TXT without sibling authorization must use the false overload.

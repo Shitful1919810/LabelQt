@@ -28,6 +28,7 @@ set(LABELQT_SERVICE_SOURCES
     services/io/ProjectFileMonitor.cpp
     services/io/ProjectFileMonitor.h
     services/io/ImagePageCache.h
+    services/io/RenameDirectoryLocks.h
     services/label/LabelClipboardService.cpp
     services/label/LabelClipboardService.h
     services/label/LabelEditController.cpp
@@ -60,6 +61,8 @@ set(LABELQT_SERVICE_SOURCES
     services/proofread/ProjectComparisonService.h
     services/proofread/ProofreadReportService.cpp
     services/proofread/ProofreadReportService.h
+    services/proofread/ProofreadReportContent.h
+    services/proofread/ProofreadPdfReport.cpp
     services/proofread/ReviewChangeClassifier.cpp
     services/proofread/ReviewChangeClassifier.h
     services/proofread/ReviewMetadataService.cpp

@@ -292,12 +292,14 @@ public class LabelQtActivity extends QtActivity {
                         || !OsConstants.S_ISREG(Os.lstat(candidate.getAbsolutePath()).st_mode)
                         || !file.canRead())
                     throw new BridgeException(SHARE_FAILED);
-                String suffix = safeExtension(file.getName());
-                if (suffix == null)
+                String name = file.getName().toLowerCase(Locale.ROOT);
+                String mime = name.endsWith(".zip") ? "application/zip"
+                        : name.endsWith(".pdf") ? "application/pdf" : null;
+                if (mime == null)
                     throw new BridgeException(UNSUPPORTED_TYPE);
                 Uri uri = FileProvider.getUriForFile(activity, activity.getPackageName() + ".files", file);
                 Intent send = new Intent(Intent.ACTION_SEND);
-                send.setType("zip".equals(suffix) ? "application/zip" : "text/plain");
+                send.setType(mime);
                 send.putExtra(Intent.EXTRA_STREAM, uri);
                 send.setClipData(ClipData.newRawUri("", uri));
                 send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);

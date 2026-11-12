@@ -17,6 +17,10 @@ Android 技术预览已引入独立 Qt Quick 前端；完整范围与验收基�
 现有选择、编辑器及图片显示控制器中的无控件规则应按需抽取共享，具体 Widgets/Quick 绑定留在各前端；
 不得复制正文编辑、撤销、校对或文件事务逻辑，也不得为关掉移动 Python 而删除共用版本和提交机制。
 
+桌面 HTML/PDF 与移动 PDF 报告共用 `ProofreadReportService` / `ProofreadReportContent`，
+QtGui 原生分页渲染独立于两套前端。移动报告适配位于 `ProofreadReportShareService`，
+与 ZIP 共用 `WorkspaceStorageService` 的只读分享文件发布事务，详见 [报告设计](proofreading-reports.md)。
+
 - `LabelQtShared` 编译 Core 与平台无关服务；`LabelQtDesktop` 编译 Widgets、Python runner 与 QtKeychain。
   桌面测试链接生产目标，不再各自维护一份服务源文件清单。Android 不链接 Widgets、Python runner 或 QtKeychain。
 - `ProjectTransferService` 负责导入/导出编排、元数据所有权验证、图源重定位和暂存发布；
@@ -116,6 +120,8 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `ProjectController`：持有当前打开的 `Project`，负责打开、保存、新建工程、未保存修改状态和自动备份写入。
 - `FileRevision`：流式内容摘要；`ProjectController` 在加载、保存、覆盖确认和改名提交之间维护磁盘版本。
 - `ProjectFileTransaction`：工程级写入锁、最终磁盘版本复核、原子提交与上一磁盘版本保护。
+  图片事务另由 `RenameDirectoryLocks` 协调所有涉及目录，避免不同 TXT 共享图源时交错改名；
+  锁顺序和恢复门禁见 [持久化安全](persistence-safety.md)。
   改名及恢复工作流须在文件移动、工程写入和失败回滚全程持锁；格式层仍只负责序列化。
 - `ProjectLocationService`：另存、备份、恢复以及旧撤销快照的来源路径重定位。窗口不能自行拼接相对引用。
 - `ProjectRecoveryService`：版本化备份索引、保留策略、恢复副本与文件事务回放。`ProjectRecoveryController/Dialog` 只编排入口、确认和只读预览。
@@ -140,6 +146,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `LabelEditController`：新增、删除、移动、改文本、改类别、批量切换、重排标签和分组编辑，并注册撤销/重做。
 - `LabelNavigator`：在当前分组筛选下查找上一条/下一条可见标签，跨页导航逻辑放这里而不是写在 UI 事件处理里。
 - `ImagePageCache`：异步加载图片、维护 LRU 缓存、预加载相邻页。UI 只请求“显示当前页”，不直接管理加载线程和缓存命中。
+  完成通知允许接收方清空或销毁缓存；每次通知后校验存活性与代数，不能继续向旧请求广播。
   GUI 线程拥有 `QFutureWatcher`；工作线程只捕获 loader 和路径等值，不接触 QObject。
   加载前后、结果交付和缓存命中均验证文件内容摘要；变化时最多重试一次。清空缓存递增代次，旧任务不能回填新请求。
 - `AutomationService` / `AutomationRunner`：脚本发现与密钥，以及进程、日志、取消和临时文件生命周期；不接收活动 Project。
@@ -167,6 +174,8 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - `ProjectViewController`：页码下拉框、来源显示、翻页控件刷新。
 - `LabelSelectionController`：右侧表格、左侧标签标记和当前标签之间的选择同步。`Ctrl` 多选、`Shift` 连续选择，以及“用户点表格”“程序同步选择”“修订模式下悬停标记”等选择来源语义应集中在这里。新增选择路径时，应通过 `selectSingle()`、`selectIndexes()` 或 `clearSelection()` 传入正确来源，不要在 `MainWindow` 里手写表格/画布双向同步状态。
 - `EditorStateController`：检测、提交和恢复当前活动文本编辑器。快捷键切换标签时保持编辑状态的逻辑放这里。
+  表格提交同步修改工程，避免立即切页/保存时错写或漏写；可能重建视图的刷新延后，按会话/页/标签身份复核。
+  延迟刷新不得重新夺回选择、覆盖新编辑器草稿；编辑器是否存在由该控制器判断，不在 MainWindow 重复探测。
 - `MainWindowShortcutController`：显式注册标签工作区后处理标签 / 翻页快捷键，只匹配按键并调用回调，不直接改工程数据；查找与其他表单保持原生键盘行为。翻页不再另设窗口级 QAction 重复截获。
 - `AutomationController`：自动化菜单构建、脚本发现、脚本运行、日志窗口、取消运行和结果派发。不要再把自动化菜单和进程生命周期散落回 `MainWindow`。
 - `ProofreadingController`：校对轮次与批注的交互编排、外部工程选择与异步比较、结果对话框启动和状态更新。`MainWindow` 只提供当前工程、偏好、选择跳转等回调，持久化提交委托 `ReviewRoundEditService`。
@@ -228,6 +237,7 @@ src/ui/widgets            可复用小控件、主题、对话框窗口标志等
 - 撤销/重做如果仍在当前页，应保持缩放和视图中心。
 
 由于图片通过 `ImagePageCache` 异步加载，恢复缩放和视图中心必须等目标 pixmap 安装进 `ImageCanvas` 后再做。需要恢复视图时，使用 `ImagePageViewController::restoreViewAfterCurrentImageDisplayed()`。
+新的图片显示请求使旧恢复请求失效；工程视图解绑时同时清空显示控制器，不能让上一工程的缩放/中心应用到新工程。
 
 `ImageCanvas::setImageLoading()` 表示真实换页，会清理当前页瞬时状态。`ImageCanvas::setImage()` 完成同一页加载后应保留已经恢复的选中标签标记，避免异步完成回调清掉会话恢复结果。
 

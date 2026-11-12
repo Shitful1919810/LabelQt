@@ -1,6 +1,7 @@
 #include "core/LabelPlusDocument.h"
 #include "core/ProjectMetadataService.h"
 #include "mobile/MobileDocument.h"
+#include "mobile/MobileSearchController.h"
 #include "mobile/MobileReviewController.h"
 #include "services/proofread/ReviewChangeClassifier.h"
 #include "services/proofread/TextDiffHtmlRenderer.h"
@@ -72,6 +73,64 @@ struct Host {
 class MobileDocumentTests final : public QObject {
     Q_OBJECT
 private slots:
+    void searchUsesSharedRulesAndRejectsStaleResults()
+    {
+        Host host;
+        QVERIFY(host.document.openProject(host.writeProject()));
+        MobileSearchController search(host.document);
+        search.configure("FIRST", false, 0, 0, -1, true, {});
+        QTRY_VERIFY(!search.busy());
+        QCOMPARE(search.results().size(), 1);
+        search.configure("FIRST", true, 0, 0, -1, true, {});
+        QTRY_VERIFY(!search.busy());
+        QVERIFY(search.results().isEmpty());
+        search.configure("second", false, 0, 0, -1, false, {"dialogue"});
+        QTRY_VERIFY(!search.busy());
+        QVERIFY(search.results().isEmpty());
+        search.configure("next", false, 0, 0, -1, true, {});
+        QTRY_VERIFY(!search.busy());
+        QCOMPARE(search.results().size(), 1);
+        host.document.setVisibleGroups({});
+        QVERIFY(search.navigate(0));
+        QCOMPARE(host.document.pageIndex(), 1);
+        QCOMPARE(host.document.selectedLabel(), key(host.label(1, 0).id()));
+        QVERIFY(host.document.visibleGroups().contains("dialogue"));
+        host.document.updateText("changed while a result was visible");
+        QVERIFY(!search.navigate(0));
+        QTRY_VERIFY(!search.busy());
+        QVERIFY(search.results().isEmpty());
+        search.configure("first", false, 1, 0, -1, true, {});
+        QTRY_VERIFY(!search.busy());
+        QVERIFY(search.results().isEmpty());
+        host.document.setPage(0);
+        QTRY_VERIFY(!search.busy());
+        QCOMPARE(search.results().size(), 1);
+        search.configure("third", false, 0, 0, -1, true, {});
+        host.document.closeRemovedProject();
+        QTRY_VERIFY(!search.busy());
+        QVERIFY(search.results().isEmpty());
+    }
+
+    void searchBoundsResultsAndEscapesMarkup()
+    {
+        Host host;
+        QVERIFY(host.document.openProject(host.writeProject()));
+        host.document.selectLabel(key(host.label().id()));
+        host.document.updateText(QString("<tag>") + QString(1500, QLatin1Char('a')));
+        QVERIFY(host.document.commitText());
+        MobileSearchController search(host.document);
+        search.configure("a", false, 0, 0, -1, true, {});
+        QTRY_VERIFY(!search.busy());
+        QCOMPARE(search.results().size(), 1000);
+        QVERIFY(search.truncated());
+        QVERIFY(search.results().first().toMap().value("snippet").toString().contains("&lt;"));
+        ProjectTextQuery query;
+        query.text = "a";
+        const auto unlimited = ProjectTextSearchService::search(host.project(), query);
+        QVERIFY(unlimited.matches.size() > 1000);
+        QVERIFY(!unlimited.truncated);
+    }
+
     void openArgumentsSurviveSaveCallbacks()
     {
         Host host;
@@ -549,6 +608,56 @@ private slots:
         QCOMPARE((**round).notes.first().labelId, QUuid(labelId));
         QCOMPARE((**round).notes.first().quote, "first");
         QVERIFY((**round).after.has_value());
+    }
+
+    void noteEditingUsesTokensAndPreservesOriginalAttribution()
+    {
+        Host host;
+        const auto path = host.writeProject();
+        QVERIFY(host.document.openProject(path));
+        host.review.startRound();
+        const auto page = key(host.project().images().first().id);
+        const auto label = key(host.label().id());
+        QVERIFY(host.review.addNote(page, label, "Original note", host.review.editToken()));
+        const auto id = host.review.notes().first().toMap().value("key").toString();
+        QCOMPARE(host.review.notes().first().toMap().value("quote").toString(), "first");
+        const auto stale = host.review.editToken();
+        QVERIFY(host.review.updateNote(id, "Edited note", stale));
+        QVERIFY(!host.review.updateNote(id, "Stale note", stale));
+        QVERIFY(!host.review.removeNote(id, stale));
+        QCOMPARE(host.review.notes().first().toMap().value("text").toString(), "Edited note");
+        host.document.undo();
+        QCOMPARE(host.review.notes().first().toMap().value("text").toString(), "Original note");
+        host.document.redo();
+        host.document.selectLabel(label);
+        host.document.deleteSelected();
+        QVERIFY(host.review.notes().first().toMap().value("orphan").toBool());
+        QVERIFY(!host.document.navigateToLabel(page, label));
+        QVERIFY(host.document.navigateToLabel(page, {}));
+        QVERIFY(host.document.selectedLabel().isEmpty());
+        const auto other = key(host.label(0, 2).id());
+        QVERIFY(host.review.relinkNote(id, page, other, host.review.editToken()));
+        QVERIFY(!host.review.notes().first().toMap().value("orphan").toBool());
+        QCOMPARE(host.review.notes().first().toMap().value("labelKey").toString(), other);
+        QCOMPARE(host.review.notes().first().toMap().value("quote").toString(), "first");
+        QVERIFY(host.document.navigateToLabel(page, other));
+        QCOMPARE(host.document.selectedLabel(), other);
+        QVERIFY(host.review.removeNote(id, host.review.editToken()));
+        QVERIFY(host.review.notes().isEmpty());
+        host.document.undo();
+        QCOMPARE(host.review.notes().size(), 1);
+        QVERIFY(host.review.completeRound(host.review.editToken()));
+        const auto frozen = host.project().commentLines();
+        QVERIFY(!host.review.updateNote(id, "Not allowed", host.review.editToken()));
+        QVERIFY(!host.review.removeNote(id, host.review.editToken()));
+        QCOMPARE(host.project().commentLines(), frozen);
+        host.review.resolveNote(id, true);
+        QVERIFY(host.review.notes().first().toMap().value("resolved").toBool());
+        const auto beforeReload = host.review.editToken();
+        QVERIFY(host.document.save());
+        QVERIFY(host.document.openProject(path));
+        QVERIFY(!host.review.startRound(true, beforeReload));
+        QCOMPARE(host.review.roundState(), "completed");
     }
 
     void notesRejectInvalidTargetsAndResolveByStableIdentity()
